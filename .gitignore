@@ -1,8 +1,10 @@
 __pycache__/
 *.py[cod]
 .DS_Store
+.env
+.env.*
+!.env.example
 
 # Generated calculation outputs
 backend/outputs/
 backend/outputs_check/
-
