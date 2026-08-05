@@ -58,6 +58,24 @@ TES 열손실 기본값 근거:
 - 월별 재생열 요구량과 태양열 공급량 시각화
 - 지역별 적용 가능성 비교
 
+## Vercel + Supabase 배포 구조
+
+- Vercel 정적 호스팅: `index.html`, `styles.css`, `app.js`
+- Vercel Python Function: `api/index.py`에서 계산 및 기상 API 제공
+- Supabase: 사용자, 프로젝트 입력값, 계산 결과, 업로드 파일을 저장하는 역할
+- GitHub `main` 브랜치를 Vercel에 연결하면 새 커밋마다 자동 배포
+
+Vercel 프로젝트 환경변수에는 다음 공개 설정만 우선 등록합니다.
+
+```text
+SUPABASE_URL
+SUPABASE_PUBLISHABLE_KEY
+```
+
+`SUPABASE_DB_PASSWORD`는 브라우저에 공개하면 안 되며, 현재 프론트엔드에는 필요하지 않습니다.
+
+현재 계산 API는 Vercel에서 실행할 수 있지만, 업로드 파일은 서버리스 파일시스템에 영구 보관할 수 없습니다. 개인 기상·부하 파일의 영구 저장은 Supabase Storage 연결 후 활성화해야 합니다.
+
 ## 다음 고도화 후보
 
 - 위도/경도 기반 외부 기상 API 또는 정밀 Clear-sky 모델 연결
