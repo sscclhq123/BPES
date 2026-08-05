@@ -1,0 +1,1472 @@
+const weatherDatasets = {
+  custom_coordinate: {
+    label: "사용자 입력 좌표",
+    source: "위도/경도 직접 입력",
+    method: "좌표 기반 Clear-sky 일사량 추정",
+    outdoorTemp: 31,
+    humidity: 70,
+    irradiance: 5.4,
+    latitude: 37.56,
+    longitude: 126.97,
+    suitability: 58,
+  },
+  upload_weather: {
+    label: "개인 기상데이터 업로드",
+    source: "사용자 선택 파일",
+    method: "업로드 파일 기반",
+    outdoorTemp: 31,
+    humidity: 70,
+    irradiance: 4.2,
+    latitude: 37.56,
+    longitude: 126.97,
+    suitability: 60,
+    uploadMode: true,
+  },
+  seoul_epw: {
+    label: "서울 TMYx EPW",
+    source: "KOR_SO_Seoul.WS.471080_TMYx.2011-2025.epw",
+    method: "EPW/TMY 파일 기반",
+    outdoorTemp: 31,
+    humidity: 72,
+    irradiance: 4.2,
+    latitude: 37.56,
+    longitude: 126.97,
+    suitability: 64,
+  },
+  bangkok_tmy: {
+    label: "방콕 TMY3",
+    source: "admin/weather/Bangkok_TMY3.epw",
+    method: "EPW/TMY 파일 기반",
+    outdoorTemp: 34,
+    humidity: 78,
+    irradiance: 5.1,
+    latitude: 13.75,
+    longitude: 100.5,
+    suitability: 87,
+  },
+  manila_tmy: {
+    label: "마닐라 TMY3",
+    source: "admin/weather/Manila_TMY3.epw",
+    method: "EPW/TMY 파일 기반",
+    outdoorTemp: 33,
+    humidity: 81,
+    irradiance: 4.8,
+    latitude: 14.6,
+    longitude: 120.98,
+    suitability: 83,
+  },
+};
+
+const comparisonRegions = {
+  seoul_epw: { label: "서울 · 대한민국", humidity: 66, irradiance: 4.9, latitude: 37.56, suitability: 64 },
+  tokyo: { label: "도쿄 · 일본", humidity: 68, irradiance: 4.4, latitude: 35.68, suitability: 67 },
+  beijing: { label: "베이징 · 중국", humidity: 53, irradiance: 5.0, latitude: 39.90, suitability: 58 },
+  bangkok_tmy: { label: "방콕 · 태국", humidity: 78, irradiance: 5.1, latitude: 13.75, suitability: 87 },
+  singapore: { label: "싱가포르 · 싱가포르", humidity: 82, irradiance: 4.6, latitude: 1.35, suitability: 90 },
+  manila_tmy: { label: "마닐라 · 필리핀", humidity: 81, irradiance: 4.8, latitude: 14.60, suitability: 83 },
+  new_delhi: { label: "뉴델리 · 인도", humidity: 62, irradiance: 5.5, latitude: 28.61, suitability: 76 },
+  dubai: { label: "두바이 · UAE", humidity: 58, irradiance: 6.0, latitude: 25.20, suitability: 70 },
+  cairo: { label: "카이로 · 이집트", humidity: 55, irradiance: 6.1, latitude: 30.04, suitability: 61 },
+  madrid: { label: "마드리드 · 스페인", humidity: 50, irradiance: 5.3, latitude: 40.42, suitability: 55 },
+  sydney: { label: "시드니 · 호주", humidity: 65, irradiance: 5.2, latitude: -33.87, suitability: 62 },
+  miami: { label: "마이애미 · 미국", humidity: 76, irradiance: 5.4, latitude: 25.76, suitability: 84 },
+};
+
+const loadDatasets = {
+  office_small: {
+    label: "소형 오피스",
+    source: "ASHRAE 90.1-2022 OfficeSmall · Miami",
+    buildingArea: 511,
+    operationHours: 9,
+    targetAbsHumidity: 10.0,
+    airflow: 795,
+    annualRegenNeed: 8550,
+    note: "EnergyPlus 출력(.table.htm)에서 면적, 조건부 체적, 존별 설계 외기량을 추출",
+  },
+  office_medium: {
+    label: "중형 오피스",
+    source: "ASHRAE 90.1-2022 OfficeMedium · Miami",
+    buildingArea: 4982,
+    operationHours: 9,
+    targetAbsHumidity: 10.0,
+    airflow: 7745,
+    annualRegenNeed: 84000,
+    note: "EnergyPlus 출력(.table.htm)에서 면적, 조건부 체적, 존별 설계 외기량을 추출",
+  },
+  office_large: {
+    label: "대형 오피스",
+    source: "ASHRAE 90.1-2022 OfficeLarge · Miami",
+    buildingArea: 46320,
+    operationHours: 9,
+    targetAbsHumidity: 10.0,
+    airflow: 72004,
+    annualRegenNeed: 805000,
+    note: "EnergyPlus 출력(.table.htm)에서 면적, 조건부 체적, 존별 설계 외기량을 추출",
+  },
+  mall_small: {
+    label: "소형 쇼핑몰",
+    source: "ASHRAE 90.1-2022 RetailStandalone scaled · Miami",
+    buildingArea: 1147,
+    operationHours: 12,
+    targetAbsHumidity: 10.0,
+    airflow: 4486,
+    annualRegenNeed: 55000,
+    note: "보유한 Stand-alone Retail prototype의 50% 스케일 예비값",
+  },
+  mall_medium: {
+    label: "중형 쇼핑몰",
+    source: "ASHRAE 90.1-2022 RetailStandalone · Miami",
+    buildingArea: 2294,
+    operationHours: 12,
+    targetAbsHumidity: 10.0,
+    airflow: 8973,
+    annualRegenNeed: 110000,
+    note: "EnergyPlus 출력(.table.htm)에서 면적, 조건부 체적, 존별 설계 외기량을 추출",
+  },
+  mall_large: {
+    label: "대형 쇼핑몰",
+    source: "ASHRAE 90.1-2022 RetailStripmall scaled · Miami",
+    buildingArea: 5226,
+    operationHours: 12,
+    targetAbsHumidity: 10.0,
+    airflow: 22220,
+    annualRegenNeed: 265000,
+    note: "보유한 Strip Mall prototype의 250% 스케일 예비값",
+  },
+  residential_small: {
+    label: "소형 주거",
+    source: "ASHRAE 90.1-2022 ApartmentMidRise scaled · Miami",
+    buildingArea: 1567,
+    operationHours: 24,
+    targetAbsHumidity: 10.0,
+    airflow: 1517,
+    annualRegenNeed: 23000,
+    note: "보유한 ApartmentMidRise prototype의 50% 스케일 예비값",
+  },
+  residential_medium: {
+    label: "중형 주거",
+    source: "ASHRAE 90.1-2022 ApartmentMidRise · Miami",
+    buildingArea: 3135,
+    operationHours: 24,
+    targetAbsHumidity: 10.0,
+    airflow: 3034,
+    annualRegenNeed: 46000,
+    note: "EnergyPlus 출력(.table.htm)에서 면적, 조건부 체적, 존별 설계 외기량을 추출",
+  },
+  residential_large: {
+    label: "대형 주거",
+    source: "ASHRAE 90.1-2022 ApartmentHighRise · Miami",
+    buildingArea: 7837,
+    operationHours: 24,
+    targetAbsHumidity: 10.0,
+    airflow: 7519,
+    annualRegenNeed: 115000,
+    note: "EnergyPlus 출력(.table.htm)에서 면적, 조건부 체적, 존별 설계 외기량을 추출",
+  },
+  hospital_small: {
+    label: "소형 병원",
+    source: "ASHRAE 90.1-2022 Hospital scaled · Miami",
+    buildingArea: 4487,
+    operationHours: 24,
+    targetAbsHumidity: 10.0,
+    airflow: 12702,
+    annualRegenNeed: 380000,
+    note: "보유한 Hospital prototype의 20% 스케일 예비값",
+  },
+  hospital_medium: {
+    label: "중형 병원",
+    source: "ASHRAE 90.1-2022 Hospital scaled · Miami",
+    buildingArea: 11218,
+    operationHours: 24,
+    targetAbsHumidity: 10.0,
+    airflow: 31755,
+    annualRegenNeed: 950000,
+    note: "보유한 Hospital prototype의 50% 스케일 예비값",
+  },
+  hospital_large: {
+    label: "대형 병원",
+    source: "ASHRAE 90.1-2022 Hospital · Miami",
+    buildingArea: 22436,
+    operationHours: 24,
+    targetAbsHumidity: 10.0,
+    airflow: 63510,
+    annualRegenNeed: 1900000,
+    note: "EnergyPlus 출력(.table.htm)에서 면적, 조건부 체적, 존별 설계 외기량을 추출",
+  },
+  factory_small: {
+    label: "소형 공장/산업시설",
+    source: "ASHRAE 90.1-2022 Warehouse scaled · Miami",
+    buildingArea: 2418,
+    operationHours: 12,
+    targetAbsHumidity: 10.0,
+    airflow: 2707,
+    annualRegenNeed: 65000,
+    note: "보유한 Warehouse prototype의 50% 스케일 예비값",
+  },
+  factory_medium: {
+    label: "중형 공장/산업시설",
+    source: "ASHRAE 90.1-2022 Warehouse · Miami",
+    buildingArea: 4835,
+    operationHours: 12,
+    targetAbsHumidity: 10.0,
+    airflow: 5414,
+    annualRegenNeed: 130000,
+    note: "EnergyPlus 출력(.table.htm)에서 면적, 조건부 체적, 존별 설계 외기량을 추출",
+  },
+  factory_large: {
+    label: "대형 공장/산업시설",
+    source: "ASHRAE 90.1-2022 Warehouse scaled · Miami",
+    buildingArea: 9670,
+    operationHours: 24,
+    targetAbsHumidity: 10.0,
+    airflow: 10828,
+    annualRegenNeed: 260000,
+    note: "보유한 Warehouse prototype의 200% 스케일 예비값",
+  },
+  agriculture_small: {
+    label: "소형 농업시설",
+    source: "Greenhouse/vertical farm prototype",
+    buildingArea: 300,
+    operationHours: 24,
+    targetAbsHumidity: 10.0,
+    airflow: 2500,
+    annualRegenNeed: 11200,
+    note: "온실/수직농장 계열 고습도 제어 대표 부하 프로파일",
+  },
+  agriculture_medium: {
+    label: "중형 농업시설",
+    source: "Greenhouse/vertical farm prototype",
+    buildingArea: 1500,
+    operationHours: 24,
+    targetAbsHumidity: 10.0,
+    airflow: 14500,
+    annualRegenNeed: 68000,
+    note: "작물 증산과 환기 제습을 고려한 농업시설 대표 부하 프로파일",
+  },
+  agriculture_large: {
+    label: "대형 농업시설",
+    source: "Greenhouse/vertical farm prototype",
+    buildingArea: 6000,
+    operationHours: 24,
+    targetAbsHumidity: 10.0,
+    airflow: 62000,
+    annualRegenNeed: 295000,
+    note: "대규모 온실/식물공장 대표 부하 프로파일",
+  },
+};
+
+const defaults = {
+  weatherInputMode: "standard",
+  weatherDataset: "seoul_epw",
+  analysisPeriodMode: "annual",
+  solarDataMode: "has_solar",
+  buildingInputMode: "template",
+  buildingUse: "office",
+  buildingSize: "medium",
+  mallParking: "no",
+  loadDataset: "office_medium",
+  latitude: 37.56,
+  longitude: 126.97,
+  buildingArea: 4982,
+  parkingArea: 1800,
+  operationHours: 9,
+  targetAbsHumidity: 10.0,
+  airflow: 7745,
+  solutionConcentration: 38,
+  lgRatio: 1.1,
+  absSolutionTemp: 25,
+  regenTemp: 55,
+  collectorType: "evacuated",
+  solutionMode: "fixed",
+  lgMode: "fixed",
+  regenMode: "fixed",
+  collectorMode: "optimize",
+  collectorMin: 20,
+  collectorMax: 140,
+  tesSupplyTemp: 75,
+  tesReturnTemp: 42,
+  tesDesignMargin: 15,
+  tesInitialTemp: 42,
+  tesInsulationK: 0.023,
+};
+
+const fallbackWeatherTrend = [
+  { month: "1월", temp: -1.5, humidity: 58, solar: 2.3 },
+  { month: "2월", temp: 1.2, humidity: 56, solar: 2.9 },
+  { month: "3월", temp: 7.1, humidity: 57, solar: 3.5 },
+  { month: "4월", temp: 13.5, humidity: 59, solar: 4.0 },
+  { month: "5월", temp: 21.5, humidity: 63, solar: 3.9 },
+  { month: "6월", temp: 25.1, humidity: 70, solar: 4.2 },
+  { month: "7월", temp: 28.4, humidity: 78, solar: 4.4 },
+  { month: "8월", temp: 29.5, humidity: 76, solar: 4.2 },
+  { month: "9월", temp: 24.2, humidity: 68, solar: 3.5 },
+  { month: "10월", temp: 17.5, humidity: 61, solar: 2.9 },
+  { month: "11월", temp: 7.2, humidity: 60, solar: 2.4 },
+  { month: "12월", temp: 0.2, humidity: 59, solar: 2.1 },
+];
+
+const fields = [
+  "weatherInputMode",
+  "weatherDataset",
+  "analysisPeriodMode",
+  "solarDataMode",
+  "buildingInputMode",
+  "buildingUse",
+  "buildingSize",
+  "mallParking",
+  "loadDataset",
+  "latitude",
+  "longitude",
+  "outdoorTemp",
+  "humidity",
+  "irradiance",
+  "buildingArea",
+  "parkingArea",
+  "operationHours",
+  "targetAbsHumidity",
+  "airflow",
+  "solutionConcentration",
+  "lgRatio",
+  "absSolutionTemp",
+  "regenTemp",
+  "collectorType",
+  "solutionMode",
+  "lgMode",
+  "regenMode",
+  "collectorMode",
+  "collectorMin",
+  "collectorMax",
+  "tesSupplyTemp",
+  "tesReturnTemp",
+  "tesDesignMargin",
+  "tesInitialTemp",
+  "tesInsulationK",
+];
+
+const $ = (id) => document.getElementById(id);
+let activeUploadDataset = "upload_weather";
+
+function monthCheckboxes() {
+  return [...document.querySelectorAll("#monthSelector input[type='checkbox']")];
+}
+
+function selectedSimulationMonths() {
+  if ($("analysisPeriodMode").value === "annual") return Array.from({ length: 12 }, (_, index) => index + 1);
+  return monthCheckboxes().filter((input) => input.checked).map((input) => Number(input.value));
+}
+
+function setSelectedSimulationMonths(months) {
+  const selected = new Set((months || []).map(Number));
+  monthCheckboxes().forEach((input) => { input.checked = selected.has(Number(input.value)); });
+}
+
+function updateAnalysisPeriodFields() {
+  const isAnnual = $("analysisPeriodMode").value === "annual";
+  $("monthSelector").classList.toggle("is-hidden", isAnnual);
+  const months = selectedSimulationMonths();
+  $("selectedMonthSummary").textContent = isAnnual
+    ? "1~12월 전체"
+    : months.length
+      ? `${months.map((month) => `${month}월`).join(", ")} 선택`
+      : "선택된 월 없음";
+}
+
+function requestJsonViaXhr(url, options = {}) {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open(options.method || "GET", url, true);
+    Object.entries(options.headers || {}).forEach(([key, value]) => request.setRequestHeader(key, value));
+    request.timeout = 120000;
+    request.onload = () => {
+      try {
+        resolve({
+          ok: request.status >= 200 && request.status < 300,
+          status: request.status,
+          result: JSON.parse(request.responseText || "{}"),
+        });
+      } catch (error) {
+        reject(error);
+      }
+    };
+    request.onerror = () => reject(new TypeError("계산 기능 연결 실패"));
+    request.ontimeout = () => reject(new TypeError("계산 요청 시간 초과"));
+    request.send(options.body || null);
+  });
+}
+
+function requestJson(url, options = {}) {
+  return requestJsonViaXhr(url, options);
+}
+
+function setDefaults() {
+  Object.entries(defaults).forEach(([key, value]) => {
+    $(key).value = value;
+  });
+  setSelectedSimulationMonths(Array.from({ length: 12 }, (_, index) => index + 1));
+  updateAnalysisPeriodFields();
+  activeUploadDataset = "upload_weather";
+  applyCurrentWeatherSelection();
+  applyBuildingSelection();
+}
+
+function getCurrentWeatherDatasetKey() {
+  return $("weatherInputMode").value === "upload" ? activeUploadDataset : $("weatherDataset").value;
+}
+
+function applyCurrentWeatherSelection() {
+  applyWeatherDataset(getCurrentWeatherDatasetKey());
+}
+
+function applyWeatherDataset(datasetKey) {
+  const dataset = weatherDatasets[datasetKey];
+  if (!dataset) {
+    return;
+  }
+  if (dataset.solarDataMode) {
+    $("solarDataMode").value = dataset.solarDataMode;
+  }
+  $("latitude").value = dataset.latitude;
+  $("longitude").value = dataset.longitude;
+  $("outdoorTemp").value = dataset.outdoorTemp;
+  $("humidity").value = dataset.humidity;
+  $("irradiance").value =
+    needsCoordinateInput(datasetKey)
+      ? estimateClearSkyIrradiance(dataset.latitude, dataset.longitude)
+      : dataset.irradiance;
+  toggleWeatherModeFields();
+  toggleCoordinateFields(datasetKey);
+  toggleWeatherValueFields(datasetKey);
+  updateWeatherNote(datasetKey);
+}
+
+function applyLoadDataset(datasetKey) {
+  const dataset = loadDatasets[datasetKey];
+  if (!dataset) {
+    return;
+  }
+  $("buildingArea").value = dataset.buildingArea;
+  $("parkingArea").value = dataset.parkingArea ?? Math.round(dataset.buildingArea * 0.35);
+  $("operationHours").value = dataset.operationHours;
+  $("targetAbsHumidity").value = dataset.targetAbsHumidity ?? 10.0;
+  $("airflow").value = dataset.airflow;
+  $("loadDataset").value = datasetKey;
+  updateBuildingModeFields();
+  updateParkingCollectorRange(dataset);
+  updateLoadNote(datasetKey);
+}
+
+function getTemplateLoadDatasetKey() {
+  return `${$("buildingUse").value}_${$("buildingSize").value}`;
+}
+
+function applyBuildingSelection() {
+  const mode = $("buildingInputMode").value;
+  if (mode === "custom" || mode === "load_upload") {
+    $("loadDataset").value = mode === "load_upload" ? "uploaded_load" : "custom_building";
+    updateBuildingModeFields();
+    updateParkingCollectorRange();
+    updateLoadNote($("loadDataset").value);
+    return;
+  }
+
+  applyLoadDataset(getTemplateLoadDatasetKey());
+}
+
+function updateBuildingModeFields() {
+  const isTemplateMode = $("buildingInputMode").value === "template";
+  $("buildingTemplateBox").classList.toggle("is-hidden", !isTemplateMode);
+  $("buildingUseLabel").textContent = "용도";
+  $("mallParkingBox").classList.toggle("is-hidden", $("buildingInputMode").value === "load_upload");
+  $("loadUploadBox").classList.toggle("is-hidden", $("buildingInputMode").value !== "load_upload");
+  $("buildingValueNote").textContent = isTemplateMode
+    ? "표준 건물 모델에서 불러온 입력값입니다. ASHRAE 출력값과 스케일 예비값이 섞여 있으며 필요하면 아래 값은 직접 보정할 수 있습니다."
+    : $("buildingInputMode").value === "load_upload"
+      ? "기타 건물은 EnergyPlus/eQuest 등에서 뽑은 시간별 부하 Excel/CSV를 업로드하는 방향입니다. 파서 연결 전까지 아래 대표값으로 예비 계산합니다."
+    : "사용자가 입력한 건물 정보로 부하를 추정합니다. 추후 EnergyPlus/eQuest 업로드 부하와 연결할 자리입니다.";
+}
+
+function updateLoadNote(datasetKey) {
+  const dataset = loadDatasets[datasetKey];
+  if (datasetKey === "uploaded_load") {
+    $("loadNote").textContent =
+      "시간별 부하 데이터 업로드 · 기타 건물은 sensible/latent load와 외기량 컬럼을 기준으로 계산할 예정";
+    return;
+  }
+  if (!dataset) {
+    $("loadNote").textContent = "사용자 건물 정보 입력 · 면적, 운전시간, 목표 조건, 처리풍량을 직접 사용";
+    return;
+  }
+
+  const parkingNote =
+    $("mallParking").value === "yes"
+      ? " · 주차장/옥외공간 집열기 설치 가능성 반영"
+      : "";
+  $("loadNote").textContent = `${dataset.source} · ${dataset.note}${parkingNote}`;
+}
+
+function updateParkingCollectorRange(dataset) {
+  const hasParkingCollector = $("buildingInputMode").value !== "load_upload" && $("mallParking").value === "yes";
+  const maxInput = $("collectorMax");
+
+  if (!hasParkingCollector) {
+    maxInput.max = 1000;
+    if (Number(maxInput.value) > 1000) {
+      maxInput.value = 1000;
+    }
+    return;
+  }
+
+  const baseArea = dataset?.buildingArea ?? Number($("buildingArea").value) ?? 0;
+  const parkingArea = Number($("parkingArea").value) || 0;
+  const suggestedMax = Math.round((baseArea + parkingArea) / 5) * 5;
+  maxInput.max = 5000;
+  maxInput.value = Math.max(Number(maxInput.value), suggestedMax);
+}
+
+function readInputs() {
+  const data = {};
+  fields.forEach((field) => {
+    const element = $(field);
+    data[field] = element.type === "number" || field === "operationHours" ? Number(element.value) : element.value;
+  });
+  data.sizingMode = "design";
+  data.weatherDataset = getCurrentWeatherDatasetKey();
+  data.simulationMonths = selectedSimulationMonths();
+  return data;
+}
+
+function validateDesignInputs(input) {
+  const checks = [
+    ["buildingArea", "적용 면적"],
+    ["parkingArea", "주차장 면적"],
+    ["targetAbsHumidity", "목표 급기 절대습도"],
+    ["airflow", "처리풍량"],
+    ["solutionConcentration", "용액 농도"],
+    ["lgRatio", "L/G"],
+    ["absSolutionTemp", "제습부 용액온도"],
+    ["regenTemp", "재생기 용액온도"],
+    ["collectorMin", "집열기 최소"],
+    ["collectorMax", "집열기 최대"],
+    ["tesSupplyTemp", "TES 공급수온도"],
+    ["tesReturnTemp", "TES 환수온도"],
+    ["tesDesignMargin", "TES 설계 여유율"],
+    ["tesInitialTemp", "TES 초기온도"],
+    ["tesInsulationK", "TES 단열재 열전도율"],
+  ];
+  const messages = checks
+    .filter(([key]) => !Number.isFinite(input[key]) || (key === "parkingArea" ? input[key] < 0 : input[key] <= 0))
+    .map(([, label]) => `${label}값을 올바른 숫자로 입력하세요.`);
+
+  if (!input.simulationMonths.length) {
+    messages.push("월별 다중선택에서는 계산할 월을 하나 이상 선택하세요.");
+  }
+
+  if (Number.isFinite(input.collectorMin) && Number.isFinite(input.collectorMax) && input.collectorMin > input.collectorMax) {
+    messages.push("집열기 최소값은 최대값보다 클 수 없습니다.");
+  }
+  if (Number.isFinite(input.tesReturnTemp) && Number.isFinite(input.tesSupplyTemp) && input.tesReturnTemp >= input.tesSupplyTemp) {
+    messages.push("TES 환수온도는 공급수온도보다 낮아야 합니다.");
+  }
+  if (Number.isFinite(input.airflow) && Number.isFinite(input.lgRatio)) {
+    const absorberModules = parallelModuleCount(input.airflow, input.lgRatio, 0.15, 0.73, 0.63, 2.08);
+    const regeneratorModules = parallelModuleCount(input.airflow, input.lgRatio, 0.24, 0.4, 0.26, 0.48);
+    if (!absorberModules || !regeneratorModules) {
+      messages.push("현재 처리풍량과 L/G로는 흡수기 또는 재생기 모듈을 회귀식 유효 유량범위 안에 구성할 수 없습니다.");
+    }
+  }
+  if (
+    Number.isFinite(input.buildingArea) &&
+    Number.isFinite(input.collectorMax) &&
+    input.buildingArea > 0 &&
+    input.collectorMax > input.buildingArea &&
+    input.mallParking !== "yes"
+  ) {
+    messages.push(
+      `주차장/옥외공간 활용을 선택하지 않았기 때문에 건축면적 ${formatNumber(input.buildingArea)} m²보다 큰 집열기 최대값 ${formatNumber(input.collectorMax)} m²를 배치할 수 없습니다. 집열기 최대값을 건축면적 이하로 낮추거나 주차장/옥외공간 활용을 선택하세요.`,
+    );
+  }
+
+  return messages;
+}
+
+function renderCalculationIssues(messages) {
+  const panel = $("calculationIssuePanel");
+  panel.classList.toggle("is-hidden", messages.length === 0);
+  $("calculationIssues").innerHTML = messages.map((message) => `<li>${message}</li>`).join("");
+}
+
+function estimateClearSkyIrradiance(latitude, longitude) {
+  const absLat = Math.abs(latitude);
+  const latitudeFactor = clamp(1 - absLat / 115, 0.48, 0.98);
+  const subtropicalBonus = absLat >= 10 && absLat <= 30 ? 0.45 : 0;
+  const longitudeSeasonBias = Math.sin((longitude / 180) * Math.PI) * 0.12;
+  return Number(clamp(6.0 * latitudeFactor + subtropicalBonus + longitudeSeasonBias, 2.4, 6.4).toFixed(1));
+}
+
+function updateWeatherNote(datasetKey) {
+  const dataset = weatherDatasets[datasetKey];
+  const lat = Number($("latitude").value);
+  const lon = Number($("longitude").value);
+  const needsCoordinates = needsCoordinateInput(datasetKey);
+
+  if (datasetKey === "custom_coordinate") {
+    $("weatherNote").textContent =
+      `일사/기상 데이터가 없을 때 사용하는 대체 경로 · ${dataset.method} · 위도 ${formatNumber(lat, 2)}°, 경도 ${formatNumber(lon, 2)}°`;
+    return;
+  }
+
+  if (datasetKey === "upload_weather") {
+    $("weatherNote").textContent = needsCoordinates
+      ? `개인 기상데이터 업로드 · 일사데이터 없음 · 위도 ${formatNumber(lat, 2)}°, 경도 ${formatNumber(lon, 2)}° 기반 Sky model 적용`
+      : "개인 기상데이터 업로드 · 파일 안의 일사데이터를 계산에 사용";
+    return;
+  }
+
+  if (dataset.uploaded) {
+    $("weatherNote").textContent = needsCoordinates
+      ? `사용자 업로드 기상데이터 사용 · 일사데이터 없음 · 위도 ${formatNumber(lat, 2)}°, 경도 ${formatNumber(lon, 2)}° 기반 Sky model 적용`
+      : `사용자 업로드 기상데이터 사용 · ${dataset.method} · ${dataset.source}`;
+    return;
+  }
+
+  $("weatherNote").textContent =
+    `사전 등록 일사/기상 데이터 사용 · ${dataset.method} · ${dataset.source}`;
+}
+
+function syncCoordinateWeather() {
+  const datasetKey = getCurrentWeatherDatasetKey();
+  if (!needsCoordinateInput(datasetKey)) {
+    updateWeatherNote(datasetKey);
+    return;
+  }
+
+  const lat = Number($("latitude").value);
+  const lon = Number($("longitude").value);
+  $("irradiance").value = estimateClearSkyIrradiance(lat, lon);
+  updateWeatherNote(datasetKey);
+}
+
+function needsCoordinateInput(datasetKey) {
+  const dataset = weatherDatasets[datasetKey];
+  return (
+    datasetKey === "custom_coordinate" ||
+    ($("weatherInputMode").value === "upload" && $("solarDataMode").value === "missing_solar") ||
+    dataset?.solarDataMode === "missing_solar"
+  );
+}
+
+function toggleWeatherModeFields() {
+  const isUploadMode = $("weatherInputMode").value === "upload";
+  $("standardWeatherBox").classList.toggle("is-hidden", isUploadMode);
+  $("weatherUploadBox").classList.toggle("is-hidden", !isUploadMode);
+}
+
+function toggleCoordinateFields(datasetKey) {
+  const isCoordinateMode = needsCoordinateInput(datasetKey);
+  $("coordinateFields").classList.toggle("is-hidden", !isCoordinateMode);
+  $("latitude").disabled = !isCoordinateMode;
+  $("longitude").disabled = !isCoordinateMode;
+}
+
+function toggleWeatherValueFields(datasetKey) {
+  const isCoordinateMode = datasetKey === "custom_coordinate";
+  const isUploadMissingSolar = needsCoordinateInput(datasetKey) && datasetKey !== "custom_coordinate";
+  $("outdoorTemp").readOnly = !isCoordinateMode;
+  $("humidity").readOnly = !isCoordinateMode;
+  $("irradiance").readOnly = true;
+  $("weatherValueNote").textContent = isCoordinateMode
+    ? "기상 데이터가 없는 경우입니다. 외기온도와 상대습도는 대체 기상 가정으로 입력하고, 일사량은 좌표 기반 Sky model 대표값을 사용합니다."
+    : isUploadMissingSolar
+      ? "업로드 파일에서 외기온도와 상대습도를 읽고, 일사량은 위도/경도 기반 Sky model 대표값을 사용합니다."
+    : "선택한 기상 데이터에서 읽은 대표값입니다. 실제 계산은 시간별 기상 데이터를 사용합니다.";
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function formatNumber(value, digits = 0) {
+  return new Intl.NumberFormat("ko-KR", {
+    maximumFractionDigits: digits,
+    minimumFractionDigits: digits,
+  }).format(value);
+}
+
+function empiricalWarnings(input) {
+  const checks = [
+    {
+      ok: input.solutionConcentration >= 36.4 && input.solutionConcentration <= 39,
+      text: `LiCl 농도 ${formatNumber(input.solutionConcentration, 1)} %는 Park 흡수기 회귀식 범위 36.4~39.0 %를 벗어납니다.`,
+    },
+    {
+      ok: input.absSolutionTemp >= 8.05 && input.absSolutionTemp <= 31.4,
+      text: `제습부 입구 용액 목표온도 ${formatNumber(input.absSolutionTemp, 1)} °C는 Park 흡수기 회귀식 범위 8.05~31.40 °C를 벗어납니다.`,
+    },
+    {
+      ok: input.regenTemp >= 48.5 && input.regenTemp <= 59.4,
+      text: `재생기 입구 용액 목표온도 ${formatNumber(input.regenTemp, 1)} °C는 재생기 회귀식 범위 48.5~59.4 °C를 벗어납니다.`,
+    },
+    {
+      ok: input.lgRatio >= 1.09 && input.lgRatio <= 2,
+      text: `L/G ${formatNumber(input.lgRatio, 2)}는 Park 흡수기와 재생기 모듈을 함께 구성하는 권장 범위 1.09~2.00을 벗어납니다.`,
+    },
+  ];
+
+  return checks.filter((check) => !check.ok).map((check) => check.text);
+}
+
+function renderValidityWarnings(warnings) {
+  const panel = $("validityPanel");
+  panel.classList.toggle("warning", warnings.length > 0);
+  const warningText = (warning) =>
+    warning.includes("외삽값") ||
+    warning.includes("입력하세요") ||
+    warning.includes("클 수 없습니다") ||
+    warning.includes("Python 엔진") ||
+    warning.includes("실제 병렬 LD 계산")
+      ? warning
+      : `${warning} 결과는 외삽값으로 해석하세요.`;
+  $("validityWarnings").innerHTML =
+    warnings.length > 0
+      ? warnings.map((warning) => `<li>${warningText(warning)}</li>`).join("")
+      : "<li>현재 주요 입력값은 권장 범위 안에 있습니다.</li>";
+}
+
+function normalize(value, min, max, top, height) {
+  if (max <= min) {
+    return top + height / 2;
+  }
+  return top + height - ((value - min) / (max - min)) * height;
+}
+
+function polyline(points, key, min, max, left, top, width, height) {
+  return points
+    .map((point, index) => {
+      const x = points.length === 1 ? left + width / 2 : left + (index / (points.length - 1)) * width;
+      const y = normalize(point[key], min, max, top, height);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+}
+
+function renderWeatherTrend(points, source = "대표 월별값") {
+  const width = 360;
+  const height = 158;
+  const plot = { left: 34, top: 10, width: 278, height: 104 };
+  const tempValues = points.map((point) => point.temp);
+  const rhValues = points.map((point) => point.humidity);
+  const solarValues = points.map((point) => point.solar);
+  const tempMin = Math.min(...tempValues) - 2;
+  const tempMax = Math.max(...tempValues) + 2;
+  const rhMin = Math.min(...rhValues) - 6;
+  const rhMax = Math.max(...rhValues) + 6;
+  const solarMin = Math.min(...solarValues) - 0.4;
+  const solarMax = Math.max(...solarValues) + 0.4;
+  const gridRows = [0, 0.5, 1];
+
+  $("weatherTrendStatus").textContent = source;
+  $("weatherTrendChart").innerHTML = `
+    <svg viewBox="0 0 ${width} ${height}" role="img">
+      ${gridRows
+        .map((ratio) => {
+          const y = plot.top + plot.height * ratio;
+          return `<line x1="${plot.left}" y1="${y}" x2="${plot.left + plot.width}" y2="${y}" class="grid-line" />`;
+        })
+        .join("")}
+      <line x1="${plot.left}" y1="${plot.top}" x2="${plot.left}" y2="${plot.top + plot.height}" class="axis-line" />
+      <line x1="${plot.left + plot.width}" y1="${plot.top}" x2="${plot.left + plot.width}" y2="${plot.top + plot.height}" class="axis-line" />
+      <line x1="${plot.left}" y1="${plot.top + plot.height}" x2="${plot.left + plot.width}" y2="${plot.top + plot.height}" class="axis-line" />
+      <text x="${plot.left - 4}" y="${plot.top + 5}" text-anchor="end">${formatNumber(tempMax, 0)}°/${formatNumber(rhMax, 0)}%</text>
+      <text x="${plot.left - 4}" y="${plot.top + plot.height}" text-anchor="end">${formatNumber(tempMin, 0)}°/${formatNumber(rhMin, 0)}%</text>
+      <text x="${plot.left + plot.width + 4}" y="${plot.top + 5}" text-anchor="start">${formatNumber(solarMax, 1)}</text>
+      <text x="${plot.left + plot.width + 4}" y="${plot.top + plot.height}" text-anchor="start">${formatNumber(solarMin, 1)}</text>
+      <polyline class="trend-line trend-temp" points="${polyline(points, "temp", tempMin, tempMax, plot.left, plot.top, plot.width, plot.height)}" />
+      <polyline class="trend-line trend-rh" points="${polyline(points, "humidity", rhMin, rhMax, plot.left, plot.top, plot.width, plot.height)}" />
+      <polyline class="trend-line trend-solar" points="${polyline(points, "solar", solarMin, solarMax, plot.left, plot.top, plot.width, plot.height)}" />
+      ${points
+        .map((point, index) => {
+          const x = points.length === 1 ? plot.left + plot.width / 2 : plot.left + (index / (points.length - 1)) * plot.width;
+          return `<text x="${x}" y="${height - 8}" text-anchor="middle">${point.month}</text>`;
+        })
+        .join("")}
+      <text x="${plot.left}" y="${height - 28}" text-anchor="start" class="axis-caption">좌: °C / %</text>
+      <text x="${plot.left + plot.width}" y="${height - 28}" text-anchor="end" class="axis-caption">우: kWh/m²·month</text>
+    </svg>
+  `;
+}
+
+async function loadWeatherTrend() {
+  const input = readInputs();
+  const fallbackPoints = fallbackWeatherTrend.filter((_, index) => input.simulationMonths.includes(index + 1));
+
+  if (!window.location.protocol.startsWith("http") || needsCoordinateInput(input.weatherDataset)) {
+    const source = needsCoordinateInput(input.weatherDataset) ? "Sky model 예비 추세" : "대표 월별값";
+    renderWeatherTrend(fallbackPoints.length ? fallbackPoints : fallbackWeatherTrend, source);
+    return;
+  }
+
+  if (input.weatherDataset === "upload_weather") {
+    renderWeatherTrend(fallbackPoints.length ? fallbackPoints : fallbackWeatherTrend, "업로드 대기");
+    return;
+  }
+
+  try {
+    const response = await requestJson("/api/weather-preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    const result = response.result;
+    if (!response.ok || result.error) {
+      throw new Error(result.error || "Weather preview failed");
+    }
+    if (result.representative) {
+      $("outdoorTemp").value = Number(result.representative.outdoorTemp).toFixed(1);
+      $("humidity").value = Number(result.representative.humidity).toFixed(0);
+      $("irradiance").value = Number(result.representative.irradiance).toFixed(1);
+    }
+    renderWeatherTrend(result.points, result.source || "기상 데이터 추세");
+  } catch (_error) {
+    renderWeatherTrend(fallbackPoints.length ? fallbackPoints : fallbackWeatherTrend, "대표 월별값");
+  }
+}
+
+async function uploadWeatherFile() {
+  const fileInput = $("weatherUpload");
+  const status = $("weatherUploadStatus");
+  const file = fileInput.files && fileInput.files[0];
+  if (!file) {
+    return;
+  }
+
+  if (!window.location.protocol.startsWith("http")) {
+    status.className = "warning";
+    status.textContent = "파일 업로드는 로컬 서버 또는 배포 서버에서만 사용할 수 있습니다.";
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("weather_file", file);
+  formData.append("solar_data_mode", $("solarDataMode").value);
+  formData.append("latitude", $("latitude").value);
+  formData.append("longitude", $("longitude").value);
+  status.className = "";
+  status.textContent = "업로드 중...";
+
+  try {
+    const response = await requestJson("/api/weather-upload", {
+      method: "POST",
+      body: formData,
+    });
+    const result = response.result;
+    if (!response.ok || result.error) {
+      throw new Error(result.error || "업로드 실패");
+    }
+
+    weatherDatasets[result.datasetId] = {
+      label: result.label,
+      source: result.filename,
+      method: result.supported ? "사용자 업로드 기상데이터" : "사용자 업로드 파일",
+      outdoorTemp: result.representative?.outdoorTemp ?? Number($("outdoorTemp").value),
+      humidity: result.representative?.humidity ?? Number($("humidity").value),
+      irradiance:
+        $("solarDataMode").value === "missing_solar"
+          ? estimateClearSkyIrradiance(Number($("latitude").value), Number($("longitude").value))
+          : result.representative?.irradiance ?? Number($("irradiance").value),
+      latitude: Number($("latitude").value) || 37.56,
+      longitude: Number($("longitude").value) || 126.97,
+      suitability: 60,
+      uploaded: true,
+      solarDataMode: $("solarDataMode").value,
+    };
+
+    activeUploadDataset = result.datasetId;
+    $("weatherInputMode").value = "upload";
+    applyWeatherDataset(activeUploadDataset);
+    await loadWeatherTrend();
+    markResultsPending();
+
+    status.className = result.supported ? "success" : "warning";
+    status.textContent = result.message;
+  } catch (error) {
+    status.className = "warning";
+    status.textContent = `업로드 실패: ${error.message}`;
+  } finally {
+    fileInput.value = "";
+  }
+}
+
+function stageLoadFile() {
+  const fileInput = $("loadUpload");
+  const status = $("loadUploadStatus");
+  const file = fileInput.files && fileInput.files[0];
+  if (!file) {
+    return;
+  }
+
+  status.className = "success";
+  status.textContent = `${file.name} 선택됨 · 시간별 부하 파서는 다음 단계에서 Python 백엔드에 연결`;
+  $("buildingInputMode").value = "load_upload";
+  applyBuildingSelection();
+  markResultsPending();
+}
+
+function parallelModuleCount(airflowM3h, lgRatio, airMin, airMax, solutionMin, solutionMax) {
+  const totalAir = airflowM3h / 3600 * 1.2;
+  const totalSolution = totalAir * lgRatio;
+  const minimumCount = Math.max(1, Math.ceil(totalAir / airMax - 1e-12), Math.ceil(totalSolution / solutionMax - 1e-12));
+  const maximumCount = Math.min(Math.floor(totalAir / airMin + 1e-12), Math.floor(totalSolution / solutionMin + 1e-12));
+  return minimumCount <= maximumCount ? minimumCount : 0;
+}
+
+function renderMetrics(best, input) {
+  $("heroResultLabel").textContent = "최적 설계안";
+  $("optimalDesign").textContent = `${formatNumber(best.collectorArea)} m² / ${formatNumber(best.tesVolume, 1)} m³`;
+  const weatherLabel =
+    needsCoordinateInput(input.weatherDataset)
+      ? `좌표 ${formatNumber(input.latitude, 2)}°, ${formatNumber(input.longitude, 2)}°`
+      : weatherDatasets[input.weatherDataset].label;
+  $("designNote").textContent =
+    `${weatherLabel}, ${input.collectorType === "evacuated" ? "진공관형" : "평판형"} · TES UA ${formatNumber(best.tesHeatLossUA || 0, 2)} W/K`;
+  $("optimalCollector").textContent = `${formatNumber(best.collectorArea)} m²`;
+  $("optimalTes").textContent = `${formatNumber(best.tesVolume, 1)} m³`;
+  $("optimalTesFlow").textContent = `${formatNumber(best.tesDesignFlow || 0, 2)} m³/h`;
+  $("solarShare").textContent = `${formatNumber(best.collectorCoverage * 100, 1)} %`;
+  $("auxEnergy").textContent = `${formatNumber(best.auxEnergy)} kWh/선택기간`;
+  $("unmetHours").textContent = `${formatNumber(best.unmetHours)} h/선택기간`;
+  $("recommendedOps").textContent =
+    `흡수기 ${formatNumber(best.absorberModules || 0)}대 · 재생기 ${formatNumber(best.regeneratorModules || 0)}대 · ${best.solutionConcentration}% · L/G ${best.lgRatio}`;
+}
+
+function renderCities(input) {
+  const selected =
+    needsCoordinateInput(input.weatherDataset)
+      ? { latitude: input.latitude, longitude: input.longitude }
+      : weatherDatasets[input.weatherDataset];
+  $("cityList").innerHTML = Object.entries(comparisonRegions)
+    .map(([key, city]) => {
+      const humidityFit = clamp(100 - Math.abs(input.humidity - city.humidity) * 1.2, 20, 100);
+      const solarFit = clamp((city.irradiance / 5.2) * 100, 30, 100);
+      const score = Math.round(city.suitability * 0.45 + humidityFit * 0.25 + solarFit * 0.3);
+      const level = score >= 75 ? "high" : score >= 55 ? "medium" : "low";
+      const selectedText = key === input.weatherDataset ? "현재" : `${formatNumber(Math.abs(selected.latitude - city.latitude), 1)}° 차이`;
+      return `
+        <div class="city-score">
+          <header><span>${city.label}</span><span>${score}% · ${selectedText}</span></header>
+          <div class="score-track"><div class="score-fill ${level}" style="width:${score}%"></div></div>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function renderCandidateRows(candidates) {
+  $("candidateRows").innerHTML = candidates
+    .map(
+      (candidate, index) => {
+        const stage = candidate.searchStage === "refined" ? "refined" : "coarse";
+        const stageLabel = stage === "refined" ? "2차 세분화" : "1차 세분화";
+        return `
+        <tr class="candidate-row${index === 0 ? " active" : ""}" data-candidate-index="${index}">
+          <td>${index + 1}</td>
+          <td><span class="search-stage-badge ${stage}">${stageLabel}</span></td>
+          <td>${formatNumber(candidate.collectorArea)} m²</td>
+          <td>${formatNumber(candidate.tesVolume, 1)} m³</td>
+          <td>${formatNumber(candidate.tesDesignFlow || 0, 2)} m³/h</td>
+          <td>${formatNumber(candidate.tesHeatLossUA || 0, 2)} W/K</td>
+          <td>${formatNumber(candidate.tesLoss || 0)} kWh</td>
+          <td>${formatNumber(candidate.tesDump || 0)} kWh</td>
+          <td>${formatNumber(candidate.solutionConcentration, 1)} %</td>
+          <td>${formatNumber(candidate.lgRatio, 1)}</td>
+          <td>${formatNumber(candidate.absSolutionTemp)} °C</td>
+          <td>${formatNumber(candidate.regenTemp)} °C</td>
+          <td>${formatNumber(candidate.collectorCoverage * 100, 1)} %</td>
+          <td>${formatNumber(candidate.auxEnergy)} kWh</td>
+          <td>${formatNumber(candidate.unmetHours)} h</td>
+          <td>${formatNumber(candidate.score, 3)}</td>
+        </tr>
+      `;
+      },
+    )
+    .join("") || `<tr class="empty-result-row"><td colspan="16">이 1차 후보에 연결된 2차 설계안이 없습니다.</td></tr>`;
+}
+
+const monthlyComparisonColors = ["#e18424", "#147d91", "#2f855a", "#c84b4b", "#7157a5", "#2f64a3", "#9a6b16", "#b04f86"];
+
+function renderCandidateMonthlyComparison(selections) {
+  if (!selections.length || !selections.every((item) => item.candidate?.monthly?.length)) return;
+  const comparison = selections.map((item, index) => ({
+    ...item,
+    color: monthlyComparisonColors[index % monthlyComparisonColors.length],
+  }));
+  const months = comparison[0].candidate.monthly;
+  $("monthlyChart").style.setProperty("--month-count", Math.max(months.length, 1));
+  const maxValue = Math.max(
+    ...months.map((item, monthIndex) => Math.max(
+      Number(item.load) || 0,
+      ...comparison.map((selection) => Number(selection.candidate.monthly[monthIndex]?.solar) || 0),
+    )),
+    1,
+  );
+  const seriesWidth = Math.max(4, Math.min(14, 68 / comparison.length));
+
+  $("monthlyChart").innerHTML = months.map((item, monthIndex) => {
+    const loadHeight = clamp(((Number(item.load) || 0) / maxValue) * 210, 5, 210);
+    const solarBars = comparison.map((selection) => {
+      const solar = Number(selection.candidate.monthly[monthIndex]?.solar) || 0;
+      const height = clamp((solar / maxValue) * 210, 5, 210);
+      return `<div class="bar solar comparison-series" style="height:${height}px;width:${seriesWidth}px;background:${selection.color}" data-value="${formatNumber(solar / 1000, 1)}" title="${selection.label}: ${formatNumber(solar)} kWh"><span class="sr-only">${selection.label}</span></div>`;
+    }).join("");
+    return `
+      <div class="month-group">
+        <div class="bars">
+          <div class="bar need" style="height:${loadHeight}px" data-value="${formatNumber((Number(item.load) || 0) / 1000, 1)}"></div>
+          ${solarBars}
+        </div>
+        <div class="month-label">${item.month}</div>
+      </div>
+    `;
+  }).join("");
+
+  $("monthlyLegend").innerHTML = `
+    <span><i style="background:var(--navy)"></i>재생열 요구량</span>
+    ${comparison.map((selection) => `<span><i style="background:${selection.color}"></i>${selection.label}</span>`).join("")}
+  `;
+  const totals = comparison.map((selection) => selection.candidate.monthly.reduce(
+    (sum, item) => sum + (Number(item.solar) || 0),
+    0,
+  ));
+  $("seasonSummary").textContent = comparison.length === 1
+    ? `${comparison[0].label} · 태양열 공급 ${formatNumber(totals[0])} kWh · 보조열원 ${formatNumber(comparison[0].candidate.auxEnergy)} kWh`
+    : `${comparison.length}개 설계안 비교 · 태양열 공급 ${formatNumber(Math.min(...totals))}~${formatNumber(Math.max(...totals))} kWh`;
+}
+
+function bindCandidateRows(chart, candidates, onActivate) {
+  const activateCandidate = (index, shouldScroll = false) => {
+    $("candidateRows").querySelectorAll(".candidate-row").forEach((row) => {
+      row.classList.toggle("active", Number(row.dataset.candidateIndex) === index);
+    });
+    chart.querySelectorAll(".candidate-point-group").forEach((point) => {
+      point.classList.toggle("active", Number(point.dataset.candidateIndex) === index);
+    });
+    if (shouldScroll) {
+      const row = $("candidateRows").querySelector(`[data-candidate-index="${index}"]`);
+      row?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+    }
+    onActivate?.(candidates[index], index);
+  };
+
+  chart.onclick = (event) => {
+    const point = event.target.closest(".candidate-point-group");
+    if (point) activateCandidate(Number(point.dataset.candidateIndex), true);
+  };
+  chart.onkeydown = (event) => {
+    const point = event.target.closest(".candidate-point-group");
+    if (point && (event.key === "Enter" || event.key === " ")) {
+      event.preventDefault();
+      activateCandidate(Number(point.dataset.candidateIndex), true);
+    }
+  };
+}
+
+function renderCandidates(candidates, hierarchy = []) {
+  const visibleCandidates = candidates.slice(0, 8);
+  const drilldown = $("refinementDrilldown");
+  const stageOneChart = $("stageOneChart");
+  const stageTwoChart = $("candidateChart");
+  const selectedCandidates = new Map();
+  let parentCandidates = [];
+  let currentChildren = [];
+
+  const selectionKey = (level, candidate) =>
+    `${level}:${candidate.collectorArea}:${candidate.tesVolume}:${candidate.tesDesignFlow}`;
+  const selectionLabel = (level, candidate) => level === "coarse"
+    ? `1차 ${formatNumber(candidate.collectorArea)} m²`
+    : `2차 ${formatNumber(candidate.collectorArea)} m² · ${formatNumber(candidate.tesVolume, 1)} m³ · ${formatNumber(candidate.tesDesignFlow, 2)} m³/h`;
+  const syncSelectionStyles = () => {
+    stageOneChart.querySelectorAll(".candidate-point-group").forEach((point) => {
+      const candidate = parentCandidates[Number(point.dataset.candidateIndex)];
+      point.classList.toggle("comparison-selected", Boolean(candidate && selectedCandidates.has(selectionKey("coarse", candidate))));
+    });
+    stageTwoChart.querySelectorAll(".candidate-point-group").forEach((point) => {
+      const candidate = currentChildren[Number(point.dataset.candidateIndex)];
+      point.classList.toggle("comparison-selected", Boolean(candidate && selectedCandidates.has(selectionKey("refined", candidate))));
+    });
+    $("candidateRows").querySelectorAll(".candidate-row").forEach((row) => {
+      const candidate = currentChildren[Number(row.dataset.candidateIndex)];
+      row.classList.toggle("comparison-selected", Boolean(candidate && selectedCandidates.has(selectionKey("refined", candidate))));
+    });
+    $("selectionStatus").textContent = `${selectedCandidates.size}개 선택 · 다시 누르면 선택 해제`;
+  };
+  const updateComparison = () => {
+    renderCandidateMonthlyComparison([...selectedCandidates.values()]);
+    syncSelectionStyles();
+  };
+  const addSelection = (level, candidate) => {
+    const key = selectionKey(level, candidate);
+    selectedCandidates.set(key, { candidate, label: selectionLabel(level, candidate) });
+    updateComparison();
+  };
+  const toggleSelection = (level, candidate) => {
+    const key = selectionKey(level, candidate);
+    if (selectedCandidates.has(key)) {
+      if (selectedCandidates.size > 1) selectedCandidates.delete(key);
+    } else {
+      selectedCandidates.set(key, { candidate, label: selectionLabel(level, candidate) });
+    }
+    updateComparison();
+  };
+
+  const renderStageTwo = (group) => {
+    const children = (group?.children || []).slice(0, 8);
+    currentChildren = children;
+    $("stageTwoTitle").textContent = `2차 세분화 · ${formatNumber(group.parent.collectorArea)} m² 주변`;
+    $("stageTwoNote").textContent = children.length
+      ? `${children.length}개 Pareto 상세안 · TES 용량, 설계유량 및 보조열원 비교`
+      : "이 1차 후보에 연결된 2차 상세안이 없습니다.";
+    renderCandidateChart(children, stageTwoChart);
+    renderCandidateRows(children);
+    bindCandidateRows(stageTwoChart, children, (candidate) => toggleSelection("refined", candidate));
+    stageTwoChart.querySelectorAll(".candidate-point-group").forEach((point) => point.classList.remove("active"));
+    $("candidateRows").querySelectorAll(".candidate-row").forEach((row) => row.classList.remove("active"));
+    syncSelectionStyles();
+  };
+
+  if (hierarchy.length) {
+    drilldown.classList.remove("is-hidden");
+    parentCandidates = hierarchy.map((group) => group.parent);
+    renderCandidateChart(parentCandidates, stageOneChart, { xMetric: "collectorArea" });
+    const activateParent = (index, toggle = true) => {
+      stageOneChart.querySelectorAll(".candidate-point-group").forEach((point) => {
+        point.classList.toggle("active", Number(point.dataset.candidateIndex) === index);
+      });
+      renderStageTwo(hierarchy[index]);
+      if (toggle) toggleSelection("coarse", hierarchy[index].parent);
+    };
+    stageOneChart.onclick = (event) => {
+      const point = event.target.closest(".candidate-point-group");
+      if (point) activateParent(Number(point.dataset.candidateIndex));
+    };
+    stageOneChart.onkeydown = (event) => {
+      const point = event.target.closest(".candidate-point-group");
+      if (point && (event.key === "Enter" || event.key === " ")) {
+        event.preventDefault();
+        activateParent(Number(point.dataset.candidateIndex));
+      }
+    };
+    activateParent(0, false);
+    addSelection("coarse", hierarchy[0].parent);
+    return;
+  }
+
+  drilldown.classList.add("is-hidden");
+  stageOneChart.innerHTML = "";
+  currentChildren = visibleCandidates;
+  renderCandidateChart(visibleCandidates, stageTwoChart);
+  renderCandidateRows(visibleCandidates);
+  bindCandidateRows(stageTwoChart, visibleCandidates, (candidate) => toggleSelection("refined", candidate));
+  if (visibleCandidates[0]?.monthly?.length) addSelection("refined", visibleCandidates[0]);
+}
+
+function renderCandidateChart(candidates, chart = $("candidateChart"), options = {}) {
+  if (!candidates.length) {
+    chart.innerHTML = "";
+    return;
+  }
+
+  const width = 860;
+  const height = 320;
+  const margin = { top: 22, right: 28, bottom: 58, left: 82 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const volumes = candidates.map((candidate) => Number(candidate.tesVolume) || 0);
+  const auxiliary = candidates.map((candidate) => Number(candidate.auxEnergy) || 0);
+  const collectorAreas = candidates.map((candidate) => Number(candidate.collectorArea) || 0);
+  const xUsesCollectorArea = options.xMetric === "collectorArea";
+  const xValues = xUsesCollectorArea ? collectorAreas : volumes;
+  const radiusValues = xUsesCollectorArea ? volumes : collectorAreas;
+  const xMinRaw = Math.min(...xValues);
+  const xMaxRaw = Math.max(...xValues);
+  const yMinRaw = Math.min(...auxiliary);
+  const yMaxRaw = Math.max(...auxiliary);
+  const xPadding = Math.max((xMaxRaw - xMinRaw) * 0.12, Math.max(xMaxRaw, 1) * 0.04);
+  const yPadding = Math.max((yMaxRaw - yMinRaw) * 0.14, Math.max(yMaxRaw, 1) * 0.025);
+  const xMin = Math.max(0, xMinRaw - xPadding);
+  const xMax = xMaxRaw + xPadding;
+  const yMin = Math.max(0, yMinRaw - yPadding);
+  const yMax = yMaxRaw + yPadding;
+  const radiusMin = Math.min(...radiusValues);
+  const radiusMax = Math.max(...radiusValues);
+  const xScale = (value) => margin.left + ((value - xMin) / Math.max(xMax - xMin, 1e-9)) * plotWidth;
+  const yScale = (value) => margin.top + plotHeight - ((value - yMin) / Math.max(yMax - yMin, 1e-9)) * plotHeight;
+  const radiusScale = (value) => 9 + ((value - radiusMin) / Math.max(radiusMax - radiusMin, 1e-9)) * 9;
+  const tickCount = 5;
+
+  const grid = Array.from({ length: tickCount }, (_, index) => {
+    const ratio = index / (tickCount - 1);
+    const x = margin.left + ratio * plotWidth;
+    const y = margin.top + ratio * plotHeight;
+    const xValue = xMin + ratio * (xMax - xMin);
+    const yValue = yMax - ratio * (yMax - yMin);
+    return `
+      <line class="grid-line" x1="${x}" y1="${margin.top}" x2="${x}" y2="${margin.top + plotHeight}" />
+      <line class="grid-line" x1="${margin.left}" y1="${y}" x2="${margin.left + plotWidth}" y2="${y}" />
+      <text x="${x}" y="${height - 34}" text-anchor="middle">${formatNumber(xValue, 1)}</text>
+      <text x="${margin.left - 12}" y="${y + 4}" text-anchor="end">${formatNumber(yValue / 1000, 1)}</text>
+    `;
+  }).join("");
+
+  const points = candidates.map((candidate, index) => {
+    const x = xScale(xUsesCollectorArea ? Number(candidate.collectorArea) || 0 : Number(candidate.tesVolume) || 0);
+    const y = yScale(Number(candidate.auxEnergy) || 0);
+    const radius = radiusScale(xUsesCollectorArea ? Number(candidate.tesVolume) || 0 : Number(candidate.collectorArea) || 0);
+    const stage = candidate.searchStage === "refined" ? "refined" : "coarse";
+    const stageLabel = stage === "refined" ? "2차 세분화" : "1차 세분화";
+    const pointClass = `candidate-point stage-${stage}${index === 0 ? " selected-design" : ""}`;
+    const description = `순위 ${index + 1}, ${stageLabel}: 집열기 ${formatNumber(candidate.collectorArea)} m², TES ${formatNumber(candidate.tesVolume, 1)} m³, 설계유량 ${formatNumber(candidate.tesDesignFlow || 0, 2)} m³/h, 보조열원 ${formatNumber(candidate.auxEnergy)} kWh`;
+    return `
+      <g class="candidate-point-group${index === 0 ? " active" : ""}" data-candidate-index="${index}" role="button" tabindex="0" aria-label="${description}">
+        <circle class="${pointClass}" cx="${x}" cy="${y}" r="${radius}"><title>${description}</title></circle>
+        <text class="point-rank" x="${x}" y="${y}">${index + 1}</text>
+      </g>
+    `;
+  }).join("");
+
+  chart.innerHTML = `
+    <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">
+      ${grid}
+      <line class="axis-line" x1="${margin.left}" y1="${margin.top + plotHeight}" x2="${margin.left + plotWidth}" y2="${margin.top + plotHeight}" />
+      <line class="axis-line" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${margin.top + plotHeight}" />
+      ${points}
+      <text class="axis-title" x="${margin.left + plotWidth / 2}" y="${height - 8}" text-anchor="middle">${xUsesCollectorArea ? "집열기 면적 (m²)" : "TES 용량 (m³)"}</text>
+      <text class="axis-title" x="18" y="${margin.top + plotHeight / 2}" text-anchor="middle" transform="rotate(-90 18 ${margin.top + plotHeight / 2})">보조열원 (MWh/선택기간)</text>
+    </svg>
+  `;
+}
+
+function renderBackendChart(monthly) {
+  $("monthlyChart").style.setProperty("--month-count", Math.max(monthly.length, 1));
+  const maxValue = Math.max(...monthly.map((item) => Math.max(item.load || 0, item.solar || 0, item.aux || 0)), 1);
+
+  $("monthlyChart").innerHTML = monthly
+    .map((item) => {
+      const loadHeight = clamp(((item.load || 0) / maxValue) * 210, 5, 210);
+      const solarHeight = clamp(((item.solar || 0) / maxValue) * 210, 5, 210);
+      return `
+        <div class="month-group">
+          <div class="bars">
+            <div class="bar need" style="height:${loadHeight}px" data-value="${formatNumber((item.load || 0) / 1000, 1)}"></div>
+            <div class="bar solar" style="height:${solarHeight}px" data-value="${formatNumber((item.solar || 0) / 1000, 1)}"></div>
+          </div>
+          <div class="month-label">${item.month}</div>
+        </div>
+      `;
+    })
+    .join("");
+  $("monthlyLegend").innerHTML = `<span><i style="background:var(--navy)"></i>재생열 요구량</span><span><i style="background:var(--amber)"></i>태양열 공급</span>`;
+}
+
+function renderPythonResult(result, input) {
+  const best = result.best;
+  renderValidityWarnings(result.warnings || empiricalWarnings(input));
+  renderMetrics(best, input);
+  renderBackendChart(result.monthly);
+  renderCities(input);
+  $("seasonSummary").textContent =
+    `Python 엔진 · 요구 재생열 ${formatNumber(best.regenNeed)} kWh · TES 공급 ${formatNumber(best.usefulSolar)} kWh · 커버율 ${formatNumber(best.collectorCoverage * 100, 1)} %`;
+  renderCandidates(result.candidates || [best], result.searchHierarchy || []);
+}
+
+function animateFlow() {
+  const cards = [...document.querySelectorAll(".flow-card")];
+  cards.forEach((card) => card.classList.remove("active"));
+  cards.forEach((card, index) => {
+    window.setTimeout(() => card.classList.add("active"), index * 90);
+  });
+}
+
+function estimateCalculation(input) {
+  const collectorRange = Math.abs(input.collectorMax - input.collectorMin);
+  const coarseCollectorCount = input.collectorMode === "fixed"
+    ? 1
+    : collectorRange < 1e-9
+      ? 1
+      : clamp(Math.ceil(collectorRange / 250) + 1, 9, 17);
+  const refinementCount = collectorRange > 500 && input.collectorMode !== "fixed" ? 12 : 0;
+  const collectorCount = coarseCollectorCount + refinementCount;
+  const candidateCount = collectorCount * 10 * 10;
+  const daysByMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  const weatherHours = input.simulationMonths.reduce((hours, month) => hours + daysByMonth[month - 1] * 24, 0);
+  const centerSeconds = 2 + candidateCount * 0.003 * Math.max(weatherHours / 4392, 0.08);
+  const lowSeconds = Math.max(3, Math.round(centerSeconds * 0.75));
+  const highSeconds = Math.max(lowSeconds + 2, Math.ceil(centerSeconds * 1.5));
+  return { candidateCount, weatherHours, lowSeconds, highSeconds };
+}
+
+function clearResultOutputs(message = "입력값을 확인한 뒤 계산을 실행하세요.") {
+  $("heroResultLabel").textContent = "계산 대기";
+  $("optimalDesign").textContent = "-";
+  $("designNote").textContent = message;
+  ["optimalCollector", "optimalTes", "optimalTesFlow", "solarShare", "auxEnergy", "unmetHours", "recommendedOps"]
+    .forEach((id) => { $(id).textContent = "-"; });
+  $("seasonSummary").textContent = message;
+  $("monthlyLegend").innerHTML = "";
+  $("monthlyChart").innerHTML = `<div class="result-empty">계산 후 월별 결과가 표시됩니다.</div>`;
+  $("cityList").innerHTML = `<div class="result-empty">계산 후 지역 비교가 표시됩니다.</div>`;
+  $("candidateChart").innerHTML = `<div class="result-empty">계산 후 Pareto 설계안이 표시됩니다.</div>`;
+  $("stageOneChart").innerHTML = "";
+  $("refinementDrilldown").classList.add("is-hidden");
+  $("candidateRows").innerHTML = `<tr class="empty-result-row"><td colspan="16">계산 결과가 없습니다.</td></tr>`;
+}
+
+function markResultsPending() {
+  const input = readInputs();
+  const validationMessages = validateDesignInputs(input);
+  renderCalculationIssues(validationMessages);
+  renderValidityWarnings(empiricalWarnings(input));
+  clearResultOutputs();
+  if (validationMessages.length > 0) {
+    $("statusPill").textContent = "입력 오류";
+    $("calculationTiming").textContent = "입력값 수정 필요";
+    return;
+  }
+  const estimate = estimateCalculation(input);
+  $("statusPill").textContent = "계산 필요";
+  $("calculationTiming").textContent =
+    `예상 ${estimate.lowSeconds}~${estimate.highSeconds}초 · ${formatNumber(estimate.candidateCount)}개 조합`;
+}
+
+function restoreCalculationInputs(input) {
+  Object.entries(input || {}).forEach(([key, value]) => {
+    const element = $(key);
+    if (element && element.type !== "file") {
+      element.value = value;
+    }
+  });
+  if (String(input?.weatherDataset || "").startsWith("uploaded:")) {
+    activeUploadDataset = input.weatherDataset;
+  }
+  setSelectedSimulationMonths(input?.simulationMonths || Array.from({ length: 12 }, (_, index) => index + 1));
+  updateAnalysisPeriodFields();
+  toggleWeatherModeFields();
+  toggleCoordinateFields(getCurrentWeatherDatasetKey());
+  toggleWeatherValueFields(getCurrentWeatherDatasetKey());
+  updateBuildingModeFields();
+}
+
+function runCalculation() {
+  const input = readInputs();
+  const validationMessages = validateDesignInputs(input);
+  renderCalculationIssues(validationMessages);
+  if (validationMessages.length > 0) {
+    $("statusPill").textContent = "입력 오류";
+    renderValidityWarnings(empiricalWarnings(input));
+    $("seasonSummary").textContent = validationMessages.join(" ");
+    return;
+  }
+
+  const estimate = estimateCalculation(input);
+  $("statusPill").textContent = "계산 중";
+  $("runButton").disabled = true;
+  $("runButton").textContent = "계산 중";
+  $("calculationTiming").textContent =
+    `예상 ${estimate.lowSeconds}~${estimate.highSeconds}초 · ${formatNumber(estimate.candidateCount)}개 조합`;
+  animateFlow();
+  $("calculationPayload").value = JSON.stringify(input);
+  window.setTimeout(() => $("calculationForm").submit(), 50);
+}
+
+function bindEvents() {
+  $("weatherInputMode").addEventListener("change", () => {
+    applyCurrentWeatherSelection();
+    loadWeatherTrend();
+    markResultsPending();
+  });
+  $("weatherDataset").addEventListener("change", (event) => {
+    applyWeatherDataset(event.target.value);
+    loadWeatherTrend();
+    markResultsPending();
+  });
+  $("analysisPeriodMode").addEventListener("change", () => {
+    updateAnalysisPeriodFields();
+    loadWeatherTrend();
+    markResultsPending();
+  });
+  monthCheckboxes().forEach((input) => input.addEventListener("change", () => {
+    updateAnalysisPeriodFields();
+    loadWeatherTrend();
+    markResultsPending();
+  }));
+  $("solarDataMode").addEventListener("change", () => {
+    const datasetKey = getCurrentWeatherDatasetKey();
+    toggleCoordinateFields(datasetKey);
+    toggleWeatherValueFields(datasetKey);
+    syncCoordinateWeather();
+    loadWeatherTrend();
+    markResultsPending();
+  });
+  $("latitude").addEventListener("input", () => {
+    syncCoordinateWeather();
+    loadWeatherTrend();
+    markResultsPending();
+  });
+  $("longitude").addEventListener("input", () => {
+    syncCoordinateWeather();
+    loadWeatherTrend();
+    markResultsPending();
+  });
+  $("buildingInputMode").addEventListener("change", () => {
+    applyBuildingSelection();
+    markResultsPending();
+  });
+  $("buildingUse").addEventListener("change", () => {
+    applyBuildingSelection();
+    markResultsPending();
+  });
+  $("buildingSize").addEventListener("change", () => {
+    applyBuildingSelection();
+    markResultsPending();
+  });
+  $("mallParking").addEventListener("change", () => {
+    applyBuildingSelection();
+    markResultsPending();
+  });
+  $("weatherUpload").addEventListener("change", uploadWeatherFile);
+  $("loadUpload").addEventListener("change", stageLoadFile);
+  $("runButton").addEventListener("click", runCalculation);
+  $("resetButton").addEventListener("click", () => {
+    setDefaults();
+    markResultsPending();
+  });
+  fields.forEach((field) => {
+    $(field).addEventListener("input", markResultsPending);
+  });
+}
+
+const calculationBootstrap = window.__CALCULATION_BOOTSTRAP__;
+setDefaults();
+if (calculationBootstrap?.input) {
+  restoreCalculationInputs(calculationBootstrap.input);
+}
+bindEvents();
+loadWeatherTrend();
+if (calculationBootstrap) {
+  window.history.replaceState({}, "", "/");
+  const input = readInputs();
+  const estimate = estimateCalculation(input);
+  if (calculationBootstrap.error) {
+    const message = `계산 실패 · ${calculationBootstrap.error}`;
+    clearResultOutputs(message);
+    $("statusPill").textContent = "계산 실패";
+    $("calculationTiming").textContent =
+      `실제 ${formatNumber(calculationBootstrap.elapsedSeconds || 0, 1)}초 후 중단`;
+  } else {
+    renderCalculationIssues([]);
+    renderPythonResult(calculationBootstrap.result, input);
+    $("statusPill").textContent = "계산 완료";
+    $("calculationTiming").textContent =
+      `실제 ${formatNumber(calculationBootstrap.elapsedSeconds || 0, 1)}초 · ${formatNumber(calculationBootstrap.result.best.evaluatedDesignCombinations || estimate.candidateCount)}개 조합 × 약 ${formatNumber(estimate.weatherHours)}시간`;
+  }
+} else {
+  markResultsPending();
+}

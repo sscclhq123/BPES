@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1080" viewBox="0 0 1800 1080" role="img" aria-labelledby="title desc">
+  <title id="title">Solar-assisted liquid desiccant system design process</title>
+  <desc id="desc">Process diagram for sizing collector area and thermal storage volume from building inputs, weather data, target supply absolute humidity, and airflow.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f7f9fb; }
+      .title { fill: #172033; font-family: Arial, Helvetica, sans-serif; font-size: 46px; font-weight: 700; }
+      .subtitle { fill: #5d6b7c; font-family: Arial, Helvetica, sans-serif; font-size: 22px; }
+      .band-label { fill: #ffffff; font-family: Arial, Helvetica, sans-serif; font-size: 24px; font-weight: 700; letter-spacing: .5px; }
+      .node-title { fill: #172033; font-family: Arial, Helvetica, sans-serif; font-size: 24px; font-weight: 700; }
+      .node-text { fill: #405064; font-family: Arial, Helvetica, sans-serif; font-size: 18px; }
+      .small { fill: #5d6b7c; font-family: Arial, Helvetica, sans-serif; font-size: 16px; }
+      .node { fill: #ffffff; stroke: #cfd9e6; stroke-width: 2; rx: 18; }
+      .input { fill: #eef6ff; stroke: #6aa0d8; }
+      .calc { fill: #f3fbf8; stroke: #4f9b80; }
+      .opt { fill: #fff7eb; stroke: #d89a42; }
+      .out { fill: #f5f1ff; stroke: #8a78ca; }
+      .band-input { fill: #2f6f9f; }
+      .band-calc { fill: #2f7b66; }
+      .band-opt { fill: #a76720; }
+      .band-out { fill: #6557a6; }
+      .arrow { fill: none; stroke: #637388; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrowhead); }
+      .soft-arrow { fill: none; stroke: #9aa8b8; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 8 9; marker-end: url(#arrowhead-soft); }
+      .note { fill: #fffef8; stroke: #e3c77d; stroke-width: 2; rx: 14; }
+    </style>
+    <marker id="arrowhead" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#637388"/>
+    </marker>
+    <marker id="arrowhead-soft" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#9aa8b8"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1800" height="1080"/>
+  <text class="title" x="90" y="88">Solar-assisted LD system sizing workflow</text>
+  <text class="subtitle" x="90" y="126">LD-only design tool for required regeneration heat, solar collector area, cover ratio, and TES sizing</text>
+
+  <rect class="band-input" x="90" y="170" width="340" height="54" rx="14"/>
+  <text class="band-label" x="126" y="205">INPUTS</text>
+  <rect class="band-calc" x="520" y="170" width="590" height="54" rx="14"/>
+  <text class="band-label" x="556" y="205">HOURLY LD + SOLAR CALCULATION</text>
+  <rect class="band-opt" x="1200" y="170" width="250" height="54" rx="14"/>
+  <text class="band-label" x="1235" y="205">OPTIMIZATION</text>
+  <rect class="band-out" x="1530" y="170" width="180" height="54" rx="14"/>
+  <text class="band-label" x="1572" y="205">OUTPUTS</text>
+
+  <rect class="node input" x="90" y="270" width="340" height="170" rx="18"/>
+  <text class="node-title" x="120" y="318">Building / schedule</text>
+  <text class="node-text" x="120" y="355">• Footprint area</text>
+  <text class="node-text" x="120" y="384">• Gross floor area</text>
+  <text class="node-text" x="120" y="413">• Parking / outdoor area</text>
+  <text class="small" x="120" y="436">Use type defines operating schedule</text>
+
+  <rect class="node input" x="90" y="500" width="340" height="150" rx="18"/>
+  <text class="node-title" x="120" y="548">Supply air target</text>
+  <text class="node-text" x="120" y="586">• Target absolute humidity</text>
+  <text class="node-text" x="120" y="615">• Supply airflow rate</text>
+
+  <rect class="node input" x="90" y="710" width="340" height="150" rx="18"/>
+  <text class="node-title" x="120" y="758">Candidate variables</text>
+  <text class="node-text" x="120" y="796">• Collector area range</text>
+  <text class="node-text" x="120" y="825">• TES volume range</text>
+
+  <rect class="node calc" x="520" y="270" width="270" height="160" rx="18"/>
+  <text class="node-title" x="550" y="318">City weather data</text>
+  <text class="node-text" x="550" y="356">Hourly T, RH, irradiance</text>
+  <text class="small" x="550" y="392">Evaluate multiple cities</text>
+
+  <rect class="node calc" x="840" y="270" width="270" height="160" rx="18"/>
+  <text class="node-title" x="870" y="318">Latent load</text>
+  <text class="node-text" x="870" y="356">Outdoor w − target w</text>
+  <text class="node-text" x="870" y="385">× airflow × schedule</text>
+
+  <rect class="node calc" x="520" y="520" width="270" height="160" rx="18"/>
+  <text class="node-title" x="550" y="568">LD absorber</text>
+  <text class="node-text" x="550" y="606">Moisture removal rate</text>
+  <text class="node-text" x="550" y="635">Solution dilution</text>
+
+  <rect class="node calc" x="840" y="520" width="270" height="160" rx="18"/>
+  <text class="node-title" x="870" y="568">Regenerator heat</text>
+  <text class="node-text" x="870" y="606">Heat required to restore</text>
+  <text class="node-text" x="870" y="635">solution concentration</text>
+
+  <rect class="node calc" x="670" y="760" width="290" height="120" rx="18"/>
+  <text class="node-title" x="700" y="806">Single solution tank</text>
+  <text class="node-text" x="700" y="844">One mixed concentration</text>
+  <text class="node-text" x="700" y="873">and one mixed temperature</text>
+
+  <rect class="node opt" x="1200" y="300" width="250" height="170" rx="18"/>
+  <text class="node-title" x="1230" y="348">Solar collector</text>
+  <text class="node-text" x="1230" y="386">Useful heat output</text>
+  <text class="node-text" x="1230" y="415">Required area</text>
+
+  <rect class="node opt" x="1200" y="560" width="250" height="170" rx="18"/>
+  <text class="node-title" x="1230" y="608">TES sizing</text>
+  <text class="node-text" x="1230" y="646">Minimize auxiliary heat</text>
+  <text class="node-text" x="1230" y="675">and tank oversizing</text>
+
+  <rect class="node out" x="1530" y="275" width="220" height="185" rx="18"/>
+  <text class="node-title" x="1560" y="323">Collector result</text>
+  <text class="node-text" x="1560" y="361">Required area</text>
+  <text class="node-text" x="1560" y="390">Available area</text>
+  <text class="node-text" x="1560" y="419">Cover ratio</text>
+
+  <rect class="node out" x="1530" y="540" width="220" height="185" rx="18"/>
+  <text class="node-title" x="1560" y="588">TES result</text>
+  <text class="node-text" x="1560" y="626">Recommended volume</text>
+  <text class="node-text" x="1560" y="655">Auxiliary heat</text>
+  <text class="node-text" x="1560" y="684">Unmet / dump heat</text>
+
+  <rect class="note" x="1140" y="815" width="530" height="110" rx="14"/>
+  <text class="node-title" x="1170" y="860">Objective function to be finalized</text>
+  <text class="node-text" x="1170" y="896">Candidate terms: auxiliary energy, TES volume, dump heat, cover ratio</text>
+
+  <path class="arrow" d="M430 355 H520"/>
+  <path class="arrow" d="M790 350 H840"/>
+  <path class="arrow" d="M1110 350 H1200"/>
+  <path class="arrow" d="M1450 385 H1530"/>
+
+  <path class="arrow" d="M430 575 C470 575, 480 350, 520 350"/>
+  <path class="arrow" d="M790 600 H840"/>
+  <path class="arrow" d="M975 430 V520"/>
+  <path class="arrow" d="M1110 600 C1160 600, 1160 385, 1200 385"/>
+  <path class="arrow" d="M1110 600 H1200"/>
+  <path class="arrow" d="M1450 645 H1530"/>
+
+  <path class="soft-arrow" d="M655 680 C655 735, 700 750, 760 760"/>
+  <path class="soft-arrow" d="M975 680 C975 735, 920 750, 860 760"/>
+  <path class="soft-arrow" d="M960 820 C1050 820, 1120 705, 1200 660"/>
+  <path class="soft-arrow" d="M430 785 C700 970, 1060 930, 1200 675"/>
+</svg>

@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Solar-Assisted Liquid Desiccant Optimization Program</title>
+    <link rel="stylesheet" href="./styles.css?v=20260802-2" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Solar Liquid Desiccant System Design Studio</p>
+          <h1>Solar-Assisted Liquid Desiccant Optimization Program</h1>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-button" id="resetButton" title="기본값 복원" aria-label="기본값 복원">
+            <span aria-hidden="true">↺</span>
+          </button>
+          <button class="primary-button" id="runButton">계산 실행</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="input-panel" aria-label="입력값">
+          <section class="panel-section">
+            <div class="section-title">
+              <span class="section-index">1</span>
+              <h2>지역 / 기상조건</h2>
+            </div>
+            <label>
+              기상 입력 방식
+              <select id="weatherInputMode">
+                <option value="standard">표준 기상 데이터</option>
+                <option value="upload">개인 기상데이터 업로드</option>
+              </select>
+            </label>
+            <div class="conditional-fields" id="standardWeatherBox">
+              <label>
+                표준 기상 데이터
+                <select id="weatherDataset">
+                  <option value="seoul_epw">서울 TMYx EPW · 2011-2025</option>
+                  <option value="bangkok_tmy">방콕 TMY3 · 고온다습</option>
+                  <option value="manila_tmy">마닐라 TMY3 · 해양성 고습</option>
+                </select>
+              </label>
+            </div>
+            <div class="dataset-note" id="weatherNote">-</div>
+            <label>
+              분석 기간
+              <select id="analysisPeriodMode">
+                <option value="annual">1년 전체</option>
+                <option value="custom">월별 다중선택</option>
+              </select>
+            </label>
+            <fieldset class="month-selector is-hidden" id="monthSelector">
+              <legend>계산할 월</legend>
+              <div class="month-check-grid">
+                <label><input type="checkbox" value="1" />1월</label>
+                <label><input type="checkbox" value="2" />2월</label>
+                <label><input type="checkbox" value="3" />3월</label>
+                <label><input type="checkbox" value="4" />4월</label>
+                <label><input type="checkbox" value="5" />5월</label>
+                <label><input type="checkbox" value="6" />6월</label>
+                <label><input type="checkbox" value="7" />7월</label>
+                <label><input type="checkbox" value="8" />8월</label>
+                <label><input type="checkbox" value="9" />9월</label>
+                <label><input type="checkbox" value="10" />10월</label>
+                <label><input type="checkbox" value="11" />11월</label>
+                <label><input type="checkbox" value="12" />12월</label>
+              </div>
+              <p id="selectedMonthSummary">1~12월 전체</p>
+            </fieldset>
+            <div class="upload-box conditional-fields is-hidden" id="weatherUploadBox">
+              <label>
+                업로드 파일의 일사데이터
+                <select id="solarDataMode">
+                  <option value="has_solar">일사데이터 있음</option>
+                  <option value="missing_solar">일사데이터 없음 · 위도/경도 Sky model 사용</option>
+                </select>
+              </label>
+              <label>
+                개인 기상데이터 업로드
+                <input id="weatherUpload" type="file" accept=".csv,.txt,.xls,.epw" />
+              </label>
+              <p id="weatherUploadStatus">ASOS 탭/CSV 형식은 바로 미리보기와 계산에 연결됩니다. EPW 파서는 다음 단계에서 추가됩니다.</p>
+            </div>
+            <div class="two-col conditional-fields" id="coordinateFields">
+              <label>
+                위도
+                <span class="unit-input"><input id="latitude" type="number" min="-90" max="90" step="0.01" /><span>°</span></span>
+              </label>
+              <label>
+                경도
+                <span class="unit-input"><input id="longitude" type="number" min="-180" max="180" step="0.01" /><span>°</span></span>
+              </label>
+            </div>
+            <div class="dataset-note secondary-note" id="weatherValueNote">선택한 기상 데이터에서 읽은 대표값입니다.</div>
+            <div class="two-col weather-value-fields" id="weatherValueFields">
+              <label>
+                대표 외기온도
+                <span class="unit-input"><input id="outdoorTemp" type="number" min="10" max="45" step="0.5" readonly /><span>°C</span></span>
+              </label>
+              <label>
+                대표 상대습도
+                <span class="unit-input"><input id="humidity" type="number" min="20" max="100" step="1" readonly /><span>%</span></span>
+              </label>
+            </div>
+            <label>
+              대표 일사량
+              <span class="unit-input"><input id="irradiance" type="number" min="2" max="7" step="0.1" readonly /><span>kWh/m²·day</span></span>
+            </label>
+            <div class="weather-trend">
+              <div class="mini-chart-header">
+                <strong>기상 추세</strong>
+                <span id="weatherTrendStatus">대표 월별값</span>
+              </div>
+              <div class="mini-line-chart" id="weatherTrendChart" aria-label="기상 월별 추세"></div>
+              <div class="mini-legend">
+                <span><i class="legend-temp"></i>외기온도</span>
+                <span><i class="legend-rh"></i>상대습도</span>
+                <span><i class="legend-solar"></i>일사량</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel-section">
+            <div class="section-title">
+              <span class="section-index">2</span>
+              <h2>건물 / 적용공간</h2>
+            </div>
+            <label id="buildingInputModeField">
+              건물 입력 방식
+              <select id="buildingInputMode">
+                <option value="template">표준 건물 모델</option>
+                <option value="custom">사용자 건물 정보 입력</option>
+                <option value="load_upload">시간별 부하 데이터 업로드</option>
+              </select>
+            </label>
+            <div class="conditional-fields" id="buildingTemplateBox">
+              <div class="two-col">
+                <label id="buildingUseField">
+                  <span id="buildingUseLabel">용도</span>
+                  <select id="buildingUse">
+                    <option value="office">오피스</option>
+                    <option value="mall">쇼핑몰</option>
+                    <option value="residential">주택</option>
+                    <option value="hospital">병원</option>
+                    <option value="factory">공장/산업시설</option>
+                    <option value="agriculture">농업시설</option>
+                  </select>
+                </label>
+                <label id="buildingSizeField">
+                  크기
+                  <select id="buildingSize">
+                    <option value="small">소형</option>
+                    <option value="medium">중형</option>
+                    <option value="large">대형</option>
+                  </select>
+                </label>
+              </div>
+              <label id="mallParkingBox">
+                주차장/옥외공간 태양열 집열기 활용
+                <select id="mallParking">
+                  <option value="no">활용 안 함</option>
+                  <option value="yes">활용함</option>
+                </select>
+              </label>
+            </div>
+            <div class="upload-box conditional-fields is-hidden" id="loadUploadBox">
+              <label>
+                기타 건물 시간별 부하 데이터
+                <input id="loadUpload" type="file" accept=".csv,.xlsx,.xls" />
+              </label>
+              <p id="loadUploadStatus">Excel/CSV 권장 컬럼: datetime, sensible_load_kW, latent_load_kW, outdoor_airflow_m3h</p>
+            </div>
+            <input id="loadDataset" type="hidden" value="office_medium" />
+            <div class="dataset-note" id="loadNote">-</div>
+            <div class="dataset-note secondary-note" id="buildingValueNote">표준 건물 모델에서 불러온 대표 입력값입니다.</div>
+            <div id="spaceSizeFields">
+              <label>
+                건축면적
+                <span class="unit-input"><input id="buildingArea" type="number" min="10" max="50000" step="10" /><span>m²</span></span>
+              </label>
+            </div>
+            <div class="two-col">
+              <label>
+                주차장 면적
+                <span class="unit-input"><input id="parkingArea" type="number" min="0" max="200000" step="10" /><span>m²</span></span>
+              </label>
+              <label>
+                스케줄
+                <select id="operationHours">
+                  <option value="9">09:00-18:00</option>
+                  <option value="12">09:00-21:00</option>
+                  <option value="24">24시간</option>
+                </select>
+              </label>
+            </div>
+            <div class="two-col">
+              <label>
+                목표 급기 절대습도
+                <span class="unit-input"><input id="targetAbsHumidity" type="number" min="4" max="20" step="0.1" /><span>g/kg</span></span>
+              </label>
+              <label id="airflowField">
+                처리풍량
+                <span class="unit-input"><input id="airflow" type="number" min="100" max="50000" step="100" /><span>m³/h</span></span>
+              </label>
+            </div>
+          </section>
+
+          <section class="panel-section">
+            <div class="section-title">
+              <span class="section-index">3</span>
+              <h2>LD 운전조건</h2>
+            </div>
+            <div class="two-col">
+              <label>
+                용액 농도
+                <span class="unit-input"><input id="solutionConcentration" type="number" min="36.4" max="39" step="0.1" /><span>%</span></span>
+              </label>
+              <label>
+                L/G
+                <span class="unit-input"><input id="lgRatio" type="number" min="1.09" max="2" step="0.01" /><span>-</span></span>
+              </label>
+            </div>
+            <div class="two-col">
+              <label>
+                제습부 입구 용액 목표온도
+                <span class="unit-input"><input id="absSolutionTemp" type="number" min="8.05" max="31.4" step="0.1" /><span>°C</span></span>
+              </label>
+              <label>
+                재생기 입구 용액 목표온도
+                <span class="unit-input"><input id="regenTemp" type="number" min="48.5" max="59.4" step="0.1" /><span>°C</span></span>
+              </label>
+            </div>
+            <label>
+              집열기 종류
+              <select id="collectorType">
+                <option value="evacuated">진공관형</option>
+                <option value="flat">평판형</option>
+              </select>
+            </label>
+            <div class="optimizer-controls">
+              <label class="mode-row">
+                <span>용액 농도</span>
+                <select id="solutionMode">
+                  <option value="optimize">최적화</option>
+                  <option value="fixed">입력값 고정</option>
+                </select>
+              </label>
+              <label class="mode-row">
+                <span>L/G</span>
+                <select id="lgMode">
+                  <option value="optimize">최적화</option>
+                  <option value="fixed">입력값 고정</option>
+                </select>
+              </label>
+              <label class="mode-row">
+                <span>재생기 용액온도</span>
+                <select id="regenMode">
+                  <option value="optimize">최적화</option>
+                  <option value="fixed">입력값 고정</option>
+                </select>
+              </label>
+            </div>
+            <div class="validity-panel" id="validityPanel">
+              <strong>실험식 권장 범위</strong>
+              <p>Park 흡수기: LiCl 36.4~39.0 %, 용액 8.05~31.40 °C, 모듈당 공기 0.15~0.73 kg/s, 용액 0.63~2.08 kg/s. 흡수기 유효도는 제공된 MATLAB 코드와 동일하게 0.70 초과 시 0.69로 치환합니다. 재생기: LiCl 23.7~40.7 %, 용액 48.5~59.4 °C, 모듈당 공기 0.24~0.40 kg/s, 용액 0.26~0.48 kg/s.</p>
+              <ul id="validityWarnings"></ul>
+            </div>
+          </section>
+
+          <section class="panel-section">
+            <div class="section-title">
+              <span class="section-index">4</span>
+              <h2>집열기 후보 / TES 자동 산정</h2>
+            </div>
+            <div class="range-row" id="collectorRangeInputs">
+              <label>
+                집열기 최소
+                <span class="unit-input"><input id="collectorMin" type="number" min="5" max="500" step="5" /><span>m²</span></span>
+              </label>
+              <label>
+                집열기 최대
+                <span class="unit-input"><input id="collectorMax" type="number" min="10" max="1000" step="5" /><span>m²</span></span>
+              </label>
+            </div>
+            <div class="range-row">
+              <label>
+                TES 공급수온도
+                <span class="unit-input"><input id="tesSupplyTemp" type="number" min="45" max="95" step="1" /><span>°C</span></span>
+              </label>
+              <label>
+                TES 환수온도
+                <span class="unit-input"><input id="tesReturnTemp" type="number" min="25" max="70" step="1" /><span>°C</span></span>
+              </label>
+              <label>
+                TES 설계 여유율
+                <span class="unit-input"><input id="tesDesignMargin" type="number" min="0" max="50" step="1" /><span>%</span></span>
+              </label>
+            </div>
+            <div class="range-row">
+              <label>
+                TES 초기온도
+                <span class="unit-input"><input id="tesInitialTemp" type="number" min="0" max="95" step="1" /><span>°C</span></span>
+              </label>
+              <label>
+                단열재 열전도율
+                <span class="unit-input"><input id="tesInsulationK" type="number" min="0.005" max="0.2" step="0.001" /><span>W/m·K</span></span>
+              </label>
+            </div>
+            <div class="dataset-note secondary-note" id="tesSizingNote">수직 원통형 탱크(H/D=2)의 용량별 표면적과 1차원 단열 전도저항으로 UA를 산정합니다. 경질 우레탄폼 0.023 W/m·K와 상용 버퍼탱크 기준 단열 100 mm를 적용합니다.</div>
+            <div class="optimizer-controls">
+              <label class="mode-row">
+                <span>집열기 면적</span>
+                <select id="collectorMode">
+                  <option value="optimize">최적화</option>
+                  <option value="fixed">최소값 고정</option>
+                </select>
+              </label>
+            </div>
+          </section>
+        </aside>
+
+        <section class="engine-panel" aria-label="계산 및 최적화 엔진">
+          <div class="engine-header">
+            <div>
+              <p class="eyebrow">Calculation & Optimization Engine</p>
+              <h2>프로그램 프로세스 다이어그램</h2>
+            </div>
+            <div class="engine-status">
+              <span class="status-pill" id="statusPill">계산 필요</span>
+              <span class="calculation-timing" id="calculationTiming">-</span>
+            </div>
+          </div>
+
+          <div class="calculation-issue-panel is-hidden" id="calculationIssuePanel" aria-live="polite">
+            <strong>계산 오류 사유</strong>
+            <ul id="calculationIssues"></ul>
+          </div>
+
+          <div class="flow-grid" id="flowGrid">
+            <article class="flow-card active">
+              <span>1</span>
+              <div>
+                <strong>기상데이터 처리</strong>
+                <p>사전 등록 EPW/TMY 또는 좌표 기반 일사량 선택</p>
+              </div>
+            </article>
+            <article class="flow-card">
+              <span>2</span>
+              <div>
+                <strong>건물 외기 잠열부하</strong>
+                <p>용도별 스케줄, 목표 급기 절대습도, 처리풍량, 외기 조건으로 시간별 제습부하 산정</p>
+              </div>
+            </article>
+            <article class="flow-card">
+              <span>3</span>
+              <div>
+                <strong>LD 제습 성능</strong>
+                <p>흡수기 실험식으로 시간별 수분 제거량과 용액 농도 변화를 계산</p>
+              </div>
+            </article>
+            <article class="flow-card">
+              <span>4</span>
+              <div>
+                <strong>태양열 집열기</strong>
+                <p>필요 집열면적과 설치가능 면적 대비 커버율 산정</p>
+              </div>
+            </article>
+            <article class="flow-card">
+              <span>5</span>
+              <div>
+                <strong>축열조 열수지</strong>
+                <p>시간별 집열, 직접공급, 충방전, 유량한계와 UA 열손실 계산</p>
+              </div>
+            </article>
+            <article class="flow-card">
+              <span>6</span>
+              <div>
+                <strong>반복 최적화</strong>
+                <p>집열면적, TES 용량과 설계유량의 Pareto 절충안 도출</p>
+              </div>
+            </article>
+          </div>
+
+          <div class="analysis-grid">
+            <section class="chart-panel">
+              <div class="panel-heading">
+                <h3>월별 재생열 요구량 및 태양열 공급</h3>
+                <p id="seasonSummary">-</p>
+              </div>
+              <div id="monthlyLegend" class="monthly-comparison-legend"></div>
+              <div class="bar-chart" id="monthlyChart" aria-label="월별 에너지 차트"></div>
+            </section>
+            <section class="map-panel">
+              <div class="panel-heading">
+                <h3>지역별 적용 가능성</h3>
+                <p>기후 대표값 기반 예비 비교 · 12개국</p>
+              </div>
+              <div class="city-list" id="cityList"></div>
+            </section>
+          </div>
+
+          <section class="comparison-panel">
+            <div class="panel-heading">
+              <h3>설계안 비교</h3>
+              <p>1차 면적 후보를 선택하면 해당 구간의 2차 세분화 결과가 표시됩니다.</p>
+            </div>
+            <div id="refinementDrilldown" class="refinement-drilldown is-hidden">
+              <div class="refinement-heading">
+                <div>
+                  <strong>1차 세분화</strong>
+                  <span>유망한 집열기 면적 후보</span>
+                </div>
+                <span id="selectionStatus">점을 선택해 비교에 추가</span>
+              </div>
+              <div id="stageOneChart" class="candidate-chart stage-one-chart" role="group" aria-label="1차 집열기 면적 후보 비교 그래프"></div>
+              <div class="refinement-heading stage-two-heading">
+                <div>
+                  <strong id="stageTwoTitle">2차 세분화</strong>
+                  <span id="stageTwoNote">1차 후보 주변의 상세 설계안</span>
+                </div>
+              </div>
+            </div>
+            <div class="candidate-chart-wrap">
+              <div class="candidate-chart-legend">
+                <span><i class="legend-selected"></i>구간 추천안</span>
+                <span><i class="legend-coarse"></i>1차 세분화</span>
+                <span><i class="legend-refined"></i>2차 세분화</span>
+                <span>점 크기: 집열기 면적</span>
+              </div>
+              <div id="candidateChart" class="candidate-chart" role="group" aria-label="TES 용량과 보조열원 사용량에 따른 설계 후보 비교 그래프"></div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>순위</th>
+                    <th>탐색 단계</th>
+                    <th>집열기</th>
+                    <th>축열조</th>
+                    <th>TES 유량</th>
+                    <th>TES UA</th>
+                    <th>TES 손실</th>
+                    <th>TES 폐기열</th>
+                    <th>농도</th>
+                    <th>L/G</th>
+                    <th>제습부 용액온도</th>
+                    <th>재생기 용액온도</th>
+                    <th>커버율</th>
+                    <th>보조열원</th>
+                    <th>미충족</th>
+                    <th>Pareto 거리</th>
+                  </tr>
+                </thead>
+                <tbody id="candidateRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <aside class="result-panel" aria-label="출력 결과">
+          <div class="result-header">
+            <p class="eyebrow">Output Results</p>
+            <h2>출력 결과</h2>
+          </div>
+
+          <div class="hero-result">
+            <p id="heroResultLabel">최적 설계안</p>
+            <strong id="optimalDesign">-</strong>
+            <span id="designNote">-</span>
+          </div>
+
+          <div class="metric-list">
+            <article class="metric-card">
+              <span class="metric-icon">A</span>
+              <div>
+                <p>집열 요구면적</p>
+                <strong id="optimalCollector">-</strong>
+              </div>
+            </article>
+            <article class="metric-card">
+              <span class="metric-icon">V</span>
+              <div>
+                <p>최적 축열조 용량</p>
+                <strong id="optimalTes">-</strong>
+              </div>
+            </article>
+            <article class="metric-card">
+              <span class="metric-icon">F</span>
+              <div>
+                <p>최적 TES 설계유량</p>
+                <strong id="optimalTesFlow">-</strong>
+              </div>
+            </article>
+            <article class="metric-card">
+              <span class="metric-icon">S</span>
+              <div>
+                <p>집열판 커버율</p>
+                <strong id="solarShare">-</strong>
+              </div>
+            </article>
+            <article class="metric-card">
+              <span class="metric-icon">Q</span>
+              <div>
+                <p>보조열원 사용량</p>
+                <strong id="auxEnergy">-</strong>
+              </div>
+            </article>
+            <article class="metric-card">
+              <span class="metric-icon">T</span>
+              <div>
+                <p>목표습도 미충족</p>
+                <strong id="unmetHours">-</strong>
+              </div>
+            </article>
+            <article class="metric-card">
+              <span class="metric-icon">R</span>
+              <div>
+                <p>추천 운전조건</p>
+                <strong id="recommendedOps">-</strong>
+              </div>
+            </article>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <form id="calculationForm" method="post" action="/calculate" class="is-hidden">
+      <input id="calculationPayload" name="payload" type="hidden" />
+    </form>
+    <script>window.__CALCULATION_BOOTSTRAP__ = null;</script>
+    <script src="./app.js?v=20260802-20"></script>
+  </body>
+</html>
