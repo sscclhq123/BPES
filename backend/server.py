@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import re
 import socket
 import sys
@@ -28,7 +29,7 @@ from solar_ld_engine import (  # noqa: E402
 
 
 DEFAULT_WEATHER = ROOT.parent / "KOR_SO_Seoul.WS.471080_TMYx.2011-2025.epw"
-UPLOAD_DIR = ROOT / "data" / "weather" / "uploads"
+UPLOAD_DIR = Path("/tmp/bpes-weather-uploads") if os.environ.get("VERCEL") else ROOT / "data" / "weather" / "uploads"
 
 
 def clean_value(value):
