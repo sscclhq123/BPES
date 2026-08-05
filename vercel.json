@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 300,
+      "excludeFiles": "{backend/test_*.py,backend/outputs/**,backend/outputs_check/**,figures/**,GPT_WORK_HANDOFF.md}"
+    }
+  },
+  "rewrites": [
+    { "source": "/calculate", "destination": "/api/index.py?route=calculate" },
+    { "source": "/api/:path*", "destination": "/api/index.py?route=:path*" }
+  ]
+}
