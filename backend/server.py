@@ -28,8 +28,10 @@ from solar_ld_engine import (  # noqa: E402
 )
 
 
-DEFAULT_WEATHER = ROOT.parent / "KOR_SO_Seoul.WS.471080_TMYx.2011-2025.epw"
 UPLOAD_DIR = Path("/tmp/bpes-weather-uploads") if os.environ.get("VERCEL") else ROOT / "data" / "weather" / "uploads"
+DEFAULT_WEATHER = ROOT.parent / "KOR_SO_Seoul.WS.471080_TMYx.2011-2025.epw"
+if not DEFAULT_WEATHER.exists():
+    DEFAULT_WEATHER = ROOT / "data" / "weather" / "uploads" / "OBS_ASOS_TIM_20260403023410.xls"
 
 
 def clean_value(value):
