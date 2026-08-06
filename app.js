@@ -135,18 +135,20 @@ const weatherDatasets = {
 };
 
 const comparisonRegions = {
-  seoul_epw: { label: "서울 · 대한민국", humidity: 66, irradiance: 4.9, latitude: 37.56, suitability: 64 },
-  tokyo: { label: "도쿄 · 일본", humidity: 68, irradiance: 4.4, latitude: 35.68, suitability: 67 },
-  beijing: { label: "베이징 · 중국", humidity: 53, irradiance: 5.0, latitude: 39.90, suitability: 58 },
-  bangkok_tmy: { label: "방콕 · 태국", humidity: 78, irradiance: 5.1, latitude: 13.75, suitability: 87 },
-  singapore: { label: "싱가포르 · 싱가포르", humidity: 82, irradiance: 4.6, latitude: 1.35, suitability: 90 },
-  manila_tmy: { label: "마닐라 · 필리핀", humidity: 81, irradiance: 4.8, latitude: 14.60, suitability: 83 },
-  new_delhi: { label: "뉴델리 · 인도", humidity: 62, irradiance: 5.5, latitude: 28.61, suitability: 76 },
-  dubai: { label: "두바이 · UAE", humidity: 58, irradiance: 6.0, latitude: 25.20, suitability: 70 },
-  cairo: { label: "카이로 · 이집트", humidity: 55, irradiance: 6.1, latitude: 30.04, suitability: 61 },
-  madrid: { label: "마드리드 · 스페인", humidity: 50, irradiance: 5.3, latitude: 40.42, suitability: 55 },
-  sydney: { label: "시드니 · 호주", humidity: 65, irradiance: 5.2, latitude: -33.87, suitability: 62 },
-  miami: { label: "마이애미 · 미국", humidity: 76, irradiance: 5.4, latitude: 25.76, suitability: 84 },
+  seoul_epw: { label: "서울 · 대한민국", humidity: 65.7, irradiance: 4.91, latitude: 37.5714, suitability: 64 },
+  daejeon_tmyx: { label: "대전 · 대한민국", humidity: 69.1, irradiance: 4.93, latitude: 36.3719, suitability: 66 },
+  busan_tmyx: { label: "부산 · 대한민국", humidity: 65.7, irradiance: 5.04, latitude: 35.1047, suitability: 68 },
+  gwangju_tmyx: { label: "광주 · 대한민국", humidity: 70.1, irradiance: 5.02, latitude: 35.1731, suitability: 69 },
+  daegu_tmyx: { label: "대구 · 대한민국", humidity: 63.5, irradiance: 4.87, latitude: 35.8283, suitability: 64 },
+  incheon_tmyx: { label: "인천 · 대한민국", humidity: 71.6, irradiance: 4.94, latitude: 37.4778, suitability: 68 },
+  jeju_tmyx: { label: "제주 · 대한민국", humidity: 70.8, irradiance: 4.76, latitude: 33.5142, suitability: 73 },
+  manila_tmy: { label: "마닐라 · 필리핀", humidity: 77.6, irradiance: 6.15, latitude: 14.509, suitability: 85 },
+  cebu_tmyx: { label: "세부 · 필리핀", humidity: 79.8, irradiance: 6.66, latitude: 10.3224, suitability: 88 },
+  bangkok_tmy: { label: "방콕 · 태국", humidity: 72.4, irradiance: 6.71, latitude: 13.7264, suitability: 87 },
+  chiang_mai_tmyx: { label: "치앙마이 · 태국", humidity: 68.4, irradiance: 6.42, latitude: 18.7714, suitability: 81 },
+  singapore_tmyx: { label: "싱가포르 · 싱가포르", humidity: 80.0, irradiance: 6.39, latitude: 1.3678, suitability: 90 },
+  amsterdam_tmyx: { label: "암스테르담 · 네덜란드", humidity: 79.9, irradiance: 3.03, latitude: 52.3172, suitability: 42 },
+  rotterdam_tmyx: { label: "로테르담 · 네덜란드", humidity: 79.6, irradiance: 3.05, latitude: 51.9606, suitability: 43 },
 };
 
 const loadDatasets = {
@@ -1027,7 +1029,7 @@ function renderCities(input) {
       const solarFit = clamp((city.irradiance / 5.2) * 100, 30, 100);
       const score = Math.round(city.suitability * 0.45 + humidityFit * 0.25 + solarFit * 0.3);
       const level = score >= 75 ? "high" : score >= 55 ? "medium" : "low";
-      const selectedText = key === input.weatherDataset ? "현재" : `${formatNumber(Math.abs(selected.latitude - city.latitude), 1)}° 차이`;
+      const selectedText = key === input.weatherDataset ? "현재" : `위도 ${formatNumber(Math.abs(selected.latitude - city.latitude), 1)}° 차이`;
       return `
         <div class="city-score">
           <header><span>${city.label}</span><span>${score}% · ${selectedText}</span></header>
