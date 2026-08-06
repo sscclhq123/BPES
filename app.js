@@ -1073,6 +1073,9 @@ function renderRegionResults(results) {
   renderRegionMonthlyComparison(
     latestRegionResults.filter((item) => selectedRegionComparisonKeys.has(item.key)),
   );
+  renderRegionAreaComparison(
+    latestRegionResults.filter((item) => selectedRegionComparisonKeys.has(item.key)),
+  );
 }
 
 function toggleRegionComparison(key) {
@@ -1104,34 +1107,65 @@ function renderCandidateRows(candidates) {
 
 const monthlyComparisonColors = ["#173f73", "#e18424", "#147d91", "#2f855a", "#c84b4b", "#7157a5", "#2f64a3", "#9a6b16", "#b04f86", "#5f7f35", "#bd6b35", "#3f7f88", "#7b5c3f", "#5964a9"];
 
+function regionComparisonColor(key) {
+  const index = Math.max(0, latestRegionResults.findIndex((item) => item.key === key));
+  return monthlyComparisonColors[index % monthlyComparisonColors.length];
+}
+
+function renderRegionAreaComparison(entries) {
+  if (!entries.length) return;
+  const rows = entries.flatMap((item) => {
+    const label = weatherDatasets[item.key]?.label?.replace(" · TMYx 2011–2025", "") || item.key;
+    const color = regionComparisonColor(item.key);
+    const candidates = item.result.areaResults || item.result.candidates || [item.result.best];
+    return candidates.map((candidate) => `
+      <tr class="candidate-row region-area-row${candidate.targetAchieved ? " active" : ""}" style="--region-color:${color}">
+        <td><span class="region-area-label"><i style="background:${color}"></i>${label}</span><br>${formatNumber(candidate.collectorArea)} m²</td>
+        <td>${formatNumber(candidate.regenNeed)} kWh</td>
+        <td>${formatNumber(candidate.usefulSolar)} kWh</td>
+        <td>${formatNumber(candidate.solarShare * 100, 1)} %</td>
+        <td>${formatNumber(candidate.auxEnergy)} kWh</td>
+        <td>${candidate.targetAchieved ? "충족" : "-"}</td>
+      </tr>
+    `);
+  });
+  $("candidateRows").innerHTML = rows.join("");
+  const labels = entries.map((item) => weatherDatasets[item.key]?.label?.replace(" · TMYx 2011–2025", "") || item.key);
+  $("areaBasisSummary").textContent = `${labels.join(", ")} 실제 기상계산 기준 · 커버율 = 태양열 공급량 ÷ 해당 지역 재생열 요구량`;
+}
+
 function renderRegionMonthlyComparison(entries) {
   if (!entries.length || !entries.every((item) => item.result?.monthly?.length)) return;
   const series = entries.map((item, index) => ({
     ...item,
-    color: monthlyComparisonColors[index % monthlyComparisonColors.length],
+    color: regionComparisonColor(item.key),
     label: weatherDatasets[item.key]?.label?.replace(" · TMYx 2011–2025", "") || item.key,
   }));
   const months = series[0].result.monthly;
-  const maxValue = Math.max(
-    ...months.map((_, monthIndex) => Math.max(
-      ...series.map((item) => Number(item.result.monthly[monthIndex]?.load) || 0),
-    )),
-    1,
-  );
-  const barWidth = Math.max(3, Math.min(16, 68 / series.length));
+  const maxValue = Math.max(...months.map((_, monthIndex) => Math.max(
+    ...series.flatMap((item) => [
+      Number(item.result.monthly[monthIndex]?.load) || 0,
+      Number(item.result.monthly[monthIndex]?.solar) || 0,
+    ]),
+  )), 1);
+  const barWidth = Math.max(3, Math.min(12, 64 / (series.length * 2)));
   $("monthlyChart").style.setProperty("--month-count", Math.max(months.length, 1));
   $("monthlyChart").innerHTML = months.map((month, monthIndex) => {
     const bars = series.map((item) => {
       const load = Number(item.result.monthly[monthIndex]?.load) || 0;
-      const height = clamp((load / maxValue) * 210, 5, 210);
-      return `<div class="bar comparison-series" style="height:${height}px;width:${barWidth}px;background:${item.color}" title="${item.label} 재생열 요구량: ${formatNumber(load)} kWh"><span class="sr-only">${item.label} ${formatNumber(load)} kWh</span></div>`;
+      const solar = Number(item.result.monthly[monthIndex]?.solar) || 0;
+      const loadHeight = clamp((load / maxValue) * 210, 5, 210);
+      const solarHeight = clamp((solar / maxValue) * 210, 5, 210);
+      return `
+        <div class="bar comparison-series" style="height:${loadHeight}px;width:${barWidth}px;background:${item.color}" title="${item.label} 재생열 요구량: ${formatNumber(load)} kWh"><span class="sr-only">${item.label} 재생열 요구량 ${formatNumber(load)} kWh</span></div>
+        <div class="bar solar comparison-series region-solar-bar" style="height:${solarHeight}px;width:${barWidth}px;--region-color:${item.color}" title="${item.label} 태양열 공급량: ${formatNumber(solar)} kWh"><span class="sr-only">${item.label} 태양열 공급량 ${formatNumber(solar)} kWh</span></div>`;
     }).join("");
     return `<div class="month-group"><div class="bars">${bars}</div><div class="month-label">${month.month}</div></div>`;
   }).join("");
   $("monthlyLegend").innerHTML = series.map((item) =>
-    `<span><i style="background:${item.color}"></i>${item.label} 재생열 요구량</span>`,
+    `<span><i style="background:${item.color}"></i>${item.label} 재생열 요구량</span><span><i class="region-solar-swatch" style="--region-color:${item.color}"></i>${item.label} 태양열 공급량</span>`,
   ).join("");
-  $("seasonSummary").textContent = `${series.length}개 지역 월별 재생열 요구량 비교 · 표의 지역 행을 클릭하여 추가/해제`;
+  $("seasonSummary").textContent = `${series.length}개 지역의 월별 재생열 요구량·태양열 공급량 비교 · 표의 지역 행을 클릭하여 추가/해제`;
 }
 
 function renderCandidateMonthlyComparison(selections) {
