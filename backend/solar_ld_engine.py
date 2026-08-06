@@ -535,7 +535,8 @@ def read_epw_weather(filename: str | Path) -> pd.DataFrame:
 
 def read_weather(filename: str | Path) -> pd.DataFrame:
     path = Path(filename)
-    return read_epw_weather(path) if path.suffix.lower() == ".epw" else read_asos_weather(path)
+    is_epw = path.name.lower().endswith((".epw", ".epw.gz"))
+    return read_epw_weather(path) if is_epw else read_asos_weather(path)
 
 
 def decompose_ghi_erbs(time, ghi_wh_m2, lat_deg=37.5665, lon_deg=126.9780, tz=9):

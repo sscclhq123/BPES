@@ -31,20 +31,20 @@ from solar_ld_engine import (  # noqa: E402
 UPLOAD_DIR = Path("/tmp/bpes-weather-uploads") if os.environ.get("VERCEL") else ROOT / "data" / "weather" / "uploads"
 WEATHER_DATA_ROOT = ROOT / "data" / "weather" / "tmy_collection"
 WEATHER_DATASETS = {
-    "seoul_epw": WEATHER_DATA_ROOT / "Korea" / "KOR_SO_Seoul.WS.471080_TMYx.2011-2025.epw",
-    "daejeon_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_TJ_Daejeon.WS.471330_TMYx.2011-2025.epw",
-    "busan_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_PU_Busan-Daecheongdong.WS.471590_TMYx.2011-2025.epw",
-    "gwangju_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_KJ_Gwangju.471560_TMYx.2011-2025.epw",
-    "daegu_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_TG_Daegu.471430_TMYx.2011-2025.epw",
-    "incheon_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_IN_Incheon.WS.471120_TMYx.2011-2025.epw",
-    "jeju_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_CJ_Jeju.WS.471840_TMYx.2011-2025.epw",
-    "manila_tmy": WEATHER_DATA_ROOT / "Philippines" / "PHL_NCR_Manila-Aquino.Intl.AP.984290_TMYx.2011-2025.epw",
-    "cebu_tmyx": WEATHER_DATA_ROOT / "Philippines" / "PHL_CNV_Mactan-Cebu.Intl.AP.986460_TMYx.2011-2025.epw",
-    "bangkok_tmy": WEATHER_DATA_ROOT / "Thailand" / "THA_CRG_Bangkok.Metropolis.484550_TMYx.2011-2025.epw",
-    "chiang_mai_tmyx": WEATHER_DATA_ROOT / "Thailand" / "THA_NRG_Chiang.Mai.Intl.AP.483270_TMYx.2011-2025.epw",
-    "singapore_tmyx": WEATHER_DATA_ROOT / "Singapore" / "SGP_SG_Singapore-Changi.Intl.AP.486980_TMYx.2011-2025.epw",
-    "amsterdam_tmyx": WEATHER_DATA_ROOT / "Netherlands" / "NLD_NH_Amsterdam-Schipol.AP.062400_TMYx.2011-2025.epw",
-    "rotterdam_tmyx": WEATHER_DATA_ROOT / "Netherlands" / "NLD_ZH_Rotterdam.The.Hague.AP.063440_TMYx.2011-2025.epw",
+    "seoul_epw": WEATHER_DATA_ROOT / "Korea" / "KOR_SO_Seoul.WS.471080_TMYx.2011-2025.epw.gz",
+    "daejeon_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_TJ_Daejeon.WS.471330_TMYx.2011-2025.epw.gz",
+    "busan_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_PU_Busan-Daecheongdong.WS.471590_TMYx.2011-2025.epw.gz",
+    "gwangju_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_KJ_Gwangju.471560_TMYx.2011-2025.epw.gz",
+    "daegu_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_TG_Daegu.471430_TMYx.2011-2025.epw.gz",
+    "incheon_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_IN_Incheon.WS.471120_TMYx.2011-2025.epw.gz",
+    "jeju_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_CJ_Jeju.WS.471840_TMYx.2011-2025.epw.gz",
+    "manila_tmy": WEATHER_DATA_ROOT / "Philippines" / "PHL_NCR_Manila-Aquino.Intl.AP.984290_TMYx.2011-2025.epw.gz",
+    "cebu_tmyx": WEATHER_DATA_ROOT / "Philippines" / "PHL_CNV_Mactan-Cebu.Intl.AP.986460_TMYx.2011-2025.epw.gz",
+    "bangkok_tmy": WEATHER_DATA_ROOT / "Thailand" / "THA_CRG_Bangkok.Metropolis.484550_TMYx.2011-2025.epw.gz",
+    "chiang_mai_tmyx": WEATHER_DATA_ROOT / "Thailand" / "THA_NRG_Chiang.Mai.Intl.AP.483270_TMYx.2011-2025.epw.gz",
+    "singapore_tmyx": WEATHER_DATA_ROOT / "Singapore" / "SGP_SG_Singapore-Changi.Intl.AP.486980_TMYx.2011-2025.epw.gz",
+    "amsterdam_tmyx": WEATHER_DATA_ROOT / "Netherlands" / "NLD_NH_Amsterdam-Schipol.AP.062400_TMYx.2011-2025.epw.gz",
+    "rotterdam_tmyx": WEATHER_DATA_ROOT / "Netherlands" / "NLD_ZH_Rotterdam.The.Hague.AP.063440_TMYx.2011-2025.epw.gz",
 }
 DEFAULT_WEATHER = WEATHER_DATASETS["seoul_epw"]
 

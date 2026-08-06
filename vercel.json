@@ -3,7 +3,7 @@
   "functions": {
     "api/index.py": {
       "maxDuration": 300,
-      "includeFiles": "data/weather/tmy_collection/**/*.epw",
+      "includeFiles": "data/weather/tmy_collection/**/*.epw.gz",
       "excludeFiles": "{backend/test_*.py,backend/outputs/**,backend/outputs_check/**,figures/**,GPT_WORK_HANDOFF.md}"
     }
   },
