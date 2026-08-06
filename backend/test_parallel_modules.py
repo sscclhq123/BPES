@@ -103,17 +103,17 @@ class ParallelModuleTests(unittest.TestCase):
         self.assertAlmostEqual(solution_flow, 0.44, places=12)
         self.assertAlmostEqual(air_flow, 0.40, places=12)
 
-    def test_invalid_lg_ratio_has_no_parallel_solution(self):
-        with self.assertRaisesRegex(ValueError, "병렬 모듈"):
-            required_parallel_modules(
-                self.air_flow,
-                self.air_flow * 0.5,
-                self.config.abs_module_air_min_kg_s,
-                self.config.abs_module_air_max_kg_s,
-                self.config.abs_module_solution_min_kg_s,
-                self.config.abs_module_solution_max_kg_s,
-                "흡수기",
-            )
+    def test_parallel_count_is_set_by_process_airflow(self):
+        modules = required_parallel_modules(
+            self.air_flow,
+            self.air_flow * 0.5,
+            self.config.abs_module_air_min_kg_s,
+            self.config.abs_module_air_max_kg_s,
+            self.config.abs_module_solution_min_kg_s,
+            self.config.abs_module_solution_max_kg_s,
+            "흡수기",
+        )
+        self.assertEqual(modules, 4)
 
     def test_operation_schedule_is_applied_by_hour(self):
         nine_hour_config = SystemConfig(operation_start_hour=9, operation_hours_per_day=9)

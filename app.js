@@ -1020,9 +1020,8 @@ function stageLoadFile() {
 
 function parallelModuleCount(airflowM3h, lgRatio, airMin, airMax, solutionMin, solutionMax) {
   const totalAir = airflowM3h / 3600 * 1.2;
-  const totalSolution = totalAir * lgRatio;
-  const minimumCount = Math.max(1, Math.ceil(totalAir / airMax - 1e-12), Math.ceil(totalSolution / solutionMax - 1e-12));
-  const maximumCount = Math.min(Math.floor(totalAir / airMin + 1e-12), Math.floor(totalSolution / solutionMin + 1e-12));
+  const minimumCount = Math.max(1, Math.ceil(totalAir / airMax - 1e-12));
+  const maximumCount = Math.floor(totalAir / airMin + 1e-12);
   return minimumCount <= maximumCount ? minimumCount : 0;
 }
 

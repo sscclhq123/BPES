@@ -936,6 +936,7 @@ def simulate(payload):
         return {
             **candidate,
             **monthly_candidate_cache[cache_key],
+            "lgRatio": clean_value(row["LG_ratio_abs"]),
             "absorberModules": int(row["ABS_module_count"]),
             "regeneratorModules": int(row["REG_module_count"]),
             "unmetHours": target_unmet_hours,
@@ -959,6 +960,7 @@ def simulate(payload):
         "monthly": monthly_rows(result),
         "best": {
             **{key: value for key, value in best.items() if key != "searchHierarchy"},
+            "lgRatio": clean_value(row["LG_ratio_abs"]),
             "solarShare": solar_share,
             "auxEnergy": aux,
             "unmetHours": target_unmet_hours,

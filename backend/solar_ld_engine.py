@@ -55,6 +55,7 @@ class SystemConfig:
     tes_tank_height_diameter_ratio: float = 2.0
 
     m_solution_tank_init_kg: float = 400.0
+    solution_tank_residence_time_s: float = 155.0
     t_solution_tank_init_c: float = 42.0
     xi_tank_init: float = 0.38
     xi_target: float = 0.38
@@ -130,23 +131,31 @@ def required_parallel_modules(
     if total_air_kg_s <= 0 or total_solution_kg_s <= 0:
         raise ValueError(f"{component_name} 전체 공기 및 용액 유량은 0보다 커야 합니다.")
 
-    minimum_count = max(
-        1,
-        math.ceil(total_air_kg_s / air_max_kg_s - 1e-12),
-        math.ceil(total_solution_kg_s / solution_max_kg_s - 1e-12),
-    )
-    maximum_count = min(
-        math.floor(total_air_kg_s / air_min_kg_s + 1e-12),
-        math.floor(total_solution_kg_s / solution_min_kg_s + 1e-12),
-    )
+    # The process-air duty determines the number of parallel contactors.  The
+    # solution loop is recirculated independently and is clamped to the
+    # correlation range after the module count has been selected.
+    minimum_count = max(1, math.ceil(total_air_kg_s / air_max_kg_s - 1e-12))
+    maximum_count = math.floor(total_air_kg_s / air_min_kg_s + 1e-12)
     if minimum_count > maximum_count:
-        ratio = total_solution_kg_s / total_air_kg_s
         raise ValueError(
-            f"{component_name} 병렬 모듈을 회귀식 유효범위 안에서 구성할 수 없습니다. "
-            f"전체 공기 {total_air_kg_s:.3f} kg/s, 용액 {total_solution_kg_s:.3f} kg/s, "
-            f"L/G {ratio:.3f} 조건을 확인하세요."
+            f"{component_name} 처리풍량이 단일 모듈 최소 공기유량보다 작습니다. "
+            f"전체 공기 {total_air_kg_s:.3f} kg/s 조건을 확인하세요."
         )
     return minimum_count
+
+
+def bounded_solution_flow(
+    requested_solution_kg_s: float,
+    module_count: int,
+    solution_min_kg_s: float,
+    solution_max_kg_s: float,
+) -> float:
+    """Keep each parallel module inside the empirical solution-flow domain."""
+    return float(np.clip(
+        requested_solution_kg_s,
+        module_count * solution_min_kg_s,
+        module_count * solution_max_kg_s,
+    ))
 
 
 def staged_regenerator_flow(
@@ -695,11 +704,32 @@ def run_simulation(
         config.reg_module_solution_max_kg_s,
         "재생기",
     )
+    m_dot_sol_abs_cmd = bounded_solution_flow(
+        m_dot_sol_abs_cmd,
+        abs_module_count,
+        config.abs_module_solution_min_kg_s,
+        config.abs_module_solution_max_kg_s,
+    )
+    m_dot_sol_reg_design = bounded_solution_flow(
+        m_dot_sol_reg_design,
+        reg_module_count,
+        config.reg_module_solution_min_kg_s,
+        config.reg_module_solution_max_kg_s,
+    )
+    lg_ratio_abs_actual = m_dot_sol_abs_cmd / m_dot_oa_abs
+    lg_ratio_reg_actual = m_dot_sol_reg_design / m_dot_oa_reg
     a_outlet = np.pi * config.d_outlet_m**2 / 4
     v_outlet = (config.sa_abs_m3h / 3600) / a_outlet
 
-    state_sol_m_salt = config.m_solution_tank_init_kg * config.xi_tank_init
-    state_sol_m_water = config.m_solution_tank_init_kg * (1 - config.xi_tank_init)
+    solution_tank_mass_kg = max(
+        config.m_solution_tank_init_kg,
+        m_dot_sol_abs_cmd * config.solution_tank_residence_time_s,
+    )
+    solution_tank_ua_w_k = config.ua_solution_tank_w_k * (
+        solution_tank_mass_kg / config.m_solution_tank_init_kg
+    ) ** (2 / 3)
+    state_sol_m_salt = solution_tank_mass_kg * config.xi_tank_init
+    state_sol_m_water = solution_tank_mass_kg * (1 - config.xi_tank_init)
     state_sol_t = config.t_solution_tank_init_c
     state_tes_m = config.rho_w_kg_m3 * config.v_tes_l / 1000
     state_tes_t = config.t_tes_init_c
@@ -834,7 +864,7 @@ def run_simulation(
                     m_reg_in = m_dot_sol_reg_design
                 m_reg_in, m_reg_air_active, reg_active_modules = staged_regenerator_flow(
                     m_reg_in,
-                    config.lg_ratio_reg_design,
+                    lg_ratio_reg_actual,
                     reg_module_count,
                     config,
                 )
@@ -922,7 +952,7 @@ def run_simulation(
             m_salt_next = max(m_salt_0 + (m_salt_in - m_salt_out) * dt_sub_s, 1e-9)
             m_water_next = max(m_water_0 + (m_water_in - m_water_out) * dt_sub_s, 1e-9)
             u_expected = u_sol_0 + (abs_ret_m * abs_ret_h + reg_ret_m * reg_ret_h - (m_abs_in + m_reg_in) * h_sol_0) * dt_sub_s
-            qloss_sol_kj = config.ua_solution_tank_w_k * max(t_sol_0 - ta, 0) * dt_sub_s / 1000
+            qloss_sol_kj = solution_tank_ua_w_k * max(t_sol_0 - ta, 0) * dt_sub_s / 1000
             m_sol_next = m_salt_next + m_water_next
             xi_next = m_salt_next / m_sol_next
             h_next = (u_expected - qloss_sol_kj) / m_sol_next
@@ -1082,10 +1112,10 @@ def build_summary(
         "ABS_module_count": abs_module_count,
         "ABS_module_air_kg_s": m_dot_oa_abs / abs_module_count,
         "ABS_module_solution_kg_s": m_dot_sol_abs_cmd / abs_module_count,
-        "LG_ratio_abs": config.lg_ratio_abs,
+        "LG_ratio_abs": m_dot_sol_abs_cmd / m_dot_oa_abs,
         "SA_reg_factor": config.sa_reg_factor,
         "SA_reg_m3h": config.sa_abs_m3h * config.sa_reg_factor,
-        "LG_ratio_reg_design": config.lg_ratio_reg_design,
+        "LG_ratio_reg_design": m_dot_sol_reg_design / m_dot_oa_reg,
         "REG_module_count": reg_module_count,
         "REG_module_air_design_kg_s": m_dot_oa_reg / reg_module_count,
         "REG_module_solution_design_kg_s": m_dot_sol_reg_design / reg_module_count,
