@@ -345,6 +345,88 @@ button:focus-visible {
   font-weight: 700;
 }
 
+.weather-region-selector {
+  margin: 10px 0 12px;
+  padding: 10px;
+  border: 1px solid #cbd7e5;
+  border-radius: 6px;
+  background: #fbfdff;
+}
+
+.weather-region-selector legend {
+  padding: 0 5px;
+  color: #34445a;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.region-selector-actions {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.region-selector-actions button {
+  padding: 5px 8px;
+  border: 1px solid #cbd7e5;
+  border-radius: 5px;
+  color: #34445a;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.weather-region-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.weather-region-grid label {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid #d5dfeb;
+  border-radius: 5px;
+  color: #44556b;
+  background: #fff;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.weather-region-grid label:has(input:checked) {
+  border-color: var(--teal);
+  color: #fff;
+  background: var(--teal);
+}
+
+.weather-region-grid input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  accent-color: var(--teal);
+}
+
+#selectedRegionSummary {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.region-result-wrap {
+  max-height: 330px;
+}
+
+.region-result-table th,
+.region-result-table td {
+  white-space: nowrap;
+}
+
 #standardWeatherBox,
 #buildingTemplateBox {
   margin-bottom: 12px;

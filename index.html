@@ -37,7 +37,7 @@
             </label>
             <div class="conditional-fields" id="standardWeatherBox">
               <label>
-                표준 기상 데이터
+                월별 상세 기준 지역
                 <select id="weatherDataset">
                   <optgroup label="대한민국">
                     <option value="seoul_epw">서울 · TMYx 2011-2025</option>
@@ -65,6 +65,30 @@
                   </optgroup>
                 </select>
               </label>
+              <fieldset class="weather-region-selector">
+                <legend>계산할 지역 다중선택</legend>
+                <div class="region-selector-actions">
+                  <button type="button" id="selectAllRegions">전체 선택</button>
+                  <button type="button" id="clearRegions">전체 해제</button>
+                </div>
+                <div class="weather-region-grid" id="weatherRegionGrid">
+                  <label><input type="checkbox" value="seoul_epw" checked />서울</label>
+                  <label><input type="checkbox" value="daejeon_tmyx" />대전</label>
+                  <label><input type="checkbox" value="busan_tmyx" />부산</label>
+                  <label><input type="checkbox" value="gwangju_tmyx" />광주</label>
+                  <label><input type="checkbox" value="daegu_tmyx" />대구</label>
+                  <label><input type="checkbox" value="incheon_tmyx" />인천</label>
+                  <label><input type="checkbox" value="jeju_tmyx" />제주</label>
+                  <label><input type="checkbox" value="manila_tmy" />마닐라</label>
+                  <label><input type="checkbox" value="cebu_tmyx" />세부</label>
+                  <label><input type="checkbox" value="bangkok_tmy" />방콕</label>
+                  <label><input type="checkbox" value="chiang_mai_tmyx" />치앙마이</label>
+                  <label><input type="checkbox" value="singapore_tmyx" />싱가포르</label>
+                  <label><input type="checkbox" value="amsterdam_tmyx" />암스테르담</label>
+                  <label><input type="checkbox" value="rotterdam_tmyx" />로테르담</label>
+                </div>
+                <p id="selectedRegionSummary">1개 지역 선택</p>
+              </fieldset>
             </div>
             <div class="dataset-note" id="weatherNote">-</div>
             <label>
@@ -410,10 +434,23 @@
             </section>
             <section class="map-panel">
               <div class="panel-heading">
-                <h3>지역별 적용 가능성</h3>
-                <p>보유 TMYx 기상데이터 기반 예비 비교 · 14개 지역</p>
+                <h3>선택 지역 실제 계산 비교</h3>
+                <p>동일한 건물·LD·집열기 조건 적용</p>
               </div>
-              <div class="city-list" id="cityList"></div>
+              <div class="table-wrap region-result-wrap">
+                <table class="region-result-table">
+                  <thead>
+                    <tr>
+                      <th>지역</th>
+                      <th>최소 면적</th>
+                      <th>커버율</th>
+                      <th>태양열 공급</th>
+                      <th>보조열원</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cityList"></tbody>
+                </table>
+              </div>
             </section>
           </div>
 
@@ -511,6 +548,6 @@
       <input id="calculationPayload" name="payload" type="hidden" />
     </form>
     <script>window.__CALCULATION_BOOTSTRAP__ = null;</script>
-    <script src="./app.js?v=20260806-2"></script>
+    <script src="./app.js?v=20260806-3"></script>
   </body>
 </html>

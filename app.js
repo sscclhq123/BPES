@@ -429,6 +429,26 @@ function monthCheckboxes() {
   return [...document.querySelectorAll("#monthSelector input[type='checkbox']")];
 }
 
+function regionCheckboxes() {
+  return [...document.querySelectorAll("#weatherRegionGrid input[type='checkbox']")];
+}
+
+function selectedWeatherDatasetKeys() {
+  if ($("weatherInputMode").value !== "standard") return [getCurrentWeatherDatasetKey()];
+  return regionCheckboxes().filter((input) => input.checked).map((input) => input.value);
+}
+
+function setSelectedWeatherDatasets(keys) {
+  const selected = new Set(keys || []);
+  regionCheckboxes().forEach((input) => { input.checked = selected.has(input.value); });
+  updateSelectedRegionSummary();
+}
+
+function updateSelectedRegionSummary() {
+  const keys = selectedWeatherDatasetKeys();
+  $("selectedRegionSummary").textContent = `${keys.length}개 지역 선택 · 월별 상세: ${weatherDatasets[$("weatherDataset").value]?.label || "-"}`;
+}
+
 function selectedSimulationMonths() {
   if ($("analysisPeriodMode").value === "annual") return Array.from({ length: 12 }, (_, index) => index + 1);
   return monthCheckboxes().filter((input) => input.checked).map((input) => Number(input.value));
@@ -482,6 +502,7 @@ function setDefaults() {
     $(key).value = value;
   });
   setSelectedSimulationMonths(Array.from({ length: 12 }, (_, index) => index + 1));
+  setSelectedWeatherDatasets(["seoul_epw"]);
   updateAnalysisPeriodFields();
   activeUploadDataset = "upload_weather";
   applyCurrentWeatherSelection();
@@ -610,6 +631,7 @@ function readInputs() {
   });
   data.sizingMode = "design";
   data.weatherDataset = getCurrentWeatherDatasetKey();
+  data.weatherDatasets = selectedWeatherDatasetKeys();
   data.simulationMonths = selectedSimulationMonths();
   return data;
 }
@@ -639,6 +661,9 @@ function validateDesignInputs(input) {
 
   if (!input.simulationMonths.length) {
     messages.push("월별 다중선택에서는 계산할 월을 하나 이상 선택하세요.");
+  }
+  if ($("weatherInputMode").value === "standard" && !input.weatherDatasets.length) {
+    messages.push("계산할 표준 기상 지역을 하나 이상 선택하세요.");
   }
 
   if (Number.isFinite(input.collectorMin) && Number.isFinite(input.collectorMax) && input.collectorMin > input.collectorMax) {
@@ -1018,26 +1043,23 @@ function renderMetrics(best, input) {
     `흡수기 ${formatNumber(best.absorberModules || 0)}대 · 재생기 ${formatNumber(best.regeneratorModules || 0)}대 · ${best.solutionConcentration}% · L/G ${best.lgRatio}`;
 }
 
-function renderCities(input) {
-  const selected =
-    needsCoordinateInput(input.weatherDataset)
-      ? { latitude: input.latitude, longitude: input.longitude }
-      : weatherDatasets[input.weatherDataset];
-  $("cityList").innerHTML = Object.entries(comparisonRegions)
-    .map(([key, city]) => {
-      const humidityFit = clamp(100 - Math.abs(input.humidity - city.humidity) * 1.2, 20, 100);
-      const solarFit = clamp((city.irradiance / 5.2) * 100, 30, 100);
-      const score = Math.round(city.suitability * 0.45 + humidityFit * 0.25 + solarFit * 0.3);
-      const level = score >= 75 ? "high" : score >= 55 ? "medium" : "low";
-      const selectedText = key === input.weatherDataset ? "현재" : `위도 ${formatNumber(Math.abs(selected.latitude - city.latitude), 1)}° 차이`;
-      return `
-        <div class="city-score">
-          <header><span>${city.label}</span><span>${score}% · ${selectedText}</span></header>
-          <div class="score-track"><div class="score-fill ${level}" style="width:${score}%"></div></div>
-        </div>
-      `;
-    })
-    .join("");
+function renderRegionResults(results) {
+  $("cityList").innerHTML = results.map(({ key, result, error }) => {
+    const label = weatherDatasets[key]?.label?.replace(" · TMYx 2011–2025", "") || key;
+    if (error) {
+      return `<tr><td>${label}</td><td colspan="4">계산 실패 · ${error}</td></tr>`;
+    }
+    const best = result.best;
+    return `
+      <tr>
+        <td>${label}</td>
+        <td>${formatNumber(best.collectorArea)} m²</td>
+        <td>${formatNumber(best.solarShare * 100, 1)} %</td>
+        <td>${formatNumber(best.usefulSolar)} kWh</td>
+        <td>${formatNumber(best.auxEnergy)} kWh</td>
+      </tr>
+    `;
+  }).join("") || `<tr><td colspan="5">선택된 지역 계산 결과가 없습니다.</td></tr>`;
 }
 
 function renderCandidateRows(candidates) {
@@ -1337,7 +1359,6 @@ function renderPythonResult(result, input) {
   renderValidityWarnings(result.warnings || empiricalWarnings(input));
   renderMetrics(best, input);
   renderBackendChart(result.monthly);
-  renderCities(input);
   $("seasonSummary").textContent =
     `Python 엔진 · 요구 재생열 ${formatNumber(best.regenNeed)} kWh · TES 공급 ${formatNumber(best.usefulSolar)} kWh · 커버율 ${formatNumber(best.collectorCoverage * 100, 1)} %`;
   renderCandidateRows(result.areaResults || result.candidates || [best]);
@@ -1375,7 +1396,7 @@ function clearResultOutputs(message = "입력값을 확인한 뒤 계산을 실�
   $("seasonSummary").textContent = message;
   $("monthlyLegend").innerHTML = "";
   $("monthlyChart").innerHTML = `<div class="result-empty">계산 후 월별 결과가 표시됩니다.</div>`;
-  $("cityList").innerHTML = `<div class="result-empty">계산 후 지역 비교가 표시됩니다.</div>`;
+  $("cityList").innerHTML = `<tr><td colspan="5">계산 후 선택 지역의 실제 결과가 표시됩니다.</td></tr>`;
   $("candidateRows").innerHTML = `<tr class="empty-result-row"><td colspan="6">계산 결과가 없습니다.</td></tr>`;
 }
 
@@ -1414,7 +1435,7 @@ function restoreCalculationInputs(input) {
   updateBuildingModeFields();
 }
 
-function runCalculation() {
+async function runCalculation() {
   const input = readInputs();
   const validationMessages = validateDesignInputs(input);
   renderCalculationIssues(validationMessages);
@@ -1430,10 +1451,59 @@ function runCalculation() {
   $("runButton").disabled = true;
   $("runButton").textContent = "계산 중";
   $("calculationTiming").textContent =
-    `예상 ${estimate.lowSeconds}~${estimate.highSeconds}초 · ${formatNumber(estimate.candidateCount)}개 조합`;
+    `지역별 계산 준비 · ${input.weatherDatasets.length}개 지역`;
   animateFlow();
-  $("calculationPayload").value = JSON.stringify(input);
-  window.setTimeout(() => $("calculationForm").submit(), 50);
+
+  const datasetKeys = input.weatherDatasets;
+  const results = new Array(datasetKeys.length);
+  let nextIndex = 0;
+  let completed = 0;
+  const worker = async () => {
+    while (nextIndex < datasetKeys.length) {
+      const index = nextIndex++;
+      const key = datasetKeys[index];
+      try {
+        const response = await requestJson("/api/simulate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...input, weatherDataset: key }),
+        });
+        if (!response.ok || response.result.error) {
+          throw new Error(response.result.error || `HTTP ${response.status}`);
+        }
+        results[index] = { key, result: response.result };
+      } catch (error) {
+        results[index] = { key, error: error.message };
+      }
+      completed += 1;
+      $("calculationTiming").textContent = `${completed}/${datasetKeys.length}개 지역 계산 완료`;
+      renderRegionResults(results.filter(Boolean));
+    }
+  };
+
+  try {
+    await Promise.all(Array.from({ length: Math.min(3, datasetKeys.length) }, () => worker()));
+    const successful = results.filter((item) => item?.result);
+    if (!successful.length) throw new Error("선택한 모든 지역의 계산에 실패했습니다.");
+    const detailed = successful.find((item) => item.key === input.weatherDataset) || successful[0];
+    if (detailed.key !== $("weatherDataset").value) {
+      $("weatherDataset").value = detailed.key;
+      applyWeatherDataset(detailed.key);
+    }
+    renderCalculationIssues([]);
+    renderPythonResult(detailed.result, { ...input, weatherDataset: detailed.key });
+    renderRegionResults(results);
+    const failedCount = results.filter((item) => item?.error).length;
+    $("statusPill").textContent = failedCount ? "일부 완료" : "계산 완료";
+    $("calculationTiming").textContent = `${successful.length}/${datasetKeys.length}개 지역 완료 · 지역당 ${formatNumber(estimate.candidateCount)}개 조합`;
+  } catch (error) {
+    clearResultOutputs(`계산 실패 · ${error.message}`);
+    $("statusPill").textContent = "계산 실패";
+    $("calculationTiming").textContent = error.message;
+  } finally {
+    $("runButton").disabled = false;
+    $("runButton").textContent = "계산 실행";
+  }
 }
 
 function bindEvents() {
@@ -1443,8 +1513,23 @@ function bindEvents() {
     markResultsPending();
   });
   $("weatherDataset").addEventListener("change", (event) => {
+    const checkbox = regionCheckboxes().find((input) => input.value === event.target.value);
+    if (checkbox) checkbox.checked = true;
+    updateSelectedRegionSummary();
     applyWeatherDataset(event.target.value);
     loadWeatherTrend();
+    markResultsPending();
+  });
+  regionCheckboxes().forEach((checkbox) => checkbox.addEventListener("change", () => {
+    updateSelectedRegionSummary();
+    markResultsPending();
+  }));
+  $("selectAllRegions").addEventListener("click", () => {
+    setSelectedWeatherDatasets(regionCheckboxes().map((input) => input.value));
+    markResultsPending();
+  });
+  $("clearRegions").addEventListener("click", () => {
+    setSelectedWeatherDatasets([]);
     markResultsPending();
   });
   $("analysisPeriodMode").addEventListener("change", () => {
