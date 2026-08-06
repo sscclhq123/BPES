@@ -266,21 +266,18 @@
               <label class="mode-row">
                 <span>용액 농도</span>
                 <select id="solutionMode">
-                  <option value="optimize">최적화</option>
                   <option value="fixed">입력값 고정</option>
                 </select>
               </label>
               <label class="mode-row">
                 <span>L/G</span>
                 <select id="lgMode">
-                  <option value="optimize">최적화</option>
                   <option value="fixed">입력값 고정</option>
                 </select>
               </label>
               <label class="mode-row">
                 <span>재생기 용액온도</span>
                 <select id="regenMode">
-                  <option value="optimize">최적화</option>
                   <option value="fixed">입력값 고정</option>
                 </select>
               </label>
@@ -295,8 +292,12 @@
           <section class="panel-section">
             <div class="section-title">
               <span class="section-index">4</span>
-              <h2>집열기 후보 / TES 자동 산정</h2>
+              <h2>집열기 면적 / 재생열 커버율 산정</h2>
             </div>
+            <label>
+              목표 재생열 커버율
+              <span class="unit-input"><input id="targetSolarShare" type="number" min="1" max="100" step="1" /><span>%</span></span>
+            </label>
             <div class="range-row" id="collectorRangeInputs">
               <label>
                 집열기 최소
@@ -332,22 +333,14 @@
               </label>
             </div>
             <div class="dataset-note secondary-note" id="tesSizingNote">수직 원통형 탱크(H/D=2)의 용량별 표면적과 1차원 단열 전도저항으로 UA를 산정합니다. 경질 우레탄폼 0.023 W/m·K와 상용 버퍼탱크 기준 단열 100 mm를 적용합니다.</div>
-            <div class="optimizer-controls">
-              <label class="mode-row">
-                <span>집열기 면적</span>
-                <select id="collectorMode">
-                  <option value="optimize">최적화</option>
-                  <option value="fixed">최소값 고정</option>
-                </select>
-              </label>
-            </div>
+            <div class="dataset-note secondary-note">면적 후보별 태양열 공급량을 계산하고, 목표 커버율을 처음 만족하는 최소 집열기 면적을 산정합니다.</div>
           </section>
         </aside>
 
-        <section class="engine-panel" aria-label="계산 및 최적화 엔진">
+        <section class="engine-panel" aria-label="시스템 계산 엔진">
           <div class="engine-header">
             <div>
-              <p class="eyebrow">Calculation & Optimization Engine</p>
+              <p class="eyebrow">System Calculation Engine</p>
               <h2>프로그램 프로세스 다이어그램</h2>
             </div>
             <div class="engine-status">
@@ -400,8 +393,8 @@
             <article class="flow-card">
               <span>6</span>
               <div>
-                <strong>반복 최적화</strong>
-                <p>집열면적, TES 용량과 설계유량의 Pareto 절충안 도출</p>
+                <strong>면적별 커버율 산정</strong>
+                <p>목표 커버율을 만족하는 최소 집열기 면적과 보조열원 요구량 산정</p>
               </div>
             </article>
           </div>
@@ -426,54 +419,19 @@
 
           <section class="comparison-panel">
             <div class="panel-heading">
-              <h3>설계안 비교</h3>
-              <p>1차 면적 후보를 선택하면 해당 구간의 2차 세분화 결과가 표시됩니다.</p>
-            </div>
-            <div id="refinementDrilldown" class="refinement-drilldown is-hidden">
-              <div class="refinement-heading">
-                <div>
-                  <strong>1차 세분화</strong>
-                  <span>유망한 집열기 면적 후보</span>
-                </div>
-                <span id="selectionStatus">점을 선택해 비교에 추가</span>
-              </div>
-              <div id="stageOneChart" class="candidate-chart stage-one-chart" role="group" aria-label="1차 집열기 면적 후보 비교 그래프"></div>
-              <div class="refinement-heading stage-two-heading">
-                <div>
-                  <strong id="stageTwoTitle">2차 세분화</strong>
-                  <span id="stageTwoNote">1차 후보 주변의 상세 설계안</span>
-                </div>
-              </div>
-            </div>
-            <div class="candidate-chart-wrap">
-              <div class="candidate-chart-legend">
-                <span><i class="legend-selected"></i>구간 추천안</span>
-                <span><i class="legend-coarse"></i>1차 세분화</span>
-                <span><i class="legend-refined"></i>2차 세분화</span>
-                <span>점 크기: 집열기 면적</span>
-              </div>
-              <div id="candidateChart" class="candidate-chart" role="group" aria-label="TES 용량과 보조열원 사용량에 따른 설계 후보 비교 그래프"></div>
+              <h3>집열기 면적별 재생열 커버율</h3>
+              <p>각 면적에서 LD 재생열 요구량 중 태양열로 공급 가능한 비율을 비교합니다.</p>
             </div>
             <div class="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>순위</th>
-                    <th>탐색 단계</th>
-                    <th>집열기</th>
-                    <th>축열조</th>
-                    <th>TES 유량</th>
-                    <th>TES UA</th>
-                    <th>TES 손실</th>
-                    <th>TES 폐기열</th>
-                    <th>농도</th>
-                    <th>L/G</th>
-                    <th>제습부 용액온도</th>
-                    <th>재생기 용액온도</th>
-                    <th>커버율</th>
+                    <th>집열기 면적</th>
+                    <th>재생열 요구량</th>
+                    <th>태양열 공급량</th>
+                    <th>재생열 커버율</th>
                     <th>보조열원</th>
-                    <th>미충족</th>
-                    <th>Pareto 거리</th>
+                    <th>목표 충족</th>
                   </tr>
                 </thead>
                 <tbody id="candidateRows"></tbody>
@@ -489,7 +447,7 @@
           </div>
 
           <div class="hero-result">
-            <p id="heroResultLabel">최적 설계안</p>
+            <p id="heroResultLabel">1차 면적 산정 결과</p>
             <strong id="optimalDesign">-</strong>
             <span id="designNote">-</span>
           </div>
@@ -505,14 +463,14 @@
             <article class="metric-card">
               <span class="metric-icon">V</span>
               <div>
-                <p>최적 축열조 용량</p>
+                <p>산정 축열조 용량</p>
                 <strong id="optimalTes">-</strong>
               </div>
             </article>
             <article class="metric-card">
               <span class="metric-icon">F</span>
               <div>
-                <p>최적 TES 설계유량</p>
+                <p>산정 TES 설계유량</p>
                 <strong id="optimalTesFlow">-</strong>
               </div>
             </article>
@@ -553,6 +511,6 @@
       <input id="calculationPayload" name="payload" type="hidden" />
     </form>
     <script>window.__CALCULATION_BOOTSTRAP__ = null;</script>
-    <script src="./app.js?v=20260802-20"></script>
+    <script src="./app.js?v=20260806-1"></script>
   </body>
 </html>

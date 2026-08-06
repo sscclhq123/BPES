@@ -4,8 +4,8 @@ from dataclasses import replace
 import pandas as pd
 
 from backend.server import (
+    calculate_collector_area_sweep,
     initial_collector_area_candidates,
-    optimize_tes_design,
     refined_collector_area_candidates,
     simulate_tes_grid,
     simulate_tes_tank,
@@ -83,12 +83,12 @@ class TesOptimizationTests(unittest.TestCase):
         self.assertGreater(len(refined), 0)
         self.assertLess(min(abs(value - coarse[4]) for value in refined), coarse[1] - coarse[0])
 
-    def test_optimizer_returns_pareto_compromise(self):
+    def test_area_sweep_returns_target_area_and_hourly_dispatch(self):
         result = self.result_frame([0.0, 40.0, 40.0, 0.0], [900.0, 200.0, 0.0, 700.0])
         payload = {
             "collectorMin": 10,
             "collectorMax": 20,
-            "collectorMode": "optimize",
+            "targetSolarShare": 1,
             "tesSupplyTemp": 75,
             "tesReturnTemp": 42,
             "tesDesignMargin": 15,
@@ -96,19 +96,22 @@ class TesOptimizationTests(unittest.TestCase):
             "parkingArea": 0,
             "mallParking": "no",
         }
-        candidates = optimize_tes_design(result, payload, self.collector, self.config)
+        selected, area_results = calculate_collector_area_sweep(result, payload, self.collector, self.config)
 
-        self.assertGreater(len(candidates), 0)
-        self.assertTrue(all(item["best"]["pareto"] for item in candidates))
-        self.assertEqual(candidates[0]["best"]["score"], min(item["best"]["score"] for item in candidates))
-        self.assertIn("TES_ACTUAL_FLOW_m3_h", candidates[0]["result"].columns)
+        self.assertGreater(len(area_results), 0)
+        self.assertTrue(selected["best"]["targetAchieved"])
+        self.assertEqual(
+            selected["best"]["collectorArea"],
+            min(item["best"]["collectorArea"] for item in area_results if item["best"]["targetAchieved"]),
+        )
+        self.assertIn("TES_ACTUAL_FLOW_m3_h", selected["result"].columns)
 
-    def test_optimizer_labels_coarse_and_refined_search_stages(self):
+    def test_area_sweep_reports_increasing_collector_areas(self):
         result = self.result_frame([0.0, 40.0, 40.0, 0.0], [900.0, 200.0, 0.0, 700.0])
         payload = {
             "collectorMin": 10,
             "collectorMax": 700,
-            "collectorMode": "optimize",
+            "targetSolarShare": 50,
             "tesSupplyTemp": 75,
             "tesReturnTemp": 42,
             "tesDesignMargin": 15,
@@ -116,14 +119,11 @@ class TesOptimizationTests(unittest.TestCase):
             "parkingArea": 0,
             "mallParking": "no",
         }
-        candidates = optimize_tes_design(result, payload, self.collector, self.config)
-        stages = {item["best"]["searchStage"] for item in candidates}
+        _, area_results = calculate_collector_area_sweep(result, payload, self.collector, self.config)
+        areas = [item["best"]["collectorArea"] for item in area_results]
 
-        self.assertIn("coarse", stages)
-        self.assertIn("refined", stages)
-        hierarchy = candidates[0]["best"]["searchHierarchy"]
-        self.assertEqual(len(hierarchy), 3)
-        self.assertTrue(all(group["children"] for group in hierarchy))
+        self.assertEqual(areas, sorted(areas))
+        self.assertGreater(len(areas), 1)
 
 
 if __name__ == "__main__":

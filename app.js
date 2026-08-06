@@ -357,7 +357,7 @@ const defaults = {
   solutionMode: "fixed",
   lgMode: "fixed",
   regenMode: "fixed",
-  collectorMode: "optimize",
+  targetSolarShare: 50,
   collectorMin: 20,
   collectorMax: 140,
   tesSupplyTemp: 75,
@@ -410,7 +410,7 @@ const fields = [
   "solutionMode",
   "lgMode",
   "regenMode",
-  "collectorMode",
+  "targetSolarShare",
   "collectorMin",
   "collectorMax",
   "tesSupplyTemp",
@@ -624,6 +624,7 @@ function validateDesignInputs(input) {
     ["regenTemp", "재생기 용액온도"],
     ["collectorMin", "집열기 최소"],
     ["collectorMax", "집열기 최대"],
+    ["targetSolarShare", "목표 재생열 커버율"],
     ["tesSupplyTemp", "TES 공급수온도"],
     ["tesReturnTemp", "TES 환수온도"],
     ["tesDesignMargin", "TES 설계 여유율"],
@@ -997,14 +998,14 @@ function parallelModuleCount(airflowM3h, lgRatio, airMin, airMax, solutionMin, s
 }
 
 function renderMetrics(best, input) {
-  $("heroResultLabel").textContent = "최적 설계안";
+  $("heroResultLabel").textContent = best.targetAchieved ? "목표 커버율 달성 최소 면적" : "입력 범위 내 최대 커버 결과";
   $("optimalDesign").textContent = `${formatNumber(best.collectorArea)} m² / ${formatNumber(best.tesVolume, 1)} m³`;
   const weatherLabel =
     needsCoordinateInput(input.weatherDataset)
       ? `좌표 ${formatNumber(input.latitude, 2)}°, ${formatNumber(input.longitude, 2)}°`
       : weatherDatasets[input.weatherDataset].label;
   $("designNote").textContent =
-    `${weatherLabel}, ${input.collectorType === "evacuated" ? "진공관형" : "평판형"} · TES UA ${formatNumber(best.tesHeatLossUA || 0, 2)} W/K`;
+    `${weatherLabel}, ${input.collectorType === "evacuated" ? "진공관형" : "평판형"} · 목표 ${formatNumber(input.targetSolarShare, 0)}% · TES UA ${formatNumber(best.tesHeatLossUA || 0, 2)} W/K`;
   $("optimalCollector").textContent = `${formatNumber(best.collectorArea)} m²`;
   $("optimalTes").textContent = `${formatNumber(best.tesVolume, 1)} m³`;
   $("optimalTesFlow").textContent = `${formatNumber(best.tesDesignFlow || 0, 2)} m³/h`;
@@ -1040,32 +1041,18 @@ function renderCities(input) {
 function renderCandidateRows(candidates) {
   $("candidateRows").innerHTML = candidates
     .map(
-      (candidate, index) => {
-        const stage = candidate.searchStage === "refined" ? "refined" : "coarse";
-        const stageLabel = stage === "refined" ? "2차 세분화" : "1차 세분화";
-        return `
-        <tr class="candidate-row${index === 0 ? " active" : ""}" data-candidate-index="${index}">
-          <td>${index + 1}</td>
-          <td><span class="search-stage-badge ${stage}">${stageLabel}</span></td>
+      (candidate) => `
+        <tr class="candidate-row${candidate.targetAchieved ? " active" : ""}">
           <td>${formatNumber(candidate.collectorArea)} m²</td>
-          <td>${formatNumber(candidate.tesVolume, 1)} m³</td>
-          <td>${formatNumber(candidate.tesDesignFlow || 0, 2)} m³/h</td>
-          <td>${formatNumber(candidate.tesHeatLossUA || 0, 2)} W/K</td>
-          <td>${formatNumber(candidate.tesLoss || 0)} kWh</td>
-          <td>${formatNumber(candidate.tesDump || 0)} kWh</td>
-          <td>${formatNumber(candidate.solutionConcentration, 1)} %</td>
-          <td>${formatNumber(candidate.lgRatio, 1)}</td>
-          <td>${formatNumber(candidate.absSolutionTemp)} °C</td>
-          <td>${formatNumber(candidate.regenTemp)} °C</td>
-          <td>${formatNumber(candidate.collectorCoverage * 100, 1)} %</td>
+          <td>${formatNumber(candidate.regenNeed)} kWh</td>
+          <td>${formatNumber(candidate.usefulSolar)} kWh</td>
+          <td>${formatNumber(candidate.solarShare * 100, 1)} %</td>
           <td>${formatNumber(candidate.auxEnergy)} kWh</td>
-          <td>${formatNumber(candidate.unmetHours)} h</td>
-          <td>${formatNumber(candidate.score, 3)}</td>
+          <td>${candidate.targetAchieved ? "충족" : "-"}</td>
         </tr>
-      `;
-      },
+      `,
     )
-    .join("") || `<tr class="empty-result-row"><td colspan="16">이 1차 후보에 연결된 2차 설계안이 없습니다.</td></tr>`;
+    .join("") || `<tr class="empty-result-row"><td colspan="6">면적별 계산 결과가 없습니다.</td></tr>`;
 }
 
 const monthlyComparisonColors = ["#e18424", "#147d91", "#2f855a", "#c84b4b", "#7157a5", "#2f64a3", "#9a6b16", "#b04f86"];
@@ -1351,7 +1338,7 @@ function renderPythonResult(result, input) {
   renderCities(input);
   $("seasonSummary").textContent =
     `Python 엔진 · 요구 재생열 ${formatNumber(best.regenNeed)} kWh · TES 공급 ${formatNumber(best.usefulSolar)} kWh · 커버율 ${formatNumber(best.collectorCoverage * 100, 1)} %`;
-  renderCandidates(result.candidates || [best], result.searchHierarchy || []);
+  renderCandidateRows(result.areaResults || result.candidates || [best]);
 }
 
 function animateFlow() {
@@ -1364,13 +1351,10 @@ function animateFlow() {
 
 function estimateCalculation(input) {
   const collectorRange = Math.abs(input.collectorMax - input.collectorMin);
-  const coarseCollectorCount = input.collectorMode === "fixed"
+  const coarseCollectorCount = collectorRange < 1e-9
     ? 1
-    : collectorRange < 1e-9
-      ? 1
-      : clamp(Math.ceil(collectorRange / 250) + 1, 9, 17);
-  const refinementCount = collectorRange > 500 && input.collectorMode !== "fixed" ? 12 : 0;
-  const collectorCount = coarseCollectorCount + refinementCount;
+    : clamp(Math.ceil(collectorRange / 250) + 1, 9, 17);
+  const collectorCount = coarseCollectorCount;
   const candidateCount = collectorCount * 10 * 10;
   const daysByMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
   const weatherHours = input.simulationMonths.reduce((hours, month) => hours + daysByMonth[month - 1] * 24, 0);
@@ -1390,10 +1374,7 @@ function clearResultOutputs(message = "입력값을 확인한 뒤 계산을 실�
   $("monthlyLegend").innerHTML = "";
   $("monthlyChart").innerHTML = `<div class="result-empty">계산 후 월별 결과가 표시됩니다.</div>`;
   $("cityList").innerHTML = `<div class="result-empty">계산 후 지역 비교가 표시됩니다.</div>`;
-  $("candidateChart").innerHTML = `<div class="result-empty">계산 후 Pareto 설계안이 표시됩니다.</div>`;
-  $("stageOneChart").innerHTML = "";
-  $("refinementDrilldown").classList.add("is-hidden");
-  $("candidateRows").innerHTML = `<tr class="empty-result-row"><td colspan="16">계산 결과가 없습니다.</td></tr>`;
+  $("candidateRows").innerHTML = `<tr class="empty-result-row"><td colspan="6">계산 결과가 없습니다.</td></tr>`;
 }
 
 function markResultsPending() {

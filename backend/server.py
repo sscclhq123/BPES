@@ -677,6 +677,103 @@ def optimize_tes_design(base_result, payload, base_collector, base_config):
     return optimized
 
 
+def calculate_collector_area_sweep(base_result, payload, base_collector, base_config):
+    """Calculate area-to-solar-share results without a multi-objective function."""
+    collector_min = to_number(payload, "collectorMin", base_collector.area_m2)
+    collector_max = to_number(payload, "collectorMax", base_collector.area_m2)
+    collector_values = initial_collector_area_candidates(collector_min, collector_max)
+    supply_temp = to_number(payload, "tesSupplyTemp", base_config.t_tes_max_c)
+    return_temp = to_number(payload, "tesReturnTemp", base_config.t_tes_min_c)
+    target_share = np.clip(to_number(payload, "targetSolarShare", 50) / 100, 0.01, 1.0)
+    available_area = max(
+        to_number(payload, "buildingArea", 0)
+        + (to_number(payload, "parkingArea", 0) if payload.get("mallParking") == "yes" else 0),
+        0,
+    )
+    if supply_temp <= return_temp:
+        raise ValueError("TES 공급수온도는 환수온도보다 높아야 합니다.")
+
+    candidate_config = replace(base_config, t_tes_min_c=return_temp, t_tes_max_c=supply_temp)
+    volume_values, flow_values, energy_density = derived_tes_candidates(base_result, candidate_config, payload)
+    reg_need = float(base_result["REG_HX_HEAT_NEED_kWh"].sum(skipna=True))
+    area_designs = []
+
+    for area in collector_values:
+        trials = simulate_tes_grid(
+            base_result,
+            candidate_config,
+            base_collector,
+            area,
+            volume_values,
+            flow_values,
+        )
+        if not trials:
+            continue
+        trial = max(
+            trials,
+            key=lambda item: (
+                item["tesToRegTotal"],
+                -item["dumpTotal"],
+                -item["lossTotal"],
+                -item["volume"],
+                -item["flow"],
+            ),
+        )
+        solar_share = trial["tesToRegTotal"] / reg_need if reg_need > 0 else 0.0
+        area_designs.append(
+            {
+                "best": {
+                    "collectorArea": clean_value(area),
+                    "tesVolume": clean_value(trial["volume"]),
+                    "tesStorageEnergy": clean_value(trial["storageCapacityKWh"]),
+                    "tesHeatLossUA": clean_value(trial["tankUA"]),
+                    "tesInsulationK": candidate_config.tes_insulation_k_w_mk,
+                    "tesKWhPerM3": clean_value(energy_density),
+                    "tesSizingMethod": "Hourly TES dispatch for maximum recoverable solar heat",
+                    "tesDesignFlow": clean_value(trial["flow"]),
+                    "tesMaxFlow": clean_value(trial["maxActualFlow"]),
+                    "tesLoss": clean_value(trial["lossTotal"]),
+                    "tesDump": clean_value(trial["dumpTotal"]),
+                    "collectorUsefulEnergy": clean_value(trial["collectorTotal"]),
+                    "solutionConcentration": base_config.xi_tank_init * 100,
+                    "lgRatio": base_config.lg_ratio_abs,
+                    "absSolutionTemp": base_config.t_abs_in_target_c,
+                    "regenTemp": base_config.t_reg_in_target_c,
+                    "solarShare": clean_value(solar_share),
+                    "collectorCoverage": clean_value(solar_share),
+                    "availableCollectorArea": clean_value(available_area),
+                    "auxEnergy": clean_value(trial["auxTotal"]),
+                    "regenNeed": clean_value(reg_need),
+                    "usefulSolar": clean_value(trial["tesToRegTotal"]),
+                    "targetSolarShare": clean_value(target_share),
+                    "targetAchieved": bool(solar_share + 1e-9 >= target_share),
+                }
+            }
+        )
+
+    if not area_designs:
+        raise ValueError("집열기 면적별 계산 결과를 만들 수 없습니다. 입력 범위를 확인하세요.")
+    area_designs.sort(key=lambda item: item["best"]["collectorArea"])
+    achieved = [item for item in area_designs if item["best"]["targetAchieved"]]
+    selected = min(achieved, key=lambda item: item["best"]["collectorArea"]) if achieved else max(
+        area_designs,
+        key=lambda item: (item["best"]["solarShare"], -item["best"]["collectorArea"]),
+    )
+    selected["best"]["evaluatedCollectorAreas"] = len(area_designs)
+    selected["best"]["evaluatedDesignCombinations"] = len(area_designs) * len(volume_values) * len(flow_values)
+    selected_dispatch = simulate_tes_tank(
+        base_result,
+        candidate_config,
+        base_collector,
+        selected["best"]["collectorArea"],
+        selected["best"]["tesVolume"],
+        selected["best"]["tesDesignFlow"],
+    )
+    selected["best"]["auxiliaryHours"] = int(sum(value > 1e-6 for value in selected_dispatch["aux"]))
+    selected["result"] = apply_tes_dispatch(base_result, selected_dispatch, selected["best"]["tesDesignFlow"])
+    return selected, area_designs
+
+
 def build_weather_preview_from_file(weather_file, source_label, months=tuple(range(1, 13))):
     config = SystemConfig(sim_months=tuple(months))
     collector = WeatherCollectorConfig.for_type("evacuated_tube")
@@ -785,11 +882,9 @@ def simulate(payload):
         collector=load_collector,
     )
     base_result = result
-    optimized = optimize_tes_design(base_result, payload, collector, config)
-    best_case = optimized[0]
+    best_case, area_designs = calculate_collector_area_sweep(base_result, payload, collector, config)
     result = best_case["result"]
     best = best_case["best"]
-    search_hierarchy = best.get("searchHierarchy", [])
     row = summary.iloc[0].to_dict()
     reg_need = float(result["REG_HX_HEAT_NEED_kWh"].sum(skipna=True))
     tes_to_reg = float(result["REG_HX_HEAT_FROM_TES_kWh"].sum(skipna=True))
@@ -846,18 +941,7 @@ def simulate(payload):
             "unmetHours": target_unmet_hours,
         }
 
-    display_hierarchy = [
-        {
-            **group,
-            "parent": candidate_with_monthly(group["parent"]),
-            "children": [
-                candidate_with_monthly(child)
-                for child in group["children"]
-            ],
-        }
-        for group in search_hierarchy
-    ]
-    display_candidates = [
+    display_area_results = [
         candidate_with_monthly(
             {
                 **item["best"],
@@ -866,7 +950,7 @@ def simulate(payload):
                 "unmetHours": target_unmet_hours,
             }
         )
-        for item in optimized[:8]
+        for item in area_designs
     ]
 
     return {
@@ -886,8 +970,7 @@ def simulate(payload):
             "regenNeed": reg_need,
             "usefulSolar": tes_to_reg,
         },
-        "candidates": display_candidates,
-        "searchHierarchy": display_hierarchy,
+        "areaResults": display_area_results,
     }
 
 
