@@ -1061,7 +1061,7 @@ function renderRegionResults(results) {
     }
     const best = result.best;
     return `
-      <tr class="region-result-row${selectedRegionComparisonKeys.has(key) ? " comparison-selected" : ""}" data-region-key="${key}" role="button" tabindex="0" aria-label="${label} 월별 재생열 요구량 비교 선택">
+      <tr class="region-result-row${selectedRegionComparisonKeys.has(key) ? " comparison-selected" : ""}" data-region-key="${key}" role="button" tabindex="0" aria-label="${label} 월별 재생열 요구량 비교 선택" onclick="toggleRegionComparison('${key}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleRegionComparison('${key}');}">
         <td>${label}</td>
         <td>${formatNumber(best.collectorArea)} m²</td>
         <td>${formatNumber(best.solarShare * 100, 1)} %</td>
@@ -1563,17 +1563,6 @@ async function runCalculation() {
 }
 
 function bindEvents() {
-  $("cityList").addEventListener("click", (event) => {
-    const row = event.target.closest(".region-result-row");
-    if (row) toggleRegionComparison(row.dataset.regionKey);
-  });
-  $("cityList").addEventListener("keydown", (event) => {
-    const row = event.target.closest(".region-result-row");
-    if (row && (event.key === "Enter" || event.key === " ")) {
-      event.preventDefault();
-      toggleRegionComparison(row.dataset.regionKey);
-    }
-  });
   $("weatherInputMode").addEventListener("change", () => {
     applyCurrentWeatherSelection();
     loadWeatherTrend();
