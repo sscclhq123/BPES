@@ -29,9 +29,24 @@ from solar_ld_engine import (  # noqa: E402
 
 
 UPLOAD_DIR = Path("/tmp/bpes-weather-uploads") if os.environ.get("VERCEL") else ROOT / "data" / "weather" / "uploads"
-DEFAULT_WEATHER = ROOT.parent / "KOR_SO_Seoul.WS.471080_TMYx.2011-2025.epw"
-if not DEFAULT_WEATHER.exists():
-    DEFAULT_WEATHER = ROOT / "data" / "weather" / "uploads" / "OBS_ASOS_TIM_20260403023410.xls"
+WEATHER_DATA_ROOT = ROOT / "data" / "weather" / "tmy_collection"
+WEATHER_DATASETS = {
+    "seoul_epw": WEATHER_DATA_ROOT / "Korea" / "KOR_SO_Seoul.WS.471080_TMYx.2011-2025.epw",
+    "daejeon_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_TJ_Daejeon.WS.471330_TMYx.2011-2025.epw",
+    "busan_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_PU_Busan-Daecheongdong.WS.471590_TMYx.2011-2025.epw",
+    "gwangju_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_KJ_Gwangju.471560_TMYx.2011-2025.epw",
+    "daegu_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_TG_Daegu.471430_TMYx.2011-2025.epw",
+    "incheon_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_IN_Incheon.WS.471120_TMYx.2011-2025.epw",
+    "jeju_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_CJ_Jeju.WS.471840_TMYx.2011-2025.epw",
+    "manila_tmy": WEATHER_DATA_ROOT / "Philippines" / "PHL_NCR_Manila-Aquino.Intl.AP.984290_TMYx.2011-2025.epw",
+    "cebu_tmyx": WEATHER_DATA_ROOT / "Philippines" / "PHL_CNV_Mactan-Cebu.Intl.AP.986460_TMYx.2011-2025.epw",
+    "bangkok_tmy": WEATHER_DATA_ROOT / "Thailand" / "THA_CRG_Bangkok.Metropolis.484550_TMYx.2011-2025.epw",
+    "chiang_mai_tmyx": WEATHER_DATA_ROOT / "Thailand" / "THA_NRG_Chiang.Mai.Intl.AP.483270_TMYx.2011-2025.epw",
+    "singapore_tmyx": WEATHER_DATA_ROOT / "Singapore" / "SGP_SG_Singapore-Changi.Intl.AP.486980_TMYx.2011-2025.epw",
+    "amsterdam_tmyx": WEATHER_DATA_ROOT / "Netherlands" / "NLD_NH_Amsterdam-Schipol.AP.062400_TMYx.2011-2025.epw",
+    "rotterdam_tmyx": WEATHER_DATA_ROOT / "Netherlands" / "NLD_ZH_Rotterdam.The.Hague.AP.063440_TMYx.2011-2025.epw",
+}
+DEFAULT_WEATHER = WEATHER_DATASETS["seoul_epw"]
 
 
 def clean_value(value):
@@ -113,7 +128,12 @@ def resolve_weather_file(payload):
       if not candidate.exists():
           raise FileNotFoundError(f"업로드 파일을 찾을 수 없습니다: {filename}")
       return candidate
-    return DEFAULT_WEATHER
+    candidate = WEATHER_DATASETS.get(dataset or "seoul_epw")
+    if candidate is None:
+        raise ValueError(f"등록되지 않은 표준 기상 데이터입니다: {dataset}")
+    if not candidate.exists():
+        raise FileNotFoundError(f"표준 기상 파일을 찾을 수 없습니다: {candidate.name}")
+    return candidate
 
 
 def build_configs(payload):
@@ -693,8 +713,19 @@ def weather_preview(payload):
     dataset = str(payload.get("weatherDataset", ""))
     dataset_labels = {
         "seoul_epw": "서울 TMYx EPW · 2011-2025",
-        "bangkok_tmy": "방콕 TMY3",
-        "manila_tmy": "마닐라 TMY3",
+        "daejeon_tmyx": "대전 TMYx EPW · 2011-2025",
+        "busan_tmyx": "부산 TMYx EPW · 2011-2025",
+        "gwangju_tmyx": "광주 TMYx EPW · 2011-2025",
+        "daegu_tmyx": "대구 TMYx EPW · 2011-2025",
+        "incheon_tmyx": "인천 TMYx EPW · 2011-2025",
+        "jeju_tmyx": "제주 TMYx EPW · 2011-2025",
+        "manila_tmy": "마닐라 TMYx EPW · 2011-2025",
+        "cebu_tmyx": "세부 TMYx EPW · 2011-2025",
+        "bangkok_tmy": "방콕 TMYx EPW · 2011-2025",
+        "chiang_mai_tmyx": "치앙마이 TMYx EPW · 2011-2025",
+        "singapore_tmyx": "싱가포르 TMYx EPW · 2011-2025",
+        "amsterdam_tmyx": "암스테르담 TMYx EPW · 2011-2025",
+        "rotterdam_tmyx": "로테르담 TMYx EPW · 2011-2025",
     }
     dataset_label = "사용자 업로드" if dataset.startswith("uploaded:") else dataset_labels.get(dataset, "표준 기상 데이터")
     return build_weather_preview_from_file(weather_file, f"{dataset_label} · {period_label(months)}", months)
