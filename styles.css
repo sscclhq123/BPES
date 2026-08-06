@@ -427,6 +427,27 @@ button:focus-visible {
   white-space: nowrap;
 }
 
+.region-result-row {
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.region-result-row:hover,
+.region-result-row:focus {
+  background: #eef8f8;
+  outline: none;
+}
+
+.region-result-row.comparison-selected {
+  background: #d9f0ee;
+  box-shadow: inset 4px 0 0 var(--teal);
+}
+
+.region-result-row.comparison-selected td:first-child {
+  color: var(--teal);
+  font-weight: 900;
+}
+
 #standardWeatherBox,
 #buildingTemplateBox {
   margin-bottom: 12px;

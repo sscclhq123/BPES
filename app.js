@@ -424,6 +424,8 @@ const fields = [
 
 const $ = (id) => document.getElementById(id);
 let activeUploadDataset = "upload_weather";
+let latestRegionResults = [];
+const selectedRegionComparisonKeys = new Set();
 
 function monthCheckboxes() {
   return [...document.querySelectorAll("#monthSelector input[type='checkbox']")];
@@ -1044,6 +1046,14 @@ function renderMetrics(best, input) {
 }
 
 function renderRegionResults(results) {
+  latestRegionResults = results.filter((item) => item?.result);
+  const validKeys = new Set(latestRegionResults.map((item) => item.key));
+  [...selectedRegionComparisonKeys].forEach((key) => {
+    if (!validKeys.has(key)) selectedRegionComparisonKeys.delete(key);
+  });
+  if (!selectedRegionComparisonKeys.size && latestRegionResults.length) {
+    selectedRegionComparisonKeys.add(latestRegionResults[0].key);
+  }
   $("cityList").innerHTML = results.map(({ key, result, error }) => {
     const label = weatherDatasets[key]?.label?.replace(" · TMYx 2011–2025", "") || key;
     if (error) {
@@ -1051,7 +1061,7 @@ function renderRegionResults(results) {
     }
     const best = result.best;
     return `
-      <tr>
+      <tr class="region-result-row${selectedRegionComparisonKeys.has(key) ? " comparison-selected" : ""}" data-region-key="${key}" role="button" tabindex="0" aria-label="${label} 월별 재생열 요구량 비교 선택">
         <td>${label}</td>
         <td>${formatNumber(best.collectorArea)} m²</td>
         <td>${formatNumber(best.solarShare * 100, 1)} %</td>
@@ -1060,6 +1070,27 @@ function renderRegionResults(results) {
       </tr>
     `;
   }).join("") || `<tr><td colspan="5">선택된 지역 계산 결과가 없습니다.</td></tr>`;
+
+  const toggleRegion = (key) => {
+    if (selectedRegionComparisonKeys.has(key)) {
+      if (selectedRegionComparisonKeys.size > 1) selectedRegionComparisonKeys.delete(key);
+    } else {
+      selectedRegionComparisonKeys.add(key);
+    }
+    renderRegionResults(results);
+  };
+  $("cityList").querySelectorAll(".region-result-row").forEach((row) => {
+    row.addEventListener("click", () => toggleRegion(row.dataset.regionKey));
+    row.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        toggleRegion(row.dataset.regionKey);
+      }
+    });
+  });
+  renderRegionMonthlyComparison(
+    latestRegionResults.filter((item) => selectedRegionComparisonKeys.has(item.key)),
+  );
 }
 
 function renderCandidateRows(candidates) {
@@ -1079,7 +1110,37 @@ function renderCandidateRows(candidates) {
     .join("") || `<tr class="empty-result-row"><td colspan="6">면적별 계산 결과가 없습니다.</td></tr>`;
 }
 
-const monthlyComparisonColors = ["#e18424", "#147d91", "#2f855a", "#c84b4b", "#7157a5", "#2f64a3", "#9a6b16", "#b04f86"];
+const monthlyComparisonColors = ["#173f73", "#e18424", "#147d91", "#2f855a", "#c84b4b", "#7157a5", "#2f64a3", "#9a6b16", "#b04f86", "#5f7f35", "#bd6b35", "#3f7f88", "#7b5c3f", "#5964a9"];
+
+function renderRegionMonthlyComparison(entries) {
+  if (!entries.length || !entries.every((item) => item.result?.monthly?.length)) return;
+  const series = entries.map((item, index) => ({
+    ...item,
+    color: monthlyComparisonColors[index % monthlyComparisonColors.length],
+    label: weatherDatasets[item.key]?.label?.replace(" · TMYx 2011–2025", "") || item.key,
+  }));
+  const months = series[0].result.monthly;
+  const maxValue = Math.max(
+    ...months.map((_, monthIndex) => Math.max(
+      ...series.map((item) => Number(item.result.monthly[monthIndex]?.load) || 0),
+    )),
+    1,
+  );
+  const barWidth = Math.max(3, Math.min(16, 68 / series.length));
+  $("monthlyChart").style.setProperty("--month-count", Math.max(months.length, 1));
+  $("monthlyChart").innerHTML = months.map((month, monthIndex) => {
+    const bars = series.map((item) => {
+      const load = Number(item.result.monthly[monthIndex]?.load) || 0;
+      const height = clamp((load / maxValue) * 210, 5, 210);
+      return `<div class="bar comparison-series" style="height:${height}px;width:${barWidth}px;background:${item.color}" title="${item.label} 재생열 요구량: ${formatNumber(load)} kWh"><span class="sr-only">${item.label} ${formatNumber(load)} kWh</span></div>`;
+    }).join("");
+    return `<div class="month-group"><div class="bars">${bars}</div><div class="month-label">${month.month}</div></div>`;
+  }).join("");
+  $("monthlyLegend").innerHTML = series.map((item) =>
+    `<span><i style="background:${item.color}"></i>${item.label} 재생열 요구량</span>`,
+  ).join("");
+  $("seasonSummary").textContent = `${series.length}개 지역 월별 재생열 요구량 비교 · 표의 지역 행을 클릭하여 추가/해제`;
+}
 
 function renderCandidateMonthlyComparison(selections) {
   if (!selections.length || !selections.every((item) => item.candidate?.monthly?.length)) return;
