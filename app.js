@@ -448,7 +448,11 @@ function setSelectedWeatherDatasets(keys) {
 
 function updateSelectedRegionSummary() {
   const keys = selectedWeatherDatasetKeys();
-  $("selectedRegionSummary").textContent = `${keys.length}개 지역 선택 · 월별 상세: ${weatherDatasets[$("weatherDataset").value]?.label || "-"}`;
+  if (keys.length && !keys.includes($("weatherDataset").value)) {
+    $("weatherDataset").value = keys[0];
+    applyWeatherDataset(keys[0]);
+  }
+  $("selectedRegionSummary").textContent = `${keys.length}개 지역 선택`;
 }
 
 function selectedSimulationMonths() {

@@ -36,7 +36,7 @@
               </select>
             </label>
             <div class="conditional-fields" id="standardWeatherBox">
-              <label>
+              <label class="is-hidden" aria-hidden="true">
                 월별 상세 기준 지역
                 <select id="weatherDataset">
                   <optgroup label="대한민국">
@@ -66,7 +66,7 @@
                 </select>
               </label>
               <fieldset class="weather-region-selector">
-                <legend>계산할 지역 다중선택</legend>
+                <legend>지역 선택</legend>
                 <div class="region-selector-actions">
                   <button type="button" id="selectAllRegions">전체 선택</button>
                   <button type="button" id="clearRegions">전체 해제</button>
@@ -548,6 +548,6 @@
       <input id="calculationPayload" name="payload" type="hidden" />
     </form>
     <script>window.__CALCULATION_BOOTSTRAP__ = null;</script>
-    <script src="./app.js?v=20260806-10"></script>
+    <script src="./app.js?v=20260806-11"></script>
   </body>
 </html>
