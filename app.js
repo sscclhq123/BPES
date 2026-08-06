@@ -648,7 +648,7 @@ function validateDesignInputs(input) {
     const absorberModules = parallelModuleCount(input.airflow, input.lgRatio, 0.15, 0.73, 0.63, 2.08);
     const regeneratorModules = parallelModuleCount(input.airflow, input.lgRatio, 0.24, 0.4, 0.26, 0.48);
     if (!absorberModules || !regeneratorModules) {
-      messages.push("현재 처리풍량과 L/G로는 흡수기 또는 재생기 모듈을 회귀식 유효 유량범위 안에 구성할 수 없습니다.");
+      messages.push("현재 처리풍량과 L/G로는 모듈을 실험식 권장 유량 범위 안에 구성할 수 없습니다.");
     }
   }
   if (
@@ -773,19 +773,19 @@ function empiricalWarnings(input) {
   const checks = [
     {
       ok: input.solutionConcentration >= 36.4 && input.solutionConcentration <= 39,
-      text: `LiCl 농도 ${formatNumber(input.solutionConcentration, 1)} %는 Park 흡수기 회귀식 범위 36.4~39.0 %를 벗어납니다.`,
+      text: `LiCl 농도 ${formatNumber(input.solutionConcentration, 1)} %는 실험식 권장 범위 36.4~39.0 %를 벗어납니다.`,
     },
     {
       ok: input.absSolutionTemp >= 8.05 && input.absSolutionTemp <= 31.4,
-      text: `제습부 입구 용액 목표온도 ${formatNumber(input.absSolutionTemp, 1)} °C는 Park 흡수기 회귀식 범위 8.05~31.40 °C를 벗어납니다.`,
+      text: `제습부 입구 용액 목표온도 ${formatNumber(input.absSolutionTemp, 1)} °C는 실험식 권장 범위 8.05~31.40 °C를 벗어납니다.`,
     },
     {
       ok: input.regenTemp >= 48.5 && input.regenTemp <= 59.4,
-      text: `재생기 입구 용액 목표온도 ${formatNumber(input.regenTemp, 1)} °C는 재생기 회귀식 범위 48.5~59.4 °C를 벗어납니다.`,
+      text: `재생부 입구 용액 목표온도 ${formatNumber(input.regenTemp, 1)} °C는 실험식 권장 범위 48.5~59.4 °C를 벗어납니다.`,
     },
     {
       ok: input.lgRatio >= 1.09 && input.lgRatio <= 2,
-      text: `L/G ${formatNumber(input.lgRatio, 2)}는 Park 흡수기와 재생기 모듈을 함께 구성하는 권장 범위 1.09~2.00을 벗어납니다.`,
+      text: `L/G ${formatNumber(input.lgRatio, 2)}는 실험식 권장 범위 1.09~2.00을 벗어납니다.`,
     },
   ];
 

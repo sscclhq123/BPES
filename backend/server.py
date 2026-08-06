@@ -184,19 +184,19 @@ def empirical_warnings(payload):
     checks = [
         (
             36.4 <= to_number(payload, "solutionConcentration", 38) <= 39.0,
-            f"LiCl 농도 {to_number(payload, 'solutionConcentration', 38):.1f} %는 Park 흡수기 회귀식 범위 36.4~39.0 %를 벗어납니다.",
+            f"LiCl 농도 {to_number(payload, 'solutionConcentration', 38):.1f} %는 실험식 권장 범위 36.4~39.0 %를 벗어납니다.",
         ),
         (
             8.05 <= to_number(payload, "absSolutionTemp", 25) <= 31.4,
-            f"제습부 입구 용액 목표온도 {to_number(payload, 'absSolutionTemp', 25):.1f} °C는 Park 흡수기 회귀식 범위 8.05~31.40 °C를 벗어납니다.",
+            f"제습부 입구 용액 목표온도 {to_number(payload, 'absSolutionTemp', 25):.1f} °C는 실험식 권장 범위 8.05~31.40 °C를 벗어납니다.",
         ),
         (
             48.5 <= to_number(payload, "regenTemp", 55) <= 59.4,
-            f"재생기 입구 용액 목표온도 {to_number(payload, 'regenTemp', 55):.1f} °C는 재생기 회귀식 범위 48.5~59.4 °C를 벗어납니다.",
+            f"재생부 입구 용액 목표온도 {to_number(payload, 'regenTemp', 55):.1f} °C는 실험식 권장 범위 48.5~59.4 °C를 벗어납니다.",
         ),
         (
             1.09 <= to_number(payload, "lgRatio", 1.1) <= 2.0,
-            f"L/G {to_number(payload, 'lgRatio', 1.1):.2f}는 Park 흡수기와 재생기 모듈을 함께 구성하는 권장 범위 1.09~2.00을 벗어납니다.",
+            f"L/G {to_number(payload, 'lgRatio', 1.1):.2f}는 실험식 권장 범위 1.09~2.00을 벗어납니다.",
         ),
     ]
     return [message + " 결과는 외삽값으로 해석하세요." for ok, message in checks if not ok]
