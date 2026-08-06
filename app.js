@@ -1071,26 +1071,19 @@ function renderRegionResults(results) {
     `;
   }).join("") || `<tr><td colspan="5">선택된 지역 계산 결과가 없습니다.</td></tr>`;
 
-  const toggleRegion = (key) => {
-    if (selectedRegionComparisonKeys.has(key)) {
-      if (selectedRegionComparisonKeys.size > 1) selectedRegionComparisonKeys.delete(key);
-    } else {
-      selectedRegionComparisonKeys.add(key);
-    }
-    renderRegionResults(results);
-  };
-  $("cityList").querySelectorAll(".region-result-row").forEach((row) => {
-    row.addEventListener("click", () => toggleRegion(row.dataset.regionKey));
-    row.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        toggleRegion(row.dataset.regionKey);
-      }
-    });
-  });
   renderRegionMonthlyComparison(
     latestRegionResults.filter((item) => selectedRegionComparisonKeys.has(item.key)),
   );
+}
+
+function toggleRegionComparison(key) {
+  if (!key || !latestRegionResults.some((item) => item.key === key)) return;
+  if (selectedRegionComparisonKeys.has(key)) {
+    if (selectedRegionComparisonKeys.size > 1) selectedRegionComparisonKeys.delete(key);
+  } else {
+    selectedRegionComparisonKeys.add(key);
+  }
+  renderRegionResults(latestRegionResults);
 }
 
 function renderCandidateRows(candidates) {
@@ -1570,6 +1563,17 @@ async function runCalculation() {
 }
 
 function bindEvents() {
+  $("cityList").addEventListener("click", (event) => {
+    const row = event.target.closest(".region-result-row");
+    if (row) toggleRegionComparison(row.dataset.regionKey);
+  });
+  $("cityList").addEventListener("keydown", (event) => {
+    const row = event.target.closest(".region-result-row");
+    if (row && (event.key === "Enter" || event.key === " ")) {
+      event.preventDefault();
+      toggleRegionComparison(row.dataset.regionKey);
+    }
+  });
   $("weatherInputMode").addEventListener("change", () => {
     applyCurrentWeatherSelection();
     loadWeatherTrend();
