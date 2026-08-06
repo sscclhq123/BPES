@@ -1553,6 +1553,8 @@ async function runCalculation() {
     }
     renderCalculationIssues([]);
     renderPythonResult(detailed.result, { ...input, weatherDataset: detailed.key });
+    selectedRegionComparisonKeys.clear();
+    selectedRegionComparisonKeys.add(detailed.key);
     renderRegionResults(results);
     const failedCount = results.filter((item) => item?.error).length;
     $("statusPill").textContent = failedCount ? "일부 완료" : "계산 완료";
