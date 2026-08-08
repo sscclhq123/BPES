@@ -243,6 +243,17 @@ def dehumidification_metrics(result):
     }
 
 
+def solar_utilization_metrics(collector_production, solar_used, regen_need):
+    production = max(float(collector_production or 0), 0.0)
+    used = max(float(solar_used or 0), 0.0)
+    demand = max(float(regen_need or 0), 0.0)
+    return {
+        "solarProductionRatio": clean_value(production / demand if demand > 0 else 0.0),
+        "solarUseCoverage": clean_value(used / demand if demand > 0 else 0.0),
+        "unutilizedSolar": clean_value(max(production - used, 0.0)),
+    }
+
+
 def tes_energy_density_kwh_m3(config):
     delta_t = max(config.t_tes_max_c - config.t_tes_min_c, 1e-9)
     return config.rho_w_kg_m3 * config.cp_w_j_kgk * delta_t / 3600 / 1000
@@ -632,6 +643,7 @@ def optimize_tes_design(base_result, payload, base_collector, base_config):
                             "auxEnergy": clean_value(aux),
                             "regenNeed": clean_value(reg_need),
                             "usefulSolar": clean_value(tes_to_reg),
+                            **solar_utilization_metrics(trial["collectorTotal"], tes_to_reg, reg_need),
                         },
                     }
                 )
@@ -767,6 +779,9 @@ def calculate_collector_area_sweep(base_result, payload, base_collector, base_co
                     "usefulSolar": clean_value(trial["tesToRegTotal"]),
                     "targetSolarShare": clean_value(target_share),
                     "targetAchieved": bool(solar_share + 1e-9 >= target_share),
+                    **solar_utilization_metrics(
+                        trial["collectorTotal"], trial["tesToRegTotal"], reg_need
+                    ),
                 }
             }
         )
@@ -955,6 +970,9 @@ def simulate(payload):
                 "usefulSolar": clean_value(candidate_solar),
                 "auxEnergy": clean_value(candidate_aux),
                 "solarShare": clean_value(candidate_solar / candidate_reg_need if candidate_reg_need > 0 else 0),
+                **solar_utilization_metrics(
+                    dispatch["collectorTotal"], candidate_solar, candidate_reg_need
+                ),
                 "monthly": monthly_rows(candidate_result),
                 **dehumidification_metrics(candidate_result),
             }
@@ -996,6 +1014,7 @@ def simulate(payload):
             "absorberModuleSolutionFlow": clean_value(row["ABS_module_solution_kg_s"]),
             "regenNeed": reg_need,
             "usefulSolar": tes_to_reg,
+            **solar_utilization_metrics(best.get("collectorUsefulEnergy", 0), tes_to_reg, reg_need),
             **dehumidification,
         },
         "areaResults": display_area_results,
