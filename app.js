@@ -1061,7 +1061,9 @@ function renderMetrics(best, input) {
   $("optimalCollector").textContent = `${formatNumber(best.collectorArea)} m²`;
   $("optimalTes").textContent = `${formatNumber(best.tesVolume, 1)} m³`;
   $("optimalTesFlow").textContent = `${formatNumber(best.tesDesignFlow || 0, 2)} m³/h`;
-  $("solarShare").textContent = `${formatNumber(best.collectorCoverage * 100, 1)} %`;
+  $("solarShare").textContent = `${formatNumber(best.solarUseCoverage * 100, 1)} %`;
+  $("solarProductionRatio").textContent = `${formatNumber(best.solarProductionRatio * 100, 1)} %`;
+  $("unutilizedSolar").textContent = `${formatNumber(best.unutilizedSolar)} kWh/선택기간`;
   $("auxEnergy").textContent = `${formatNumber(best.auxEnergy)} kWh/선택기간`;
   $("unmetHours").textContent = `${formatNumber(best.unmetHours)} h/선택기간`;
   $("recommendedOps").textContent =
@@ -1080,7 +1082,7 @@ function renderRegionResults(results) {
   $("cityList").innerHTML = results.map(({ key, result, error }) => {
     const label = weatherDatasets[key]?.label?.replace(" · TMYx 2011–2025", "") || key;
     if (error) {
-      return `<tr><td>${label}</td><td colspan="7">계산 실패 · ${error}</td></tr>`;
+      return `<tr><td>${label}</td><td colspan="9">계산 실패 · ${error}</td></tr>`;
     }
     const best = result.best;
     return `
@@ -1089,13 +1091,15 @@ function renderRegionResults(results) {
         <td>${formatNumber(best.collectorArea)} m²</td>
         <td>${formatNumber(best.solarShare * 100, 1)} %</td>
         <td>${formatNumber(best.usefulSolar)} kWh</td>
+        <td>${formatNumber(best.solarProductionRatio * 100, 1)} %</td>
+        <td>${formatNumber(best.unutilizedSolar)} kWh</td>
         <td>${formatNumber(best.auxEnergy)} kWh</td>
         <td>${formatNumber(best.targetDehumidification)} kg</td>
         <td>${formatNumber(best.actualDehumidification)} kg</td>
         <td>${formatNumber(best.dehumidificationAchievement * 100, 1)} %</td>
       </tr>
     `;
-  }).join("") || `<tr><td colspan="8">선택된 지역 계산 결과가 없습니다.</td></tr>`;
+  }).join("") || `<tr><td colspan="10">선택된 지역 계산 결과가 없습니다.</td></tr>`;
 
   renderRegionMonthlyComparison(
     latestRegionResults.filter((item) => selectedRegionComparisonKeys.has(item.key)),
@@ -1127,6 +1131,8 @@ function renderCandidateRows(candidates) {
           <td>${formatNumber(candidate.regenNeed)} kWh</td>
           <td>${formatNumber(candidate.usefulSolar)} kWh</td>
           <td>${formatNumber(candidate.solarShare * 100, 1)} %</td>
+          <td>${formatNumber(candidate.solarProductionRatio * 100, 1)} %</td>
+          <td>${formatNumber(candidate.unutilizedSolar)} kWh</td>
           <td>${formatNumber(candidate.auxEnergy)} kWh</td>
           <td>${candidate.targetAchieved ? "충족" : "-"}</td>
           <td>${formatNumber(candidate.targetDehumidification)} kg</td>
@@ -1135,7 +1141,7 @@ function renderCandidateRows(candidates) {
         </tr>
       `,
     )
-    .join("") || `<tr class="empty-result-row"><td colspan="9">면적별 계산 결과가 없습니다.</td></tr>`;
+    .join("") || `<tr class="empty-result-row"><td colspan="11">면적별 계산 결과가 없습니다.</td></tr>`;
 }
 
 const monthlyComparisonColors = ["#173f73", "#e18424", "#147d91", "#2f855a", "#c84b4b", "#7157a5", "#2f64a3", "#9a6b16", "#b04f86", "#5f7f35", "#bd6b35", "#3f7f88", "#7b5c3f", "#5964a9"];
@@ -1157,6 +1163,8 @@ function renderRegionAreaComparison(entries) {
         <td>${formatNumber(candidate.regenNeed)} kWh</td>
         <td>${formatNumber(candidate.usefulSolar)} kWh</td>
         <td>${formatNumber(candidate.solarShare * 100, 1)} %</td>
+        <td>${formatNumber(candidate.solarProductionRatio * 100, 1)} %</td>
+        <td>${formatNumber(candidate.unutilizedSolar)} kWh</td>
         <td>${formatNumber(candidate.auxEnergy)} kWh</td>
         <td>${candidate.targetAchieved ? "충족" : "-"}</td>
         <td>${formatNumber(candidate.targetDehumidification)} kg</td>
@@ -1167,7 +1175,7 @@ function renderRegionAreaComparison(entries) {
   });
   $("candidateRows").innerHTML = rows.join("");
   const labels = entries.map((item) => weatherDatasets[item.key]?.label?.replace(" · TMYx 2011–2025", "") || item.key);
-  $("areaBasisSummary").textContent = `${labels.join(", ")} 실제 기상계산 기준 · 커버율 = 태양열 공급량 ÷ 해당 지역 재생열 요구량`;
+  $("areaBasisSummary").textContent = `${labels.join(", ")} 실제 기상계산 기준 · 실사용 커버율은 최대 100%, 태양열 생산비는 100% 초과 가능`;
 }
 
 function renderRegionMonthlyComparison(entries) {
@@ -1532,7 +1540,7 @@ function renderPythonResult(result, input) {
   renderBackendChart(result.monthly);
   renderDehumidificationComparison([{ key: input.weatherKey || "selected", result }]);
   $("seasonSummary").textContent =
-    `Python 엔진 · 요구 재생열 ${formatNumber(best.regenNeed)} kWh · TES 공급 ${formatNumber(best.usefulSolar)} kWh · 커버율 ${formatNumber(best.collectorCoverage * 100, 1)} %`;
+    `Python 엔진 · 요구 재생열 ${formatNumber(best.regenNeed)} kWh · TES 실사용 ${formatNumber(best.usefulSolar)} kWh · 실사용 커버율 ${formatNumber(best.solarUseCoverage * 100, 1)} % · 태양열 생산비 ${formatNumber(best.solarProductionRatio * 100, 1)} %`;
   renderCandidateRows(result.areaResults || result.candidates || [best]);
 }
 
@@ -1563,7 +1571,7 @@ function clearResultOutputs(message = "입력값을 확인한 뒤 계산을 실�
   $("heroResultLabel").textContent = "계산 대기";
   $("optimalDesign").textContent = "-";
   $("designNote").textContent = message;
-  ["optimalCollector", "optimalTes", "optimalTesFlow", "solarShare", "auxEnergy", "unmetHours", "recommendedOps"]
+  ["optimalCollector", "optimalTes", "optimalTesFlow", "solarShare", "solarProductionRatio", "unutilizedSolar", "auxEnergy", "unmetHours", "recommendedOps"]
     .forEach((id) => { $(id).textContent = "-"; });
   $("seasonSummary").textContent = message;
   $("monthlyLegend").innerHTML = "";
