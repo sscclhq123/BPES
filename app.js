@@ -453,6 +453,26 @@ function updateSelectedRegionSummary() {
     applyWeatherDataset(keys[0]);
   }
   $("selectedRegionSummary").textContent = `${keys.length}개 지역 선택`;
+  renderWeatherTrendRegionOptions();
+}
+
+function renderWeatherTrendRegionOptions() {
+  const container = $("weatherTrendRegionOptions");
+  if (!container) return;
+  const keys = $("weatherInputMode").value === "standard" ? selectedWeatherDatasetKeys() : [];
+  const activeKey = $("weatherDataset").value;
+  container.innerHTML = keys.map((key) => {
+    const label = weatherDatasets[key]?.label?.split(" · ")[0] || key;
+    return `<button type="button" class="weather-trend-region-button${key === activeKey ? " active" : ""}" data-weather-trend-key="${key}" aria-pressed="${key === activeKey}">${label}</button>`;
+  }).join("");
+}
+
+function selectWeatherTrendRegion(datasetKey) {
+  if (!selectedWeatherDatasetKeys().includes(datasetKey)) return;
+  $("weatherDataset").value = datasetKey;
+  applyWeatherDataset(datasetKey);
+  renderWeatherTrendRegionOptions();
+  loadWeatherTrend();
 }
 
 function selectedSimulationMonths() {
@@ -1615,8 +1635,13 @@ function bindEvents() {
   });
   regionCheckboxes().forEach((checkbox) => checkbox.addEventListener("change", () => {
     updateSelectedRegionSummary();
+    loadWeatherTrend();
     markResultsPending();
   }));
+  $("weatherTrendRegionOptions").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-weather-trend-key]");
+    if (button) selectWeatherTrendRegion(button.dataset.weatherTrendKey);
+  });
   $("selectAllRegions").addEventListener("click", () => {
     setSelectedWeatherDatasets(regionCheckboxes().map((input) => input.value));
     markResultsPending();

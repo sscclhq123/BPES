@@ -593,6 +593,46 @@ button:focus-visible {
   font-weight: 800;
 }
 
+.mini-chart-header {
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.weather-trend-region-options {
+  display: flex;
+  flex: 1 1 150px;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.weather-trend-region-button {
+  border: 1px solid #cbd9e6;
+  border-radius: 999px;
+  background: #f7fafc;
+  color: #53657a;
+  padding: 3px 8px;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.weather-trend-region-button:hover,
+.weather-trend-region-button:focus-visible {
+  border-color: var(--teal);
+  color: var(--teal-dark);
+}
+
+.weather-trend-region-button.active {
+  border-color: var(--teal);
+  background: var(--teal);
+  color: white;
+}
+
+#weatherTrendStatus {
+  margin-left: auto;
+}
+
 .mini-line-chart {
   height: 168px;
   margin-top: 8px;
