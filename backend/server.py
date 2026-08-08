@@ -224,7 +224,7 @@ def monthly_rows(result):
             "actualDehumidification": clean_value(row.actual_dehumid_kg),
             "dehumidificationAchievement": clean_value(
                 min(row.actual_dehumid_kg, row.target_dehumid_kg) / row.target_dehumid_kg
-                if row.target_dehumid_kg > 0 else 1.0
+                if row.target_dehumid_kg > 0 else None
             ),
         }
         for row in grouped.itertuples(index=False)
@@ -239,7 +239,7 @@ def dehumidification_metrics(result):
         "targetDehumidification": clean_value(target),
         "actualDehumidification": clean_value(actual),
         "servedDehumidification": clean_value(served),
-        "dehumidificationAchievement": clean_value(served / target if target > 0 else 1.0),
+        "dehumidificationAchievement": clean_value(served / target if target > 0 else None),
     }
 
 

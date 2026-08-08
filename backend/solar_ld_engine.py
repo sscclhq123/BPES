@@ -397,6 +397,59 @@ def parallel_absorber_block(
     return result
 
 
+def apply_absorber_target_control(
+    result,
+    target_w_kgkg,
+    inlet_air_t_c,
+    inlet_air_w_kgkg,
+    inlet_air_h_kjkg,
+    total_air_kg_s,
+    total_solution_kg_s,
+    solution_xi,
+    solution_t_c,
+    eff_enthalpy,
+):
+    """Mix untreated bypass air so the delivered air does not exceed the moisture target."""
+    raw_out_w = float(result["w_air_out"])
+    if raw_out_w >= target_w_kgkg or inlet_air_w_kgkg <= target_w_kgkg:
+        result["process_air_fraction"] = 1.0
+        return result
+
+    removable_raw = max(inlet_air_w_kgkg - raw_out_w, 1e-12)
+    process_fraction = float(np.clip(
+        (inlet_air_w_kgkg - target_w_kgkg) / removable_raw,
+        0.0,
+        1.0,
+    ))
+    controlled = dict(result)
+    controlled["process_air_fraction"] = process_fraction
+    controlled["eff"] = float(result["eff"]) * process_fraction
+    controlled["w_air_out"] = target_w_kgkg
+    controlled["T_air_out"] = inlet_air_t_c + process_fraction * (
+        float(result["T_air_out"]) - inlet_air_t_c
+    )
+    controlled["m_water_absorb"] = total_air_kg_s * max(
+        inlet_air_w_kgkg - target_w_kgkg,
+        0.0,
+    )
+    controlled["m_sol_out"] = total_solution_kg_s + controlled["m_water_absorb"]
+    controlled["xi_out"] = float(np.clip(
+        solution_xi * total_solution_kg_s / max(controlled["m_sol_out"], 1e-9),
+        0.20,
+        0.60,
+    ))
+    h_air_out = moist_air_enthalpy(controlled["T_air_out"], controlled["w_air_out"])
+    h_sol_in = solution_enthalpy(solution_xi, solution_t_c)
+    controlled["h_sol_out"] = (
+        h_sol_in * total_solution_kg_s
+        + (inlet_air_h_kjkg - h_air_out) * eff_enthalpy * total_air_kg_s
+    ) / max(controlled["m_sol_out"], 1e-9)
+    controlled["T_sol_out"] = solution_temperature_from_h(
+        controlled["h_sol_out"], controlled["xi_out"]
+    )
+    return controlled
+
+
 def regenerator_block(
     ta,
     rh,
@@ -835,6 +888,18 @@ def run_simulation(
                     xi_0,
                     config.eff_enthalpy,
                 )
+                abs_res = apply_absorber_target_control(
+                    abs_res,
+                    config.target_supply_w_g_kg / 1000,
+                    ta,
+                    w_oa,
+                    h_oa,
+                    m_dot_oa_abs,
+                    m_abs_in,
+                    xi_0,
+                    config.t_abs_in_target_c,
+                    config.eff_enthalpy,
+                )
                 abs_ret_m, abs_ret_xi, abs_ret_h = abs_res["m_sol_out"], abs_res["xi_out"], abs_res["h_sol_out"]
                 acc["abs_water"] += abs_res["m_water_absorb"] * dt_sub_s
                 acc["abs_cooling_kWh"] += qcool_abs_w * dt_sub_h / 1000
@@ -1037,6 +1102,7 @@ def run_simulation(
                 "ABS_AIR_OUT_h_kJkg": moist_air_enthalpy(last_abs["T_air_out"], last_abs["w_air_out"]),
                 "ABS_AIR_OUT_RH_pct": rh_from_tw(last_abs["T_air_out"], last_abs["w_air_out"], config.p_atm_kpa),
                 "ABS_DELTA_w_g_kg": (w_oa - last_abs["w_air_out"]) * 1000,
+                "ABS_PROCESS_AIR_FRACTION": last_abs.get("process_air_fraction", 0.0),
                 "ABS_AIR_OUT_m3_h": dry_air_volume_flow_m3h(m_dot_oa_abs, last_abs["T_air_out"], last_abs["w_air_out"], config.p_atm_kpa),
                 "ABS_SOL_OUT_T_degC": last_abs["T_sol_out"],
                 "ABS_SOL_OUT_xi": last_abs["xi_out"],
