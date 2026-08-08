@@ -753,6 +753,11 @@ def run_simulation(
         tes_avail_start = state_tes_m * config.cp_w_j_kgk * max(state_tes_t - config.t_tes_min_c, 0) / 3600 / 1000
         schedule_on = is_operation_hour(row.time, config)
         ld_needed_hour = schedule_on and (w_oa * 1000) > config.target_supply_w_g_kg
+        target_moisture_removal_kg_h = (
+            m_dot_oa_abs * max(w_oa - config.target_supply_w_g_kg / 1000, 0) * 3600
+            if schedule_on
+            else 0.0
+        )
         acc = {
             "abs_water": 0.0,
             "des_water": 0.0,
@@ -1024,6 +1029,7 @@ def run_simulation(
                 "TANK_xi_NEXT": state_sol_m_salt / m_sol_end,
                 "TANK_Msol_NEXT_kg": m_sol_end,
                 "ABS_WATER_ABSORB_kg_h": acc["abs_water"] / dt_s * 3600,
+                "TARGET_MOISTURE_REMOVAL_kg_h": target_moisture_removal_kg_h,
                 "REG_WATER_DESORB_kg_h": acc["des_water"] / dt_s * 3600,
                 "WATER_GAP_kg_h": (acc["abs_water"] - acc["des_water"]) / dt_s * 3600,
                 "ABS_AIR_OUT_T_degC": last_abs["T_air_out"],

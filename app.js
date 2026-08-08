@@ -1080,7 +1080,7 @@ function renderRegionResults(results) {
   $("cityList").innerHTML = results.map(({ key, result, error }) => {
     const label = weatherDatasets[key]?.label?.replace(" · TMYx 2011–2025", "") || key;
     if (error) {
-      return `<tr><td>${label}</td><td colspan="4">계산 실패 · ${error}</td></tr>`;
+      return `<tr><td>${label}</td><td colspan="7">계산 실패 · ${error}</td></tr>`;
     }
     const best = result.best;
     return `
@@ -1090,14 +1090,20 @@ function renderRegionResults(results) {
         <td>${formatNumber(best.solarShare * 100, 1)} %</td>
         <td>${formatNumber(best.usefulSolar)} kWh</td>
         <td>${formatNumber(best.auxEnergy)} kWh</td>
+        <td>${formatNumber(best.targetDehumidification)} kg</td>
+        <td>${formatNumber(best.actualDehumidification)} kg</td>
+        <td>${formatNumber(best.dehumidificationAchievement * 100, 1)} %</td>
       </tr>
     `;
-  }).join("") || `<tr><td colspan="5">선택된 지역 계산 결과가 없습니다.</td></tr>`;
+  }).join("") || `<tr><td colspan="8">선택된 지역 계산 결과가 없습니다.</td></tr>`;
 
   renderRegionMonthlyComparison(
     latestRegionResults.filter((item) => selectedRegionComparisonKeys.has(item.key)),
   );
   renderRegionAreaComparison(
+    latestRegionResults.filter((item) => selectedRegionComparisonKeys.has(item.key)),
+  );
+  renderDehumidificationComparison(
     latestRegionResults.filter((item) => selectedRegionComparisonKeys.has(item.key)),
   );
 }
@@ -1123,10 +1129,13 @@ function renderCandidateRows(candidates) {
           <td>${formatNumber(candidate.solarShare * 100, 1)} %</td>
           <td>${formatNumber(candidate.auxEnergy)} kWh</td>
           <td>${candidate.targetAchieved ? "충족" : "-"}</td>
+          <td>${formatNumber(candidate.targetDehumidification)} kg</td>
+          <td>${formatNumber(candidate.actualDehumidification)} kg</td>
+          <td>${formatNumber(candidate.dehumidificationAchievement * 100, 1)} %</td>
         </tr>
       `,
     )
-    .join("") || `<tr class="empty-result-row"><td colspan="6">면적별 계산 결과가 없습니다.</td></tr>`;
+    .join("") || `<tr class="empty-result-row"><td colspan="9">면적별 계산 결과가 없습니다.</td></tr>`;
 }
 
 const monthlyComparisonColors = ["#173f73", "#e18424", "#147d91", "#2f855a", "#c84b4b", "#7157a5", "#2f64a3", "#9a6b16", "#b04f86", "#5f7f35", "#bd6b35", "#3f7f88", "#7b5c3f", "#5964a9"];
@@ -1150,6 +1159,9 @@ function renderRegionAreaComparison(entries) {
         <td>${formatNumber(candidate.solarShare * 100, 1)} %</td>
         <td>${formatNumber(candidate.auxEnergy)} kWh</td>
         <td>${candidate.targetAchieved ? "충족" : "-"}</td>
+        <td>${formatNumber(candidate.targetDehumidification)} kg</td>
+        <td>${formatNumber(candidate.actualDehumidification)} kg</td>
+        <td>${formatNumber(candidate.dehumidificationAchievement * 100, 1)} %</td>
       </tr>
     `);
   });
@@ -1190,6 +1202,54 @@ function renderRegionMonthlyComparison(entries) {
     `<span><i style="background:${item.color}"></i>${item.label} 재생열 요구량</span><span><i class="region-solar-swatch" style="--region-color:${item.color}"></i>${item.label} 태양열 공급량</span>`,
   ).join("");
   $("seasonSummary").textContent = `${series.length}개 지역의 월별 재생열 요구량·태양열 공급량 비교 · 표의 지역 행을 클릭하여 추가/해제`;
+}
+
+function renderDehumidificationComparison(entries) {
+  const chart = $("dehumidificationChart");
+  const rows = $("dehumidificationRows");
+  if (!chart || !rows) return;
+  if (!entries.length || !entries.every((item) => item.result?.monthly?.length)) {
+    chart.innerHTML = `<p class="result-empty">비교할 지역 계산 결과가 없습니다.</p>`;
+    rows.innerHTML = `<tr><td colspan="5">비교할 데이터가 없습니다.</td></tr>`;
+    return;
+  }
+  const series = entries.map((item) => ({
+    ...item,
+    color: regionComparisonColor(item.key),
+    label: weatherDatasets[item.key]?.label?.replace(" · TMYx 2011–2025", "") || item.key,
+  }));
+  const months = series[0].result.monthly;
+  const maxValue = Math.max(...series.flatMap((item) => item.result.monthly.flatMap((month) => [
+    Number(month.targetDehumidification) || 0,
+    Number(month.actualDehumidification) || 0,
+  ])), 1);
+  const barWidth = Math.max(3, Math.min(12, 64 / (series.length * 2)));
+  chart.style.setProperty("--month-count", Math.max(months.length, 1));
+  chart.innerHTML = months.map((month, monthIndex) => {
+    const bars = series.map((item) => {
+      const data = item.result.monthly[monthIndex] || {};
+      const target = Number(data.targetDehumidification) || 0;
+      const actual = Number(data.actualDehumidification) || 0;
+      const targetHeight = clamp((target / maxValue) * 210, target > 0 ? 5 : 0, 210);
+      const actualHeight = clamp((actual / maxValue) * 210, actual > 0 ? 5 : 0, 210);
+      return `
+        <div class="bar comparison-series dehumid-target-bar" style="height:${targetHeight}px;width:${barWidth}px;--region-color:${item.color}" title="${item.label} 목표 제습량: ${formatNumber(target)} kg" data-value="${formatNumber(target)}"><span class="sr-only">${item.label} 목표 제습량 ${formatNumber(target)} kg</span></div>
+        <div class="bar comparison-series" style="height:${actualHeight}px;width:${barWidth}px;background:${item.color}" title="${item.label} 실제 제습량: ${formatNumber(actual)} kg" data-value="${formatNumber(actual)}"><span class="sr-only">${item.label} 실제 제습량 ${formatNumber(actual)} kg</span></div>`;
+    }).join("");
+    return `<div class="month-group"><div class="bars">${bars}</div><div class="month-label">${month.month}</div></div>`;
+  }).join("");
+  $("dehumidificationLegend").innerHTML = series.map((item) => `
+    <span><i class="dehumid-target-swatch" style="--region-color:${item.color}"></i>${item.label} 목표</span>
+    <span><i style="background:${item.color}"></i>${item.label} 실제</span>
+  `).join("");
+  rows.innerHTML = months.flatMap((month, monthIndex) => series.map((item) => {
+    const data = item.result.monthly[monthIndex] || {};
+    return `<tr><td>${month.month}</td><td>${item.label}</td><td>${formatNumber(data.targetDehumidification)} kg</td><td>${formatNumber(data.actualDehumidification)} kg</td><td>${formatNumber((Number(data.dehumidificationAchievement) || 0) * 100, 1)} %</td></tr>`;
+  })).join("");
+  const totals = series.map((item) => item.result.best);
+  $("dehumidificationSummary").textContent = totals.map((best, index) =>
+    `${series[index].label} ${formatNumber(best.actualDehumidification)} / ${formatNumber(best.targetDehumidification)} kg (${formatNumber(best.dehumidificationAchievement * 100, 1)}%)`,
+  ).join(" · ");
 }
 
 function renderCandidateMonthlyComparison(selections) {
@@ -1470,6 +1530,7 @@ function renderPythonResult(result, input) {
   renderValidityWarnings(result.warnings || empiricalWarnings(input));
   renderMetrics(best, input);
   renderBackendChart(result.monthly);
+  renderDehumidificationComparison([{ key: input.weatherKey || "selected", result }]);
   $("seasonSummary").textContent =
     `Python 엔진 · 요구 재생열 ${formatNumber(best.regenNeed)} kWh · TES 공급 ${formatNumber(best.usefulSolar)} kWh · 커버율 ${formatNumber(best.collectorCoverage * 100, 1)} %`;
   renderCandidateRows(result.areaResults || result.candidates || [best]);

@@ -951,6 +951,25 @@ button:focus-visible {
   ) !important;
 }
 
+.dehumid-target-bar {
+  border: 2px solid var(--region-color);
+  background: color-mix(in srgb, var(--region-color) 12%, white) !important;
+}
+
+.dehumid-target-swatch {
+  border: 2px solid var(--region-color);
+  background: color-mix(in srgb, var(--region-color) 12%, white) !important;
+}
+
+.dehumidification-panel .bar.comparison-series::after {
+  display: block;
+}
+
+.dehumidification-data-wrap {
+  max-height: 300px;
+  margin-top: 12px;
+}
+
 .region-area-row {
   box-shadow: inset 4px 0 0 var(--region-color);
 }
