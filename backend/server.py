@@ -210,6 +210,8 @@ def monthly_rows(result):
         tes_to_reg_kWh=("REG_HX_HEAT_FROM_TES_kWh", "sum"),
         aux_kWh=("REG_HX_HEAT_FROM_AUX_kWh", "sum"),
         collector_kWh=("COLLECTOR_QU_TOTAL_kWh", "sum"),
+        target_dehumid_kg=("TARGET_MOISTURE_REMOVAL_kg_h", lambda values: float((values * monthly.loc[values.index, "dt_h"]).sum())),
+        actual_dehumid_kg=("ABS_WATER_ABSORB_kg_h", lambda values: float((values * monthly.loc[values.index, "dt_h"]).sum())),
     )
     return [
         {
@@ -218,9 +220,27 @@ def monthly_rows(result):
             "solar": clean_value(row.tes_to_reg_kWh),
             "aux": clean_value(row.aux_kWh),
             "collector": clean_value(row.collector_kWh),
+            "targetDehumidification": clean_value(row.target_dehumid_kg),
+            "actualDehumidification": clean_value(row.actual_dehumid_kg),
+            "dehumidificationAchievement": clean_value(
+                min(row.actual_dehumid_kg, row.target_dehumid_kg) / row.target_dehumid_kg
+                if row.target_dehumid_kg > 0 else 1.0
+            ),
         }
         for row in grouped.itertuples(index=False)
     ]
+
+
+def dehumidification_metrics(result):
+    target = float((result["TARGET_MOISTURE_REMOVAL_kg_h"] * result["dt_h"]).sum(skipna=True))
+    actual = float((result["ABS_WATER_ABSORB_kg_h"] * result["dt_h"]).sum(skipna=True))
+    served = min(actual, target)
+    return {
+        "targetDehumidification": clean_value(target),
+        "actualDehumidification": clean_value(actual),
+        "servedDehumidification": clean_value(served),
+        "dehumidificationAchievement": clean_value(served / target if target > 0 else 1.0),
+    }
 
 
 def tes_energy_density_kwh_m3(config):
@@ -893,6 +913,10 @@ def simulate(payload):
     row["TES_TO_REG_total_kWh"] = tes_to_reg
     row["AUX_TO_REG_total_kWh"] = aux
     row["AUX_ON_hours"] = int(result["AUX_ON"].sum())
+    dehumidification = dehumidification_metrics(result)
+    row["TARGET_DEHUMIDIFICATION_total_kg"] = dehumidification["targetDehumidification"]
+    row["ACTUAL_DEHUMIDIFICATION_total_kg"] = dehumidification["actualDehumidification"]
+    row["DEHUMIDIFICATION_ACHIEVEMENT"] = dehumidification["dehumidificationAchievement"]
     target_unmet_hours = int(row.get("TARGET_HUMIDITY_UNMET_hours", 0) or 0)
     solar_share = tes_to_reg / reg_need if reg_need > 0 else 0
     warnings = empirical_warnings(payload)
@@ -932,6 +956,7 @@ def simulate(payload):
                 "auxEnergy": clean_value(candidate_aux),
                 "solarShare": clean_value(candidate_solar / candidate_reg_need if candidate_reg_need > 0 else 0),
                 "monthly": monthly_rows(candidate_result),
+                **dehumidification_metrics(candidate_result),
             }
         return {
             **candidate,
@@ -971,6 +996,7 @@ def simulate(payload):
             "absorberModuleSolutionFlow": clean_value(row["ABS_module_solution_kg_s"]),
             "regenNeed": reg_need,
             "usefulSolar": tes_to_reg,
+            **dehumidification,
         },
         "areaResults": display_area_results,
     }
