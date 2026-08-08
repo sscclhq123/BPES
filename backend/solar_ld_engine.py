@@ -76,6 +76,7 @@ class SystemConfig:
     t_abs_in_target_c: float = 25.0
     t_reg_in_target_c: float = 55.0
     target_supply_w_g_kg: float = 10.0
+    target_humidity_tolerance_g_kg: float = 0.5
     eps_tes_reg_hx: float = 0.80
     eps_dec: float = 0.95
     eff_enthalpy: float = 0.70
@@ -806,8 +807,16 @@ def run_simulation(
         tes_avail_start = state_tes_m * config.cp_w_j_kgk * max(state_tes_t - config.t_tes_min_c, 0) / 3600 / 1000
         schedule_on = is_operation_hour(row.time, config)
         ld_needed_hour = schedule_on and (w_oa * 1000) > config.target_supply_w_g_kg
+        accepted_upper_w_kgkg = (
+            config.target_supply_w_g_kg + config.target_humidity_tolerance_g_kg
+        ) / 1000
         target_moisture_removal_kg_h = (
             m_dot_oa_abs * max(w_oa - config.target_supply_w_g_kg / 1000, 0) * 3600
+            if schedule_on
+            else 0.0
+        )
+        acceptable_min_moisture_removal_kg_h = (
+            m_dot_oa_abs * max(w_oa - accepted_upper_w_kgkg, 0) * 3600
             if schedule_on
             else 0.0
         )
@@ -1095,6 +1104,7 @@ def run_simulation(
                 "TANK_Msol_NEXT_kg": m_sol_end,
                 "ABS_WATER_ABSORB_kg_h": acc["abs_water"] / dt_s * 3600,
                 "TARGET_MOISTURE_REMOVAL_kg_h": target_moisture_removal_kg_h,
+                "ACCEPTABLE_MIN_MOISTURE_REMOVAL_kg_h": acceptable_min_moisture_removal_kg_h,
                 "REG_WATER_DESORB_kg_h": acc["des_water"] / dt_s * 3600,
                 "WATER_GAP_kg_h": (acc["abs_water"] - acc["des_water"]) / dt_s * 3600,
                 "ABS_AIR_OUT_T_degC": last_abs["T_air_out"],
