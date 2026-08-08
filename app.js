@@ -1252,7 +1252,9 @@ function renderDehumidificationComparison(entries) {
   `).join("");
   rows.innerHTML = months.flatMap((month, monthIndex) => series.map((item) => {
     const data = item.result.monthly[monthIndex] || {};
-    return `<tr><td>${month.month}</td><td>${item.label}</td><td>${formatNumber(data.targetDehumidification)} kg</td><td>${formatNumber(data.actualDehumidification)} kg</td><td>${formatNumber((Number(data.dehumidificationAchievement) || 0) * 100, 1)} %</td></tr>`;
+    const achievement = data.dehumidificationAchievement;
+    const achievementText = achievement == null ? "해당 없음" : `${formatNumber(Number(achievement) * 100, 1)} %`;
+    return `<tr><td>${month.month}</td><td>${item.label}</td><td>${formatNumber(data.targetDehumidification)} kg</td><td>${formatNumber(data.actualDehumidification)} kg</td><td>${achievementText}</td></tr>`;
   })).join("");
   const totals = series.map((item) => item.result.best);
   $("dehumidificationSummary").textContent = totals.map((best, index) =>
