@@ -248,10 +248,17 @@
                 목표 급기 절대습도
                 <span class="unit-input"><input id="targetAbsHumidity" type="number" min="4" max="20" step="0.1" /><span>g/kg</span></span>
               </label>
+              <label>
+                목표습도 허용편차
+                <span class="unit-input"><input id="targetHumidityTolerance" type="number" min="0" max="3" step="0.1" /><span>g/kg</span></span>
+              </label>
+            </div>
+            <div class="two-col">
               <label id="airflowField">
                 처리풍량
                 <span class="unit-input"><input id="airflow" type="number" min="100" max="50000" step="100" /><span>m³/h</span></span>
               </label>
+              <div class="dataset-note">목표 10.0 g/kg, 허용편차 0.5 g/kg이면 10.0~10.5 g/kg를 달성 범위로 인정합니다.</div>
             </div>
           </section>
 
@@ -467,7 +474,7 @@
               <div class="bar-chart" id="dehumidificationChart" aria-label="월별 목표 및 실제 제습량 차트"></div>
               <div class="table-wrap dehumidification-data-wrap">
                 <table>
-                  <thead><tr><th>월</th><th>지역</th><th>목표 제습량</th><th>실제 제습량</th><th>달성률</th></tr></thead>
+                  <thead><tr><th>월</th><th>지역</th><th>목표 제습량</th><th>허용 최소 제습량</th><th>실제 제습량</th><th>달성률</th><th>판정</th></tr></thead>
                   <tbody id="dehumidificationRows"></tbody>
                 </table>
               </div>
@@ -587,6 +594,6 @@
       <input id="calculationPayload" name="payload" type="hidden" />
     </form>
     <script>window.__CALCULATION_BOOTSTRAP__ = null;</script>
-    <script src="./app.js?v=20260808-3"></script>
+    <script src="./app.js?v=20260808-4"></script>
   </body>
 </html>

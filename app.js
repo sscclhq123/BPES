@@ -350,6 +350,7 @@ const defaults = {
   parkingArea: 1800,
   operationHours: 9,
   targetAbsHumidity: 10.0,
+  targetHumidityTolerance: 0.5,
   airflow: 7745,
   solutionConcentration: 38,
   lgRatio: 1.1,
@@ -403,6 +404,7 @@ const fields = [
   "parkingArea",
   "operationHours",
   "targetAbsHumidity",
+  "targetHumidityTolerance",
   "airflow",
   "solutionConcentration",
   "lgRatio",
@@ -667,6 +669,7 @@ function validateDesignInputs(input) {
     ["buildingArea", "적용 면적"],
     ["parkingArea", "주차장 면적"],
     ["targetAbsHumidity", "목표 급기 절대습도"],
+    ["targetHumidityTolerance", "목표습도 허용편차"],
     ["airflow", "처리풍량"],
     ["solutionConcentration", "용액 농도"],
     ["lgRatio", "L/G"],
@@ -1218,7 +1221,7 @@ function renderDehumidificationComparison(entries) {
   if (!chart || !rows) return;
   if (!entries.length || !entries.every((item) => item.result?.monthly?.length)) {
     chart.innerHTML = `<p class="result-empty">비교할 지역 계산 결과가 없습니다.</p>`;
-    rows.innerHTML = `<tr><td colspan="5">비교할 데이터가 없습니다.</td></tr>`;
+    rows.innerHTML = `<tr><td colspan="7">비교할 데이터가 없습니다.</td></tr>`;
     return;
   }
   const series = entries.map((item) => ({
@@ -1254,11 +1257,12 @@ function renderDehumidificationComparison(entries) {
     const data = item.result.monthly[monthIndex] || {};
     const achievement = data.dehumidificationAchievement;
     const achievementText = achievement == null ? "해당 없음" : `${formatNumber(Number(achievement) * 100, 1)} %`;
-    return `<tr><td>${month.month}</td><td>${item.label}</td><td>${formatNumber(data.targetDehumidification)} kg</td><td>${formatNumber(data.actualDehumidification)} kg</td><td>${achievementText}</td></tr>`;
+    const acceptedText = data.dehumidificationAccepted == null ? "해당 없음" : (data.dehumidificationAccepted ? "달성" : "미달");
+    return `<tr><td>${month.month}</td><td>${item.label}</td><td>${formatNumber(data.targetDehumidification)} kg</td><td>${formatNumber(data.acceptableMinDehumidification)} kg</td><td>${formatNumber(data.actualDehumidification)} kg</td><td>${achievementText}</td><td>${acceptedText}</td></tr>`;
   })).join("");
   const totals = series.map((item) => item.result.best);
   $("dehumidificationSummary").textContent = totals.map((best, index) =>
-    `${series[index].label} ${formatNumber(best.actualDehumidification)} / ${formatNumber(best.targetDehumidification)} kg (${formatNumber(best.dehumidificationAchievement * 100, 1)}%)`,
+    `${series[index].label} 실제 ${formatNumber(best.actualDehumidification)} kg · 목표 ${formatNumber(best.targetDehumidification)} kg · 허용 최소 ${formatNumber(best.acceptableMinDehumidification)} kg (${formatNumber(best.dehumidificationAchievement * 100, 1)}%) · ${best.dehumidificationAccepted ? "달성" : "미달"} · 허용 ${formatNumber(best.targetSupplyHumidity, 1)}~${formatNumber(best.acceptedUpperHumidity, 1)} g/kg`,
   ).join(" · ");
 }
 

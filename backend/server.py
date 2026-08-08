@@ -175,6 +175,11 @@ def build_configs(payload):
     if config.tes_insulation_k_w_mk <= 0:
         raise ValueError("TES 단열재 열전도율은 0보다 커야 합니다.")
     config.target_supply_w_g_kg = to_number(payload, "targetAbsHumidity", config.target_supply_w_g_kg)
+    config.target_humidity_tolerance_g_kg = float(np.clip(
+        to_number(payload, "targetHumidityTolerance", config.target_humidity_tolerance_g_kg),
+        0,
+        3,
+    ))
     config.sa_abs_m3h = to_number(payload, "airflow", config.sa_abs_m3h)
     config.operation_hours_per_day = int(to_number(payload, "operationHours", config.operation_hours_per_day))
     return collector_type, collector, config
@@ -211,6 +216,7 @@ def monthly_rows(result):
         aux_kWh=("REG_HX_HEAT_FROM_AUX_kWh", "sum"),
         collector_kWh=("COLLECTOR_QU_TOTAL_kWh", "sum"),
         target_dehumid_kg=("TARGET_MOISTURE_REMOVAL_kg_h", lambda values: float((values * monthly.loc[values.index, "dt_h"]).sum())),
+        acceptable_min_dehumid_kg=("ACCEPTABLE_MIN_MOISTURE_REMOVAL_kg_h", lambda values: float((values * monthly.loc[values.index, "dt_h"]).sum())),
         actual_dehumid_kg=("ABS_WATER_ABSORB_kg_h", lambda values: float((values * monthly.loc[values.index, "dt_h"]).sum())),
     )
     return [
@@ -221,7 +227,12 @@ def monthly_rows(result):
             "aux": clean_value(row.aux_kWh),
             "collector": clean_value(row.collector_kWh),
             "targetDehumidification": clean_value(row.target_dehumid_kg),
+            "acceptableMinDehumidification": clean_value(row.acceptable_min_dehumid_kg),
             "actualDehumidification": clean_value(row.actual_dehumid_kg),
+            "dehumidificationAccepted": (
+                bool(row.actual_dehumid_kg + 1e-9 >= row.acceptable_min_dehumid_kg)
+                if row.target_dehumid_kg > 0 else None
+            ),
             "dehumidificationAchievement": clean_value(
                 min(row.actual_dehumid_kg, row.target_dehumid_kg) / row.target_dehumid_kg
                 if row.target_dehumid_kg > 0 else None
@@ -233,11 +244,14 @@ def monthly_rows(result):
 
 def dehumidification_metrics(result):
     target = float((result["TARGET_MOISTURE_REMOVAL_kg_h"] * result["dt_h"]).sum(skipna=True))
+    acceptable_min = float((result["ACCEPTABLE_MIN_MOISTURE_REMOVAL_kg_h"] * result["dt_h"]).sum(skipna=True))
     actual = float((result["ABS_WATER_ABSORB_kg_h"] * result["dt_h"]).sum(skipna=True))
     served = min(actual, target)
     return {
         "targetDehumidification": clean_value(target),
+        "acceptableMinDehumidification": clean_value(acceptable_min),
         "actualDehumidification": clean_value(actual),
+        "dehumidificationAccepted": bool(actual + 1e-9 >= acceptable_min) if target > 0 else None,
         "servedDehumidification": clean_value(served),
         "dehumidificationAchievement": clean_value(served / target if target > 0 else None),
     }
@@ -1014,6 +1028,10 @@ def simulate(payload):
             "absorberModuleSolutionFlow": clean_value(row["ABS_module_solution_kg_s"]),
             "regenNeed": reg_need,
             "usefulSolar": tes_to_reg,
+            "targetSupplyHumidity": config.target_supply_w_g_kg,
+            "targetHumidityTolerance": config.target_humidity_tolerance_g_kg,
+            "acceptedUpperHumidity": config.target_supply_w_g_kg
+            + config.target_humidity_tolerance_g_kg,
             **solar_utilization_metrics(best.get("collectorUsefulEnergy", 0), tes_to_reg, reg_need),
             **dehumidification,
         },
