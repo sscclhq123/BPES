@@ -366,9 +366,6 @@ const defaults = {
   collectorMax: 140,
   tesSupplyTemp: 75,
   tesReturnTemp: 42,
-  tesDesignMargin: 15,
-  tesInitialTemp: 42,
-  tesInsulationK: 0.023,
 };
 
 const fallbackWeatherTrend = [
@@ -421,9 +418,6 @@ const fields = [
   "collectorMax",
   "tesSupplyTemp",
   "tesReturnTemp",
-  "tesDesignMargin",
-  "tesInitialTemp",
-  "tesInsulationK",
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -682,9 +676,6 @@ function validateDesignInputs(input) {
     ["targetSolarShare", "목표 재생열 커버율"],
     ["tesSupplyTemp", "TES 공급수온도"],
     ["tesReturnTemp", "TES 환수온도"],
-    ["tesDesignMargin", "TES 설계 여유율"],
-    ["tesInitialTemp", "TES 초기온도"],
-    ["tesInsulationK", "TES 단열재 열전도율"],
   ];
   const messages = checks
     .filter(([key]) => !Number.isFinite(input[key]) || (key === "parkingArea" ? input[key] < 0 : input[key] <= 0))
@@ -1056,16 +1047,16 @@ function parallelModuleCount(airflowM3h, lgRatio, airMin, airMax, solutionMin, s
 
 function renderMetrics(best, input) {
   $("heroResultLabel").textContent = best.targetAchieved ? "목표 커버율 달성 최소 면적" : "입력 범위 내 최대 커버 결과";
-  $("optimalDesign").textContent = `${formatNumber(best.collectorArea)} m² / ${formatNumber(best.tesVolume, 1)} m³`;
+  $("optimalDesign").textContent = `${formatNumber(best.collectorArea, 1)} m²`;
   const weatherLabel =
     needsCoordinateInput(input.weatherDataset)
       ? `좌표 ${formatNumber(input.latitude, 2)}°, ${formatNumber(input.longitude, 2)}°`
       : weatherDatasets[input.weatherDataset].label;
   $("designNote").textContent =
-    `${weatherLabel}, ${input.collectorType === "evacuated" ? "진공관형" : "평판형"} · 목표 ${formatNumber(input.targetSolarShare, 0)}% · TES UA ${formatNumber(best.tesHeatLossUA || 0, 2)} W/K`;
-  $("optimalCollector").textContent = `${formatNumber(best.collectorArea)} m²`;
-  $("optimalTes").textContent = `${formatNumber(best.tesVolume, 1)} m³`;
-  $("optimalTesFlow").textContent = `${formatNumber(best.tesDesignFlow || 0, 2)} m³/h`;
+    `${weatherLabel}, ${input.collectorType === "evacuated" ? "진공관형" : "평판형"} · 목표 ${formatNumber(input.targetSolarShare, 0)}% · 월별 이상적 TES 가정`;
+  $("optimalCollector").textContent = `${formatNumber(best.collectorArea, 1)} m²`;
+  $("optimalTes").textContent = "월내 무손실";
+  $("optimalTesFlow").textContent = "추후 산정";
   $("solarShare").textContent = `${formatNumber(best.solarUseCoverage * 100, 1)} %`;
   $("solarProductionRatio").textContent = `${formatNumber(best.solarProductionRatio * 100, 1)} %`;
   $("unutilizedSolar").textContent = `${formatNumber(best.unutilizedSolar)} kWh/선택기간`;

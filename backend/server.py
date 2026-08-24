@@ -499,6 +499,69 @@ def apply_tes_dispatch(result, dispatch, design_flow_m3_h):
     return adjusted
 
 
+def simulate_ideal_monthly_tes(result, config, collector, collector_area_m2):
+    """Dispatch solar heat with an ideal, lossless TES independently in each month.
+
+    The phase-1 sizing model intentionally ignores tank capacity, charge/discharge
+    flow and standing losses. Solar collected within a calendar month may serve
+    any regeneration load in that same month, but is not carried between months.
+    """
+    area = max(float(collector_area_m2), 0.0)
+    collector_temp_c = (config.t_tes_min_c + config.t_tes_max_c) / 2
+    production = []
+    for row in result.itertuples(index=False):
+        dt_h = max(float(getattr(row, "dt_h", 1) or 1), 1e-9)
+        ambient_c = float(getattr(row, "Ta_degC", config.t_tes_min_c) or config.t_tes_min_c)
+        irradiance_w_m2 = max(float(getattr(row, "GT_COLLECTOR_W_m2", 0) or 0), 0.0)
+        useful_w_m2, _, _ = collector_output_w_m2(
+            collector, irradiance_w_m2, collector_temp_c, ambient_c
+        )
+        production.append(max(area * useful_w_m2 * dt_h / 1000, 0.0))
+
+    loads = result["REG_HX_HEAT_NEED_kWh"].fillna(0).clip(lower=0).to_numpy(dtype=float)
+    production = np.asarray(production, dtype=float)
+    months = pd.to_datetime(result["time"]).dt.to_period("M")
+    served = np.zeros(len(result), dtype=float)
+    dump = np.zeros(len(result), dtype=float)
+
+    for month in months.unique():
+        mask = (months == month).to_numpy()
+        monthly_load = float(loads[mask].sum())
+        monthly_production = float(production[mask].sum())
+        monthly_used = min(monthly_load, monthly_production)
+        if monthly_load > 0:
+            served[mask] = loads[mask] * (monthly_used / monthly_load)
+        if monthly_production > 0:
+            dump[mask] = production[mask] * ((monthly_production - monthly_used) / monthly_production)
+
+    aux = np.maximum(loads - served, 0.0)
+    zero = np.zeros(len(result), dtype=float)
+    supply_temp = np.full(len(result), config.t_tes_max_c, dtype=float)
+    return_temp = np.full(len(result), config.t_tes_min_c, dtype=float)
+    output = {
+        "collector": production.tolist(),
+        "solarDirect": zero.tolist(),
+        "storageToReg": served.tolist(),
+        "tesToReg": served.tolist(),
+        "aux": aux.tolist(),
+        "flow": zero.tolist(),
+        "loss": zero.tolist(),
+        "dump": dump.tolist(),
+        "tempStart": supply_temp.tolist(),
+        "tempEnd": return_temp.tolist(),
+        "storedEnd": zero.tolist(),
+        "auxTotal": float(aux.sum()),
+        "lossTotal": 0.0,
+        "dumpTotal": float(dump.sum()),
+        "collectorTotal": float(production.sum()),
+        "tesToRegTotal": float(served.sum()),
+        "maxActualFlow": 0.0,
+        "storageCapacityKWh": 0.0,
+        "tankUA": 0.0,
+    }
+    return output
+
+
 def values_for_range(min_value, max_value, step, fixed=False):
     if fixed:
         return [float(min_value)]
@@ -725,7 +788,7 @@ def optimize_tes_design(base_result, payload, base_collector, base_config):
 
 
 def calculate_collector_area_sweep(base_result, payload, base_collector, base_config):
-    """Calculate area-to-solar-share results without a multi-objective function."""
+    """Find minimum collector area with an ideal monthly TES assumption."""
     collector_min = to_number(payload, "collectorMin", base_collector.area_m2)
     collector_max = to_number(payload, "collectorMax", base_collector.area_m2)
     collector_values = initial_collector_area_candidates(collector_min, collector_max)
@@ -741,45 +804,25 @@ def calculate_collector_area_sweep(base_result, payload, base_collector, base_co
         raise ValueError("TES 공급수온도는 환수온도보다 높아야 합니다.")
 
     candidate_config = replace(base_config, t_tes_min_c=return_temp, t_tes_max_c=supply_temp)
-    volume_values, flow_values, energy_density = derived_tes_candidates(base_result, candidate_config, payload)
     reg_need = float(base_result["REG_HX_HEAT_NEED_kWh"].sum(skipna=True))
     area_designs = []
 
-    for area in collector_values:
-        trials = simulate_tes_grid(
-            base_result,
-            candidate_config,
-            base_collector,
-            area,
-            volume_values,
-            flow_values,
-        )
-        if not trials:
-            continue
-        trial = max(
-            trials,
-            key=lambda item: (
-                item["tesToRegTotal"],
-                -item["dumpTotal"],
-                -item["lossTotal"],
-                -item["volume"],
-                -item["flow"],
-            ),
+    def evaluate(area):
+        trial = simulate_ideal_monthly_tes(
+            base_result, candidate_config, base_collector, area
         )
         solar_share = trial["tesToRegTotal"] / reg_need if reg_need > 0 else 0.0
-        area_designs.append(
-            {
+        return {
                 "best": {
                     "collectorArea": clean_value(area),
-                    "tesVolume": clean_value(trial["volume"]),
-                    "tesStorageEnergy": clean_value(trial["storageCapacityKWh"]),
-                    "tesHeatLossUA": clean_value(trial["tankUA"]),
-                    "tesInsulationK": candidate_config.tes_insulation_k_w_mk,
-                    "tesKWhPerM3": clean_value(energy_density),
-                    "tesSizingMethod": "Hourly TES dispatch for maximum recoverable solar heat",
-                    "tesDesignFlow": clean_value(trial["flow"]),
-                    "tesMaxFlow": clean_value(trial["maxActualFlow"]),
-                    "tesLoss": clean_value(trial["lossTotal"]),
+                    "tesVolume": None,
+                    "tesStorageEnergy": None,
+                    "tesHeatLossUA": 0.0,
+                    "tesKWhPerM3": None,
+                    "tesSizingMethod": "Ideal lossless monthly TES buffer (phase-1 assumption)",
+                    "tesDesignFlow": None,
+                    "tesMaxFlow": None,
+                    "tesLoss": 0.0,
                     "tesDump": clean_value(trial["dumpTotal"]),
                     "collectorUsefulEnergy": clean_value(trial["collectorTotal"]),
                     "solutionConcentration": base_config.xi_tank_init * 100,
@@ -797,9 +840,32 @@ def calculate_collector_area_sweep(base_result, payload, base_collector, base_co
                     **solar_utilization_metrics(
                         trial["collectorTotal"], trial["tesToRegTotal"], reg_need
                     ),
-                }
+                },
+                "dispatch": trial,
             }
+
+    area_designs = [evaluate(area) for area in collector_values]
+
+    # Refine the first target-crossing interval to 0.1 m2 instead of returning
+    # only the coarse UI sweep point.
+    if reg_need > 0 and payload.get("collectorMode") != "fixed":
+        ordered = sorted(area_designs, key=lambda item: item["best"]["collectorArea"])
+        crossing_index = next(
+            (index for index, item in enumerate(ordered) if item["best"]["targetAchieved"]),
+            None,
         )
+        if crossing_index is not None and crossing_index > 0:
+            low = float(ordered[crossing_index - 1]["best"]["collectorArea"])
+            high = float(ordered[crossing_index]["best"]["collectorArea"])
+            while high - low > 0.1:
+                mid = (low + high) / 2
+                trial = evaluate(mid)
+                if trial["best"]["targetAchieved"]:
+                    high = mid
+                else:
+                    low = mid
+            refined = evaluate(high)
+            area_designs.append(refined)
 
     if not area_designs:
         raise ValueError("집열기 면적별 계산 결과를 만들 수 없습니다. 입력 범위를 확인하세요.")
@@ -810,17 +876,12 @@ def calculate_collector_area_sweep(base_result, payload, base_collector, base_co
         key=lambda item: (item["best"]["solarShare"], -item["best"]["collectorArea"]),
     )
     selected["best"]["evaluatedCollectorAreas"] = len(area_designs)
-    selected["best"]["evaluatedDesignCombinations"] = len(area_designs) * len(volume_values) * len(flow_values)
-    selected_dispatch = simulate_tes_tank(
-        base_result,
-        candidate_config,
-        base_collector,
-        selected["best"]["collectorArea"],
-        selected["best"]["tesVolume"],
-        selected["best"]["tesDesignFlow"],
-    )
+    selected["best"]["evaluatedDesignCombinations"] = len(area_designs)
+    selected_dispatch = selected.pop("dispatch")
     selected["best"]["auxiliaryHours"] = int(sum(value > 1e-6 for value in selected_dispatch["aux"]))
-    selected["result"] = apply_tes_dispatch(base_result, selected_dispatch, selected["best"]["tesDesignFlow"])
+    selected["result"] = apply_tes_dispatch(base_result, selected_dispatch, 0.0)
+    for item in area_designs:
+        item.pop("dispatch", None)
     return selected, area_designs
 
 
@@ -958,24 +1019,13 @@ def simulate(payload):
     monthly_candidate_cache = {}
 
     def candidate_with_monthly(candidate):
-        cache_key = (
-            candidate["collectorArea"],
-            candidate["tesVolume"],
-            candidate["tesDesignFlow"],
-        )
+        cache_key = candidate["collectorArea"]
         if cache_key not in monthly_candidate_cache:
-            dispatch = simulate_tes_tank(
-                base_result,
-                config,
-                collector,
-                candidate["collectorArea"],
-                candidate["tesVolume"],
-                candidate["tesDesignFlow"],
+            dispatch = simulate_ideal_monthly_tes(
+                base_result, config, collector, candidate["collectorArea"]
             )
             candidate_result = apply_tes_dispatch(
-                base_result,
-                dispatch,
-                candidate["tesDesignFlow"],
+                base_result, dispatch, 0.0
             )
             candidate_reg_need = float(candidate_result["REG_HX_HEAT_NEED_kWh"].sum(skipna=True))
             candidate_solar = float(candidate_result["REG_HX_HEAT_FROM_TES_kWh"].sum(skipna=True))

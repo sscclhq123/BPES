@@ -356,23 +356,9 @@
                 TES 환수온도
                 <span class="unit-input"><input id="tesReturnTemp" type="number" min="25" max="70" step="1" /><span>°C</span></span>
               </label>
-              <label>
-                TES 설계 여유율
-                <span class="unit-input"><input id="tesDesignMargin" type="number" min="0" max="50" step="1" /><span>%</span></span>
-              </label>
             </div>
-            <div class="range-row">
-              <label>
-                TES 초기온도
-                <span class="unit-input"><input id="tesInitialTemp" type="number" min="0" max="95" step="1" /><span>°C</span></span>
-              </label>
-              <label>
-                단열재 열전도율
-                <span class="unit-input"><input id="tesInsulationK" type="number" min="0.005" max="0.2" step="0.001" /><span>W/m·K</span></span>
-              </label>
-            </div>
-            <div class="dataset-note secondary-note" id="tesSizingNote">수직 원통형 탱크(H/D=2)의 용량별 표면적과 1차원 단열 전도저항으로 UA를 산정합니다. 경질 우레탄폼 0.023 W/m·K와 상용 버퍼탱크 기준 단열 100 mm를 적용합니다.</div>
-            <div class="dataset-note secondary-note">면적 후보별 태양열 공급량을 계산하고, 목표 커버율을 처음 만족하는 최소 집열기 면적을 산정합니다.</div>
+            <div class="dataset-note secondary-note" id="tesSizingNote">1차 설계에서는 TES가 월내 태양열을 손실·용량·유량 제한 없이 원활하게 공급한다고 가정합니다. 계절 간 이월은 적용하지 않습니다.</div>
+            <div class="dataset-note secondary-note">월별 재생열 요구량과 태양열 생산량을 비교하고, 목표 커버율을 만족하는 최소 집열기 면적을 0.1 m² 수준으로 탐색합니다.</div>
           </section>
         </aside>
 
@@ -539,14 +525,14 @@
             <article class="metric-card">
               <span class="metric-icon">V</span>
               <div>
-                <p>산정 축열조 용량</p>
+                <p>TES 계산 가정</p>
                 <strong id="optimalTes">-</strong>
               </div>
             </article>
             <article class="metric-card">
               <span class="metric-icon">F</span>
               <div>
-                <p>산정 TES 설계유량</p>
+                <p>TES 상세설계</p>
                 <strong id="optimalTesFlow">-</strong>
               </div>
             </article>
