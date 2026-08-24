@@ -337,16 +337,6 @@
               목표 재생열 커버율
               <span class="unit-input"><input id="targetSolarShare" type="number" min="1" max="100" step="1" /><span>%</span></span>
             </label>
-            <div class="range-row" id="collectorRangeInputs">
-              <label>
-                집열기 최소
-                <span class="unit-input"><input id="collectorMin" type="number" min="5" max="500" step="5" /><span>m²</span></span>
-              </label>
-              <label>
-                집열기 최대
-                <span class="unit-input"><input id="collectorMax" type="number" min="10" max="1000" step="5" /><span>m²</span></span>
-              </label>
-            </div>
             <div class="range-row">
               <label>
                 TES 공급수온도
@@ -358,7 +348,7 @@
               </label>
             </div>
             <div class="dataset-note secondary-note" id="tesSizingNote">1차 설계에서는 TES가 월내 태양열을 손실·용량·유량 제한 없이 원활하게 공급한다고 가정합니다. 계절 간 이월은 적용하지 않습니다.</div>
-            <div class="dataset-note secondary-note">월별 재생열 요구량과 태양열 생산량을 비교하고, 목표 커버율을 만족하는 최소 집열기 면적을 0.1 m² 수준으로 탐색합니다.</div>
+            <div class="dataset-note secondary-note">월별 재생열 요구량과 태양열 생산량을 비교하고, 탐색 상한을 자동으로 확장하여 목표 커버율을 만족하는 최소 집열기 면적을 0.1 m² 수준으로 산정합니다.</div>
           </section>
         </aside>
 

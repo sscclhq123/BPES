@@ -139,18 +139,9 @@ def resolve_weather_file(payload):
 def build_configs(payload):
     collector_type = "evacuated_tube" if payload.get("collectorType") == "evacuated" else "flat_plate"
     collector = CollectorConfig.for_type(collector_type)
-    collector.area_m2 = to_number(payload, "collectorArea", to_number(payload, "collectorMin", collector.area_m2))
+    collector.area_m2 = to_number(payload, "collectorArea", collector.area_m2)
     if collector.area_m2 <= 0:
         raise ValueError("집열기 면적은 0보다 커야 합니다.")
-    building_area = to_number(payload, "buildingArea", 0)
-    collector_max = to_number(payload, "collectorMax", collector.area_m2)
-    uses_parking_collector = payload.get("mallParking") == "yes"
-    if building_area > 0 and collector_max > building_area and not uses_parking_collector:
-        raise ValueError(
-            f"적용 면적 {building_area:.0f} m²보다 집열기 최대값 {collector_max:.0f} m²가 큽니다. "
-            "주차장/옥외공간 활용을 선택하지 않았기 때문에 배치 면적이 부족합니다. "
-            "집열기 최대값을 적용 면적 이하로 낮추거나 주차장/옥외공간 활용을 선택하세요."
-        )
 
     config = SystemConfig()
     config.sim_months = selected_simulation_months(payload)
@@ -789,9 +780,6 @@ def optimize_tes_design(base_result, payload, base_collector, base_config):
 
 def calculate_collector_area_sweep(base_result, payload, base_collector, base_config):
     """Find minimum collector area with an ideal monthly TES assumption."""
-    collector_min = to_number(payload, "collectorMin", base_collector.area_m2)
-    collector_max = to_number(payload, "collectorMax", base_collector.area_m2)
-    collector_values = initial_collector_area_candidates(collector_min, collector_max)
     supply_temp = to_number(payload, "tesSupplyTemp", base_config.t_tes_max_c)
     return_temp = to_number(payload, "tesReturnTemp", base_config.t_tes_min_c)
     target_share = np.clip(to_number(payload, "targetSolarShare", 50) / 100, 0.01, 1.0)
@@ -836,7 +824,7 @@ def calculate_collector_area_sweep(base_result, payload, base_collector, base_co
                     "regenNeed": clean_value(reg_need),
                     "usefulSolar": clean_value(trial["tesToRegTotal"]),
                     "targetSolarShare": clean_value(target_share),
-                    "targetAchieved": bool(solar_share + 1e-9 >= target_share),
+                    "targetAchieved": bool(reg_need <= 1e-9 or solar_share + 1e-9 >= target_share),
                     **solar_utilization_metrics(
                         trial["collectorTotal"], trial["tesToRegTotal"], reg_need
                     ),
@@ -844,37 +832,42 @@ def calculate_collector_area_sweep(base_result, payload, base_collector, base_co
                 "dispatch": trial,
             }
 
-    area_designs = [evaluate(area) for area in collector_values]
+    low = 0.0
+    high = 10.0
+    high_trial = evaluate(high)
+    automatic_safety_cap_m2 = 10_000_000.0
+    while not high_trial["best"]["targetAchieved"] and high < automatic_safety_cap_m2:
+        low = high
+        high = min(high * 2, automatic_safety_cap_m2)
+        high_trial = evaluate(high)
 
-    # Refine the first target-crossing interval to 0.1 m2 instead of returning
-    # only the coarse UI sweep point.
-    if reg_need > 0 and payload.get("collectorMode") != "fixed":
-        ordered = sorted(area_designs, key=lambda item: item["best"]["collectorArea"])
-        crossing_index = next(
-            (index for index, item in enumerate(ordered) if item["best"]["targetAchieved"]),
-            None,
-        )
-        if crossing_index is not None and crossing_index > 0:
-            low = float(ordered[crossing_index - 1]["best"]["collectorArea"])
-            high = float(ordered[crossing_index]["best"]["collectorArea"])
-            while high - low > 0.1:
-                mid = (low + high) / 2
-                trial = evaluate(mid)
-                if trial["best"]["targetAchieved"]:
-                    high = mid
-                else:
-                    low = mid
-            refined = evaluate(high)
-            area_designs.append(refined)
+    if high_trial["best"]["targetAchieved"]:
+        while high - low > 0.1:
+            mid = (low + high) / 2
+            trial = evaluate(mid)
+            if trial["best"]["targetAchieved"]:
+                high = mid
+                high_trial = trial
+            else:
+                low = mid
+        selected_area = 0.0 if reg_need <= 1e-9 else math.ceil(high * 10 - 1e-9) / 10
+        selected = evaluate(selected_area)
+        display_upper = max(selected_area * 1.25, 10.0)
+    else:
+        selected_area = high
+        selected = high_trial
+        display_upper = high
+
+    display_areas = np.linspace(0, display_upper, 9).tolist()
+    display_areas.append(selected_area)
+    area_designs = [
+        evaluate(area)
+        for area in sorted(set(round(value, 3) for value in display_areas))
+    ]
 
     if not area_designs:
         raise ValueError("집열기 면적별 계산 결과를 만들 수 없습니다. 입력 범위를 확인하세요.")
     area_designs.sort(key=lambda item: item["best"]["collectorArea"])
-    achieved = [item for item in area_designs if item["best"]["targetAchieved"]]
-    selected = min(achieved, key=lambda item: item["best"]["collectorArea"]) if achieved else max(
-        area_designs,
-        key=lambda item: (item["best"]["solarShare"], -item["best"]["collectorArea"]),
-    )
     selected["best"]["evaluatedCollectorAreas"] = len(area_designs)
     selected["best"]["evaluatedDesignCombinations"] = len(area_designs)
     selected_dispatch = selected.pop("dispatch")

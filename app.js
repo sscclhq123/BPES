@@ -362,8 +362,6 @@ const defaults = {
   lgMode: "fixed",
   regenMode: "fixed",
   targetSolarShare: 50,
-  collectorMin: 20,
-  collectorMax: 140,
   tesSupplyTemp: 75,
   tesReturnTemp: 42,
 };
@@ -414,8 +412,6 @@ const fields = [
   "lgMode",
   "regenMode",
   "targetSolarShare",
-  "collectorMin",
-  "collectorMax",
   "tesSupplyTemp",
   "tesReturnTemp",
 ];
@@ -575,7 +571,6 @@ function applyLoadDataset(datasetKey) {
   $("airflow").value = dataset.airflow;
   $("loadDataset").value = datasetKey;
   updateBuildingModeFields();
-  updateParkingCollectorRange(dataset);
   updateLoadNote(datasetKey);
 }
 
@@ -588,7 +583,6 @@ function applyBuildingSelection() {
   if (mode === "custom" || mode === "load_upload") {
     $("loadDataset").value = mode === "load_upload" ? "uploaded_load" : "custom_building";
     updateBuildingModeFields();
-    updateParkingCollectorRange();
     updateLoadNote($("loadDataset").value);
     return;
   }
@@ -628,25 +622,6 @@ function updateLoadNote(datasetKey) {
   $("loadNote").textContent = `${dataset.source} · ${dataset.note}${parkingNote}`;
 }
 
-function updateParkingCollectorRange(dataset) {
-  const hasParkingCollector = $("buildingInputMode").value !== "load_upload" && $("mallParking").value === "yes";
-  const maxInput = $("collectorMax");
-
-  if (!hasParkingCollector) {
-    maxInput.max = 1000;
-    if (Number(maxInput.value) > 1000) {
-      maxInput.value = 1000;
-    }
-    return;
-  }
-
-  const baseArea = dataset?.buildingArea ?? Number($("buildingArea").value) ?? 0;
-  const parkingArea = Number($("parkingArea").value) || 0;
-  const suggestedMax = Math.round((baseArea + parkingArea) / 5) * 5;
-  maxInput.max = 5000;
-  maxInput.value = Math.max(Number(maxInput.value), suggestedMax);
-}
-
 function readInputs() {
   const data = {};
   fields.forEach((field) => {
@@ -671,8 +646,6 @@ function validateDesignInputs(input) {
     ["lgRatio", "L/G"],
     ["absSolutionTemp", "제습부 용액온도"],
     ["regenTemp", "재생기 용액온도"],
-    ["collectorMin", "집열기 최소"],
-    ["collectorMax", "집열기 최대"],
     ["targetSolarShare", "목표 재생열 커버율"],
     ["tesSupplyTemp", "TES 공급수온도"],
     ["tesReturnTemp", "TES 환수온도"],
@@ -688,9 +661,6 @@ function validateDesignInputs(input) {
     messages.push("계산할 표준 기상 지역을 하나 이상 선택하세요.");
   }
 
-  if (Number.isFinite(input.collectorMin) && Number.isFinite(input.collectorMax) && input.collectorMin > input.collectorMax) {
-    messages.push("집열기 최소값은 최대값보다 클 수 없습니다.");
-  }
   if (Number.isFinite(input.tesReturnTemp) && Number.isFinite(input.tesSupplyTemp) && input.tesReturnTemp >= input.tesSupplyTemp) {
     messages.push("TES 환수온도는 공급수온도보다 낮아야 합니다.");
   }
@@ -701,18 +671,6 @@ function validateDesignInputs(input) {
       messages.push("현재 처리풍량과 L/G로는 모듈을 실험식 권장 유량 범위 안에 구성할 수 없습니다.");
     }
   }
-  if (
-    Number.isFinite(input.buildingArea) &&
-    Number.isFinite(input.collectorMax) &&
-    input.buildingArea > 0 &&
-    input.collectorMax > input.buildingArea &&
-    input.mallParking !== "yes"
-  ) {
-    messages.push(
-      `주차장/옥외공간 활용을 선택하지 않았기 때문에 건축면적 ${formatNumber(input.buildingArea)} m²보다 큰 집열기 최대값 ${formatNumber(input.collectorMax)} m²를 배치할 수 없습니다. 집열기 최대값을 건축면적 이하로 낮추거나 주차장/옥외공간 활용을 선택하세요.`,
-    );
-  }
-
   return messages;
 }
 
@@ -1552,12 +1510,7 @@ function animateFlow() {
 }
 
 function estimateCalculation(input) {
-  const collectorRange = Math.abs(input.collectorMax - input.collectorMin);
-  const coarseCollectorCount = collectorRange < 1e-9
-    ? 1
-    : clamp(Math.ceil(collectorRange / 250) + 1, 9, 17);
-  const collectorCount = coarseCollectorCount;
-  const candidateCount = collectorCount * 10 * 10;
+  const candidateCount = 30;
   const daysByMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
   const weatherHours = input.simulationMonths.reduce((hours, month) => hours + daysByMonth[month - 1] * 24, 0);
   const centerSeconds = 2 + candidateCount * 0.003 * Math.max(weatherHours / 4392, 0.08);
