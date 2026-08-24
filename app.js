@@ -355,6 +355,7 @@ const defaults = {
   solutionConcentration: 38,
   lgRatio: 1.1,
   absSolutionTemp: 25,
+  absTempMode: "auto",
   regenTemp: 55,
   collectorType: "evacuated",
   solutionMode: "fixed",
@@ -409,6 +410,7 @@ const fields = [
   "solutionConcentration",
   "lgRatio",
   "absSolutionTemp",
+  "absTempMode",
   "regenTemp",
   "collectorType",
   "solutionMode",
@@ -1070,7 +1072,7 @@ function renderMetrics(best, input) {
   $("auxEnergy").textContent = `${formatNumber(best.auxEnergy)} kWh/선택기간`;
   $("unmetHours").textContent = `${formatNumber(best.unmetHours)} h/선택기간`;
   $("recommendedOps").textContent =
-    `흡수기 ${formatNumber(best.absorberModules || 0)}대 · 재생기 ${formatNumber(best.regeneratorModules || 0)}대 · ${best.solutionConcentration}% · L/G ${best.lgRatio}`;
+    `흡수기 ${formatNumber(best.absorberModules || 0)}대 · 재생기 ${formatNumber(best.regeneratorModules || 0)}대 · 제습부 ${best.absorberTemperatureMode === "auto" ? `자동 ${formatNumber(best.absorberSolutionTempMin, 1)}~${formatNumber(best.absorberSolutionTempMax, 1)} °C` : `고정 ${formatNumber(input.absSolutionTemp, 1)} °C`} · L/G ${best.lgRatio}`;
 }
 
 function renderRegionResults(results) {

@@ -75,6 +75,7 @@ class SystemConfig:
     fan_static_pressure_design_pa: float = 150.0
     t_abs_in_target_c: float = 25.0
     t_reg_in_target_c: float = 55.0
+    abs_temp_auto_control: bool = True
     target_supply_w_g_kg: float = 10.0
     target_humidity_tolerance_g_kg: float = 0.5
     eps_tes_reg_hx: float = 0.80
@@ -451,6 +452,95 @@ def apply_absorber_target_control(
     return controlled
 
 
+def controlled_parallel_absorber_block(
+    ta,
+    rh,
+    w_oa,
+    h_oa,
+    p_atm,
+    total_air_kg_s,
+    total_solution_kg_s,
+    module_count,
+    requested_solution_t_c,
+    xi_in,
+    eff_enthalpy,
+    target_w_kgkg,
+    auto_temperature_control=True,
+    solution_t_min_c=8.05,
+    solution_t_max_c=31.4,
+):
+    """Control absorber inlet solution temperature before using bypass as a safeguard."""
+
+    def evaluate(solution_t_c):
+        result = parallel_absorber_block(
+            ta,
+            rh,
+            w_oa,
+            h_oa,
+            p_atm,
+            total_air_kg_s,
+            total_solution_kg_s,
+            module_count,
+            solution_t_c,
+            xi_in,
+            eff_enthalpy,
+        )
+        result["ABS_SOL_IN_T_CONTROLLED_degC"] = float(solution_t_c)
+        result["ABS_TEMP_CONTROL_ACTIVE"] = bool(auto_temperature_control)
+        return result
+
+    requested_solution_t_c = float(np.clip(
+        requested_solution_t_c,
+        solution_t_min_c,
+        solution_t_max_c,
+    ))
+    if not auto_temperature_control:
+        selected = evaluate(requested_solution_t_c)
+    else:
+        low_t = float(solution_t_min_c)
+        high_t = float(solution_t_max_c)
+        low_result = evaluate(low_t)
+        high_result = evaluate(high_t)
+        low_w = float(low_result["w_air_out"])
+        high_w = float(high_result["w_air_out"])
+
+        if low_w > target_w_kgkg:
+            # Even the coldest permitted solution cannot reach the target.
+            selected = low_result
+        elif high_w < target_w_kgkg:
+            # Even the warmest permitted solution over-dehumidifies; use it,
+            # then apply the bypass safeguard below.
+            selected = high_result
+        else:
+            selected = evaluate(requested_solution_t_c)
+            for _ in range(18):
+                mid_t = (low_t + high_t) / 2
+                mid_result = evaluate(mid_t)
+                if float(mid_result["w_air_out"]) < target_w_kgkg:
+                    low_t = mid_t
+                else:
+                    high_t = mid_t
+                selected = mid_result
+            selected = evaluate(high_t)
+
+    controlled_t = float(selected["ABS_SOL_IN_T_CONTROLLED_degC"])
+    controlled = apply_absorber_target_control(
+        selected,
+        target_w_kgkg,
+        ta,
+        w_oa,
+        h_oa,
+        total_air_kg_s,
+        total_solution_kg_s,
+        xi_in,
+        controlled_t,
+        eff_enthalpy,
+    )
+    controlled["ABS_SOL_IN_T_CONTROLLED_degC"] = controlled_t
+    controlled["ABS_TEMP_CONTROL_ACTIVE"] = bool(auto_temperature_control)
+    return controlled
+
+
 def regenerator_block(
     ta,
     rh,
@@ -806,10 +896,10 @@ def run_simulation(
         t_tes_start = state_tes_t
         tes_avail_start = state_tes_m * config.cp_w_j_kgk * max(state_tes_t - config.t_tes_min_c, 0) / 3600 / 1000
         schedule_on = is_operation_hour(row.time, config)
-        ld_needed_hour = schedule_on and (w_oa * 1000) > config.target_supply_w_g_kg
         accepted_upper_w_kgkg = (
             config.target_supply_w_g_kg + config.target_humidity_tolerance_g_kg
         ) / 1000
+        ld_needed_hour = schedule_on and w_oa > accepted_upper_w_kgkg
         target_moisture_removal_kg_h = (
             m_dot_oa_abs * max(w_oa - config.target_supply_w_g_kg / 1000, 0) * 3600
             if schedule_on
@@ -882,9 +972,7 @@ def run_simulation(
 
             if abs_on:
                 m_abs_in = m_dot_sol_abs_cmd
-                h_abs_in = solution_enthalpy(xi_0, config.t_abs_in_target_c)
-                qcool_abs_w = m_abs_in * max(h_sol_0 - h_abs_in, 0) * 1000
-                abs_res = parallel_absorber_block(
+                abs_res = controlled_parallel_absorber_block(
                     ta,
                     rh,
                     w_oa,
@@ -896,19 +984,12 @@ def run_simulation(
                     config.t_abs_in_target_c,
                     xi_0,
                     config.eff_enthalpy,
-                )
-                abs_res = apply_absorber_target_control(
-                    abs_res,
                     config.target_supply_w_g_kg / 1000,
-                    ta,
-                    w_oa,
-                    h_oa,
-                    m_dot_oa_abs,
-                    m_abs_in,
-                    xi_0,
-                    config.t_abs_in_target_c,
-                    config.eff_enthalpy,
+                    config.abs_temp_auto_control,
                 )
+                abs_solution_t_controlled = abs_res["ABS_SOL_IN_T_CONTROLLED_degC"]
+                h_abs_in = solution_enthalpy(xi_0, abs_solution_t_controlled)
+                qcool_abs_w = m_abs_in * max(h_sol_0 - h_abs_in, 0) * 1000
                 abs_ret_m, abs_ret_xi, abs_ret_h = abs_res["m_sol_out"], abs_res["xi_out"], abs_res["h_sol_out"]
                 acc["abs_water"] += abs_res["m_water_absorb"] * dt_sub_s
                 acc["abs_cooling_kWh"] += qcool_abs_w * dt_sub_h / 1000
@@ -1113,6 +1194,8 @@ def run_simulation(
                 "ABS_AIR_OUT_RH_pct": rh_from_tw(last_abs["T_air_out"], last_abs["w_air_out"], config.p_atm_kpa),
                 "ABS_DELTA_w_g_kg": (w_oa - last_abs["w_air_out"]) * 1000,
                 "ABS_PROCESS_AIR_FRACTION": last_abs.get("process_air_fraction", 0.0),
+                "ABS_SOL_IN_T_CONTROLLED_degC": last_abs.get("ABS_SOL_IN_T_CONTROLLED_degC", np.nan),
+                "ABS_TEMP_CONTROL_ACTIVE": last_abs.get("ABS_TEMP_CONTROL_ACTIVE", False),
                 "ABS_AIR_OUT_m3_h": dry_air_volume_flow_m3h(m_dot_oa_abs, last_abs["T_air_out"], last_abs["w_air_out"], config.p_atm_kpa),
                 "ABS_SOL_OUT_T_degC": last_abs["T_sol_out"],
                 "ABS_SOL_OUT_xi": last_abs["xi_out"],
@@ -1241,10 +1324,20 @@ def build_summary(
         "ABS_air_out_mean_m3h_when_on": result.loc[abs_on, "ABS_AIR_OUT_m3_h"].mean(),
         "ABS_air_out_mean_T_degC_when_on": result.loc[abs_on, "ABS_AIR_OUT_T_degC"].mean(),
         "ABS_air_out_mean_RH_pct_when_on": result.loc[abs_on, "ABS_AIR_OUT_RH_pct"].mean(),
+        "ABS_solution_in_control_mean_degC": result.loc[abs_on, "ABS_SOL_IN_T_CONTROLLED_degC"].mean(),
+        "ABS_solution_in_control_min_degC": result.loc[abs_on, "ABS_SOL_IN_T_CONTROLLED_degC"].min(),
+        "ABS_solution_in_control_max_degC": result.loc[abs_on, "ABS_SOL_IN_T_CONTROLLED_degC"].max(),
+        "ABS_bypass_hours": int((abs_on & (result["ABS_PROCESS_AIR_FRACTION"] < 1 - 1e-9)).sum()),
         "SUPPLY_mean_T_LD_degC": result.loc[abs_on, "SUPPLY_AIR_T_degC"].mean(),
         "SUPPLY_mean_RH_LD_pct": result.loc[abs_on, "SUPPLY_AIR_RH_pct"].mean(),
         "TARGET_HUMIDITY_UNMET_hours": int(
-            (abs_on & (result["SUPPLY_AIR_w_kgkg"] * 1000 > config.target_supply_w_g_kg + 1e-9)).sum()
+            (
+                abs_on
+                & (
+                    result["SUPPLY_AIR_w_kgkg"] * 1000
+                    > config.target_supply_w_g_kg + config.target_humidity_tolerance_g_kg + 1e-9
+                )
+            ).sum()
         ),
     }
     return pd.DataFrame([summary])

@@ -10,6 +10,7 @@ from backend.solar_ld_engine import (
     is_operation_hour,
     moist_air_enthalpy,
     parallel_absorber_block,
+    controlled_parallel_absorber_block,
     required_parallel_modules,
     staged_regenerator_flow,
 )
@@ -95,6 +96,56 @@ class ParallelModuleTests(unittest.TestCase):
         self.assertAlmostEqual(total["m_water_absorb"], module["m_water_absorb"] * module_count, places=12)
         self.assertAlmostEqual(total["w_air_out"], module["w_air_out"], places=12)
         self.assertAlmostEqual(total["xi_out"], module["xi_out"], places=12)
+
+    def test_auto_temperature_control_prevents_over_dehumidification(self):
+        outdoor_temp = 31.0
+        outdoor_rh = 75.0
+        outdoor_w = humidity_ratio_from_trh(outdoor_temp, outdoor_rh)
+        outdoor_h = moist_air_enthalpy(outdoor_temp, outdoor_w)
+        result = controlled_parallel_absorber_block(
+            outdoor_temp,
+            outdoor_rh,
+            outdoor_w,
+            outdoor_h,
+            self.config.p_atm_kpa,
+            self.air_flow,
+            self.solution_flow,
+            4,
+            25.0,
+            0.38,
+            self.config.eff_enthalpy,
+            0.010,
+            True,
+        )
+
+        self.assertGreaterEqual(result["w_air_out"], 0.010 - 1e-9)
+        self.assertLessEqual(result["w_air_out"], 0.010 + 1e-6)
+        self.assertGreaterEqual(result["ABS_SOL_IN_T_CONTROLLED_degC"], 8.05)
+        self.assertLessEqual(result["ABS_SOL_IN_T_CONTROLLED_degC"], 31.4)
+        self.assertTrue(result["ABS_TEMP_CONTROL_ACTIVE"])
+
+    def test_fixed_temperature_mode_keeps_requested_setpoint(self):
+        outdoor_temp = 31.0
+        outdoor_rh = 75.0
+        outdoor_w = humidity_ratio_from_trh(outdoor_temp, outdoor_rh)
+        result = controlled_parallel_absorber_block(
+            outdoor_temp,
+            outdoor_rh,
+            outdoor_w,
+            moist_air_enthalpy(outdoor_temp, outdoor_w),
+            self.config.p_atm_kpa,
+            self.air_flow,
+            self.solution_flow,
+            4,
+            25.0,
+            0.38,
+            self.config.eff_enthalpy,
+            0.010,
+            False,
+        )
+
+        self.assertAlmostEqual(result["ABS_SOL_IN_T_CONTROLLED_degC"], 25.0)
+        self.assertFalse(result["ABS_TEMP_CONTROL_ACTIVE"])
 
     def test_regenerator_stages_modules_within_domain(self):
         solution_flow, air_flow, active_modules = staged_regenerator_flow(0.50, 1.1, 7, self.config)

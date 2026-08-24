@@ -165,6 +165,7 @@ def build_configs(payload):
     config.lg_ratio_abs = to_number(payload, "lgRatio", config.lg_ratio_abs)
     config.lg_ratio_reg_design = to_number(payload, "lgRatio", config.lg_ratio_reg_design)
     config.t_abs_in_target_c = to_number(payload, "absSolutionTemp", config.t_abs_in_target_c)
+    config.abs_temp_auto_control = payload.get("absTempMode", "auto") == "auto"
     config.t_reg_in_target_c = to_number(payload, "regenTemp", config.t_reg_in_target_c)
     config.t_tes_min_c = to_number(payload, "tesReturnTemp", config.t_tes_min_c)
     config.t_tes_max_c = to_number(payload, "tesSupplyTemp", config.t_tes_max_c)
@@ -1026,6 +1027,11 @@ def simulate(payload):
             "regeneratorModules": int(row["REG_module_count"]),
             "absorberModuleAirFlow": clean_value(row["ABS_module_air_kg_s"]),
             "absorberModuleSolutionFlow": clean_value(row["ABS_module_solution_kg_s"]),
+            "absorberSolutionTempMean": clean_value(row["ABS_solution_in_control_mean_degC"]),
+            "absorberSolutionTempMin": clean_value(row["ABS_solution_in_control_min_degC"]),
+            "absorberSolutionTempMax": clean_value(row["ABS_solution_in_control_max_degC"]),
+            "absorberBypassHours": int(max(0, row["ABS_bypass_hours"])),
+            "absorberTemperatureMode": "auto" if config.abs_temp_auto_control else "fixed",
             "regenNeed": reg_need,
             "usefulSolar": tes_to_reg,
             "targetSupplyHumidity": config.target_supply_w_g_kg,
