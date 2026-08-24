@@ -646,7 +646,7 @@ function validateDesignInputs(input) {
     ["lgRatio", "L/G"],
     ["absSolutionTemp", "제습부 용액온도"],
     ["regenTemp", "재생기 용액온도"],
-    ["targetSolarShare", "목표 재생열 커버율"],
+    ["targetSolarShare", "월별 최소 재생열 커버율"],
     ["tesSupplyTemp", "TES 공급수온도"],
     ["tesReturnTemp", "TES 환수온도"],
   ];
@@ -1011,11 +1011,11 @@ function renderMetrics(best, input) {
       ? `좌표 ${formatNumber(input.latitude, 2)}°, ${formatNumber(input.longitude, 2)}°`
       : weatherDatasets[input.weatherDataset].label;
   $("designNote").textContent =
-    `${weatherLabel}, ${input.collectorType === "evacuated" ? "진공관형" : "평판형"} · 목표 ${formatNumber(input.targetSolarShare, 0)}% · 월별 이상적 TES 가정`;
+    `${weatherLabel}, ${input.collectorType === "evacuated" ? "진공관형" : "평판형"} · 월별 최저 목표 ${formatNumber(input.targetSolarShare, 0)}% · 설계 지배월 ${best.designCriticalMonth || "-"}`;
   $("optimalCollector").textContent = `${formatNumber(best.collectorArea, 1)} m²`;
   $("optimalTes").textContent = "월내 무손실";
   $("optimalTesFlow").textContent = "추후 산정";
-  $("solarShare").textContent = `${formatNumber(best.solarUseCoverage * 100, 1)} %`;
+  $("solarShare").textContent = `${formatNumber(best.monthlyMinimumCoverage * 100, 1)} %`;
   $("solarProductionRatio").textContent = `${formatNumber(best.solarProductionRatio * 100, 1)} %`;
   $("unutilizedSolar").textContent = `${formatNumber(best.unutilizedSolar)} kWh/선택기간`;
   $("auxEnergy").textContent = `${formatNumber(best.auxEnergy)} kWh/선택기간`;
@@ -1043,7 +1043,7 @@ function renderRegionResults(results) {
       <tr class="region-result-row${selectedRegionComparisonKeys.has(key) ? " comparison-selected" : ""}" data-region-key="${key}" role="button" tabindex="0" aria-label="${label} 월별 재생열 요구량 비교 선택" onclick="toggleRegionComparison('${key}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleRegionComparison('${key}');}">
         <td><button type="button" class="region-compare-button" onclick="event.stopPropagation();toggleRegionComparison('${key}')">${label}</button></td>
         <td>${formatNumber(best.collectorArea)} m²</td>
-        <td>${formatNumber(best.solarShare * 100, 1)} %</td>
+        <td>${formatNumber(best.monthlyMinimumCoverage * 100, 1)} %</td>
         <td>${formatNumber(best.usefulSolar)} kWh</td>
         <td>${formatNumber(best.solarProductionRatio * 100, 1)} %</td>
         <td>${formatNumber(best.unutilizedSolar)} kWh</td>
@@ -1084,7 +1084,7 @@ function renderCandidateRows(candidates) {
           <td>${formatNumber(candidate.collectorArea)} m²</td>
           <td>${formatNumber(candidate.regenNeed)} kWh</td>
           <td>${formatNumber(candidate.usefulSolar)} kWh</td>
-          <td>${formatNumber(candidate.solarShare * 100, 1)} %</td>
+          <td>${formatNumber(candidate.monthlyMinimumCoverage * 100, 1)} %</td>
           <td>${formatNumber(candidate.solarProductionRatio * 100, 1)} %</td>
           <td>${formatNumber(candidate.unutilizedSolar)} kWh</td>
           <td>${formatNumber(candidate.auxEnergy)} kWh</td>
@@ -1116,7 +1116,7 @@ function renderRegionAreaComparison(entries) {
         <td><span class="region-area-label"><i style="background:${color}"></i>${label}</span><br>${formatNumber(candidate.collectorArea)} m²</td>
         <td>${formatNumber(candidate.regenNeed)} kWh</td>
         <td>${formatNumber(candidate.usefulSolar)} kWh</td>
-        <td>${formatNumber(candidate.solarShare * 100, 1)} %</td>
+        <td>${formatNumber(candidate.monthlyMinimumCoverage * 100, 1)} %</td>
         <td>${formatNumber(candidate.solarProductionRatio * 100, 1)} %</td>
         <td>${formatNumber(candidate.unutilizedSolar)} kWh</td>
         <td>${formatNumber(candidate.auxEnergy)} kWh</td>
@@ -1129,7 +1129,7 @@ function renderRegionAreaComparison(entries) {
   });
   $("candidateRows").innerHTML = rows.join("");
   const labels = entries.map((item) => weatherDatasets[item.key]?.label?.replace(" · TMYx 2011–2025", "") || item.key);
-  $("areaBasisSummary").textContent = `${labels.join(", ")} 실제 기상계산 기준 · 실사용 커버율은 최대 100%, 태양열 생산비는 100% 초과 가능`;
+  $("areaBasisSummary").textContent = `${labels.join(", ")} 실제 기상계산 기준 · 모든 부하 발생월이 목표 커버율 이상이 되도록 면적 산정`;
 }
 
 function renderRegionMonthlyComparison(entries) {

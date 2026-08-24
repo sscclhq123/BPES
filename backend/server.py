@@ -260,6 +260,26 @@ def solar_utilization_metrics(collector_production, solar_used, regen_need):
     }
 
 
+def monthly_coverage_metrics(result, solar_used):
+    frame = pd.DataFrame(
+        {
+            "month": pd.to_datetime(result["time"]).dt.to_period("M"),
+            "load": result["REG_HX_HEAT_NEED_kWh"].fillna(0).clip(lower=0).to_numpy(dtype=float),
+            "solar": np.asarray(solar_used, dtype=float),
+        }
+    )
+    grouped = frame.groupby("month", as_index=False)[["load", "solar"]].sum()
+    active = grouped[grouped["load"] > 1e-9].copy()
+    if active.empty:
+        return {"monthlyMinimumCoverage": 1.0, "designCriticalMonth": None}
+    active["coverage"] = active["solar"] / active["load"]
+    worst = active.loc[active["coverage"].idxmin()]
+    return {
+        "monthlyMinimumCoverage": clean_value(float(worst["coverage"])),
+        "designCriticalMonth": f"{worst['month'].month}월",
+    }
+
+
 def tes_energy_density_kwh_m3(config):
     delta_t = max(config.t_tes_max_c - config.t_tes_min_c, 1e-9)
     return config.rho_w_kg_m3 * config.cp_w_j_kgk * delta_t / 3600 / 1000
@@ -800,6 +820,7 @@ def calculate_collector_area_sweep(base_result, payload, base_collector, base_co
             base_result, candidate_config, base_collector, area
         )
         solar_share = trial["tesToRegTotal"] / reg_need if reg_need > 0 else 0.0
+        monthly_coverage = monthly_coverage_metrics(base_result, trial["tesToReg"])
         return {
                 "best": {
                     "collectorArea": clean_value(area),
@@ -824,7 +845,10 @@ def calculate_collector_area_sweep(base_result, payload, base_collector, base_co
                     "regenNeed": clean_value(reg_need),
                     "usefulSolar": clean_value(trial["tesToRegTotal"]),
                     "targetSolarShare": clean_value(target_share),
-                    "targetAchieved": bool(reg_need <= 1e-9 or solar_share + 1e-9 >= target_share),
+                    "targetAchieved": bool(
+                        monthly_coverage["monthlyMinimumCoverage"] + 1e-9 >= target_share
+                    ),
+                    **monthly_coverage,
                     **solar_utilization_metrics(
                         trial["collectorTotal"], trial["tesToRegTotal"], reg_need
                     ),
