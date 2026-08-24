@@ -158,6 +158,7 @@ def build_configs(payload):
     config.t_abs_in_target_c = to_number(payload, "absSolutionTemp", config.t_abs_in_target_c)
     config.abs_temp_auto_control = payload.get("absTempMode", "auto") == "auto"
     config.t_reg_in_target_c = to_number(payload, "regenTemp", config.t_reg_in_target_c)
+    config.reg_temp_auto_control = payload.get("regenMode", "auto") == "auto"
     config.t_tes_min_c = to_number(payload, "tesReturnTemp", config.t_tes_min_c)
     config.t_tes_max_c = to_number(payload, "tesSupplyTemp", config.t_tes_max_c)
     config.t_tes_init_c = to_number(payload, "tesInitialTemp", config.t_tes_init_c)
@@ -1029,10 +1030,18 @@ def simulate(payload):
     solar_share = tes_to_reg / reg_need if reg_need > 0 else 0
     warnings = empirical_warnings(payload)
     if target_unmet_hours > 0:
-        warnings.append(
-            f"실제 병렬 LD 계산에서 목표 급기 절대습도를 충족하지 못한 시간이 {target_unmet_hours} h입니다. "
-            "농도, 흡수기 용액온도, L/G 또는 모듈 직렬단 구성을 검토하세요."
-        )
+        if config.reg_temp_auto_control:
+            warnings.append(
+                f"L/G를 {config.lg_ratio_abs:.2f}로 고정하고 재생부 용액온도를 "
+                f"{config.reg_temp_min_c:.1f}~{config.reg_temp_max_c:.1f} °C에서 자동제어했지만, "
+                f"목표 급기 절대습도 미충족 시간이 {target_unmet_hours} h입니다. "
+                "현재 실험식 권장 재생온도 범위만으로는 해당 피크 조건을 달성할 수 없습니다."
+            )
+        else:
+            warnings.append(
+                f"재생부 용액온도 {config.t_reg_in_target_c:.1f} °C 고정조건에서 "
+                f"목표 급기 절대습도 미충족 시간이 {target_unmet_hours} h입니다."
+            )
     monthly_candidate_cache = {}
 
     def candidate_with_monthly(candidate):
@@ -1099,6 +1108,10 @@ def simulate(payload):
             "absorberSolutionTempMax": clean_value(row["ABS_solution_in_control_max_degC"]),
             "absorberBypassHours": int(max(0, row["ABS_bypass_hours"])),
             "absorberTemperatureMode": "auto" if config.abs_temp_auto_control else "fixed",
+            "regeneratorTemperatureMode": "auto" if config.reg_temp_auto_control else "fixed",
+            "regeneratorSolutionTempMean": clean_value(row["REG_solution_in_control_mean_degC"]),
+            "regeneratorSolutionTempMin": clean_value(row["REG_solution_in_control_min_degC"]),
+            "regeneratorSolutionTempMax": clean_value(row["REG_solution_in_control_max_degC"]),
             "regenNeed": reg_need,
             "usefulSolar": tes_to_reg,
             "targetSupplyHumidity": config.target_supply_w_g_kg,

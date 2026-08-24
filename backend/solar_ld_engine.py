@@ -76,6 +76,9 @@ class SystemConfig:
     t_abs_in_target_c: float = 25.0
     t_reg_in_target_c: float = 55.0
     abs_temp_auto_control: bool = True
+    reg_temp_auto_control: bool = True
+    reg_temp_min_c: float = 48.5
+    reg_temp_max_c: float = 59.4
     target_supply_w_g_kg: float = 10.0
     target_humidity_tolerance_g_kg: float = 0.5
     eps_tes_reg_hx: float = 0.80
@@ -921,6 +924,8 @@ def run_simulation(
             "reg_mdot_time": 0.0,
             "reg_air_mdot_time": 0.0,
             "reg_module_time": 0.0,
+            "reg_temp_time": 0.0,
+            "reg_active_time": 0.0,
             "incident_kWh": 0.0,
             "absorbed_kWh": 0.0,
             "collector_kWh": 0.0,
@@ -957,7 +962,10 @@ def run_simulation(
             regen_by_solar = (xi_0 < config.xi_regen_on) and (
                 (qcollector_w > 50) or (t_tes_0 > config.t_tes_min_c + 1)
             )
-            regen_by_aux = ld_needed_hour and (xi_0 < config.xi_aux_on)
+            # In the phase-1 ideal-TES model, request regeneration as soon as
+            # concentration leaves the normal band. Waiting for the deeper
+            # emergency threshold causes peak-season dehumidification loss.
+            regen_by_aux = xi_0 < config.xi_target
             reg_on_request = regen_by_solar or regen_by_aux
 
             abs_ret_m, abs_ret_xi, abs_ret_h = 0.0, xi_0, h_sol_0
@@ -966,6 +974,7 @@ def run_simulation(
             m_reg_in = 0.0
             m_reg_air_active = 0.0
             reg_active_modules = 0
+            reg_solution_t_controlled = config.t_reg_in_target_c
             qreg_need_w = 0.0
             qtes_to_reg_w = 0.0
             qaux_w = 0.0
@@ -997,7 +1006,21 @@ def run_simulation(
                 hour_abs_on = True
 
             if reg_on_request:
-                cp_reg = cp_licl_solution_kjkgk(xi_0, (t_sol_0 + config.t_reg_in_target_c) / 2)
+                if config.reg_temp_auto_control:
+                    concentration_deficit = max(config.xi_target - xi_0, 0.0)
+                    control_band = max(config.xi_target - config.xi_regen_on, 1e-9)
+                    control_fraction = float(np.clip(concentration_deficit / control_band, 0.0, 1.0))
+                    reg_solution_t_controlled = (
+                        config.reg_temp_min_c
+                        + control_fraction * (config.reg_temp_max_c - config.reg_temp_min_c)
+                    )
+                else:
+                    reg_solution_t_controlled = float(np.clip(
+                        config.t_reg_in_target_c,
+                        config.reg_temp_min_c,
+                        config.reg_temp_max_c,
+                    ))
+                cp_reg = cp_licl_solution_kjkgk(xi_0, (t_sol_0 + reg_solution_t_controlled) / 2)
                 m_water_at_target = m_salt_0 * (1 / config.xi_target - 1)
                 water_removable_to_target = max(m_water_0 - m_water_at_target, 0)
                 if abs_on:
@@ -1007,16 +1030,16 @@ def run_simulation(
                 qtes_energy_limit_w = qcollector_w - qloss_tes_w
                 qtes_energy_limit_w += state_tes_m * config.cp_w_j_kgk * max(t_tes_0 - config.t_tes_min_c, 0) / dt_sub_s
                 qtes_energy_limit_w = max(qtes_energy_limit_w, 0)
-                dt_reg_est = max(config.t_reg_in_target_c - t_sol_0, 0)
+                dt_reg_est = max(reg_solution_t_controlled - t_sol_0, 0)
                 t_after_tes_limit = t_sol_0 + config.eps_tes_reg_hx * max(t_tes_0 - t_sol_0, 0)
-                t_after_tes_limit = min(t_after_tes_limit, config.t_reg_in_target_c)
+                t_after_tes_limit = min(t_after_tes_limit, reg_solution_t_controlled)
                 m_reg_heat_limit = (
                     m_dot_sol_reg_design
                     if dt_reg_est <= 1e-9
                     else qtes_energy_limit_w / (cp_reg * 1000 * dt_reg_est)
                 )
                 if config.reg_flow_control_by_tes and not regen_by_aux:
-                    if t_after_tes_limit < config.t_reg_in_target_c - 1e-9:
+                    if t_after_tes_limit < reg_solution_t_controlled - 1e-9:
                         m_reg_in = 0.0
                     else:
                         m_reg_in = min(m_dot_sol_reg_design, m_reg_heat_limit)
@@ -1052,7 +1075,7 @@ def run_simulation(
                     m_reg_air_active,
                     m_reg_in,
                     reg_active_modules,
-                    config.t_reg_in_target_c,
+                    reg_solution_t_controlled,
                     xi_0,
                     np.nan,
                     config.eff_enthalpy,
@@ -1067,15 +1090,15 @@ def run_simulation(
                         m_reg_air_active,
                         m_reg_in,
                         reg_active_modules,
-                        config.t_reg_in_target_c,
+                        reg_solution_t_controlled,
                         xi_0,
                         m_desorb_cap_kg_s / 1.2,
                         config.eff_enthalpy,
                     )
-                cp_reg_actual = cp_licl_solution_kjkgk(xi_0, (t_sol_0 + config.t_reg_in_target_c) / 2)
-                qreg_need_w = m_reg_in * cp_reg_actual * 1000 * max(config.t_reg_in_target_c - t_sol_0, 0)
+                cp_reg_actual = cp_licl_solution_kjkgk(xi_0, (t_sol_0 + reg_solution_t_controlled) / 2)
+                qreg_need_w = m_reg_in * cp_reg_actual * 1000 * max(reg_solution_t_controlled - t_sol_0, 0)
                 t_after_tes_actual = t_sol_0 + config.eps_tes_reg_hx * max(t_tes_0 - t_sol_0, 0)
-                t_after_tes_actual = min(t_after_tes_actual, config.t_reg_in_target_c)
+                t_after_tes_actual = min(t_after_tes_actual, reg_solution_t_controlled)
                 qtes_temp_limit_w = m_reg_in * cp_reg_actual * 1000 * max(t_after_tes_actual - t_sol_0, 0)
                 qtes_possible_w = min(qreg_need_w, qtes_energy_limit_w, qtes_temp_limit_w)
                 if regen_by_aux:
@@ -1091,7 +1114,7 @@ def run_simulation(
 
             if reg_on_request:
                 reg_ret_m, reg_ret_xi, reg_ret_h = reg_res["m_sol_out"], reg_res["xi_out"], reg_res["h_sol_out"]
-                qlatent_w = reg_res["m_water_desorb"] * latent_heat_vaporization_water_kjkg(config.t_reg_in_target_c) * 1000
+                qlatent_w = reg_res["m_water_desorb"] * latent_heat_vaporization_water_kjkg(reg_solution_t_controlled) * 1000
                 acc["des_water"] += reg_res["m_water_desorb"] * dt_sub_s
                 acc["reg_need_kWh"] += qreg_need_w * dt_sub_h / 1000
                 acc["tes_kWh"] += qtes_to_reg_w * dt_sub_h / 1000
@@ -1100,6 +1123,8 @@ def run_simulation(
                 acc["reg_mdot_time"] += m_reg_in * dt_sub_s
                 acc["reg_air_mdot_time"] += m_reg_air_active * dt_sub_s
                 acc["reg_module_time"] += reg_active_modules * dt_sub_s
+                acc["reg_temp_time"] += reg_solution_t_controlled * dt_sub_s
+                acc["reg_active_time"] += dt_sub_s
                 last_reg = reg_res
                 hour_reg_on = True
                 hour_aux_on = hour_aux_on or (qaux_w > 1e-6)
@@ -1148,7 +1173,10 @@ def run_simulation(
         supply_h = h_oa
         if hour_abs_on:
             supply_t = last_abs["T_air_out"]
-            supply_w = last_abs["w_air_out"]
+            # Use the water removed over every internal substep, not only the
+            # final substep outlet, for the hourly delivered humidity.
+            hourly_water_removed_kg_s = acc["abs_water"] / max(dt_s, 1e-9)
+            supply_w = max(w_oa - hourly_water_removed_kg_s / max(m_dot_oa_abs, 1e-9), 0.0)
             supply_rh = rh_from_tw(supply_t, supply_w, config.p_atm_kpa)
             supply_h = moist_air_enthalpy(supply_t, supply_w)
 
@@ -1189,10 +1217,10 @@ def run_simulation(
                 "REG_WATER_DESORB_kg_h": acc["des_water"] / dt_s * 3600,
                 "WATER_GAP_kg_h": (acc["abs_water"] - acc["des_water"]) / dt_s * 3600,
                 "ABS_AIR_OUT_T_degC": last_abs["T_air_out"],
-                "ABS_AIR_OUT_w_kgkg": last_abs["w_air_out"],
-                "ABS_AIR_OUT_h_kJkg": moist_air_enthalpy(last_abs["T_air_out"], last_abs["w_air_out"]),
-                "ABS_AIR_OUT_RH_pct": rh_from_tw(last_abs["T_air_out"], last_abs["w_air_out"], config.p_atm_kpa),
-                "ABS_DELTA_w_g_kg": (w_oa - last_abs["w_air_out"]) * 1000,
+                "ABS_AIR_OUT_w_kgkg": supply_w,
+                "ABS_AIR_OUT_h_kJkg": moist_air_enthalpy(last_abs["T_air_out"], supply_w),
+                "ABS_AIR_OUT_RH_pct": rh_from_tw(last_abs["T_air_out"], supply_w, config.p_atm_kpa),
+                "ABS_DELTA_w_g_kg": (w_oa - supply_w) * 1000,
                 "ABS_PROCESS_AIR_FRACTION": last_abs.get("process_air_fraction", 0.0),
                 "ABS_SOL_IN_T_CONTROLLED_degC": last_abs.get("ABS_SOL_IN_T_CONTROLLED_degC", np.nan),
                 "ABS_TEMP_CONTROL_ACTIVE": last_abs.get("ABS_TEMP_CONTROL_ACTIVE", False),
@@ -1204,6 +1232,9 @@ def run_simulation(
                 "REG_SOL_IN_mdot_kg_s": acc["reg_mdot_time"] / dt_s,
                 "REG_AIR_IN_mdot_kg_s": acc["reg_air_mdot_time"] / dt_s,
                 "REG_ACTIVE_MODULE_COUNT": acc["reg_module_time"] / dt_s,
+                "REG_SOL_IN_T_CONTROLLED_degC": safe_div(
+                    acc["reg_temp_time"], acc["reg_active_time"]
+                ) if acc["reg_active_time"] > 0 else np.nan,
                 "REG_SOL_IN_LG": safe_div(acc["reg_mdot_time"], acc["reg_air_mdot_time"]),
                 "REG_AIR_OUT_T_degC": last_reg["T_air_out"],
                 "REG_AIR_OUT_w_kgkg": last_reg["w_air_out"],
@@ -1293,6 +1324,10 @@ def build_summary(
         "fan_static_pressure_design_Pa": config.fan_static_pressure_design_pa,
         "T_abs_in_target": config.t_abs_in_target_c,
         "T_reg_in_target": config.t_reg_in_target_c,
+        "REG_temperature_mode": "auto" if config.reg_temp_auto_control else "fixed",
+        "REG_solution_in_control_mean_degC": result.loc[reg_on, "REG_SOL_IN_T_CONTROLLED_degC"].mean(),
+        "REG_solution_in_control_min_degC": result.loc[reg_on, "REG_SOL_IN_T_CONTROLLED_degC"].min(),
+        "REG_solution_in_control_max_degC": result.loc[reg_on, "REG_SOL_IN_T_CONTROLLED_degC"].max(),
         "T_sol_tank_init": config.t_solution_tank_init_c,
         "xi_tank_init": config.xi_tank_init,
         "xi_regen_on": config.xi_regen_on,

@@ -360,7 +360,7 @@ const defaults = {
   collectorType: "evacuated",
   solutionMode: "fixed",
   lgMode: "fixed",
-  regenMode: "fixed",
+  regenMode: "auto",
   targetSolarShare: 50,
   tesSupplyTemp: 75,
   tesReturnTemp: 42,
@@ -1021,7 +1021,7 @@ function renderMetrics(best, input) {
   $("auxEnergy").textContent = `${formatNumber(best.auxEnergy)} kWh/선택기간`;
   $("unmetHours").textContent = `${formatNumber(best.unmetHours)} h/선택기간`;
   $("recommendedOps").textContent =
-    `흡수기 ${formatNumber(best.absorberModules || 0)}대 · 재생기 ${formatNumber(best.regeneratorModules || 0)}대 · 제습부 ${best.absorberTemperatureMode === "auto" ? `자동 ${formatNumber(best.absorberSolutionTempMin, 1)}~${formatNumber(best.absorberSolutionTempMax, 1)} °C` : `고정 ${formatNumber(input.absSolutionTemp, 1)} °C`} · L/G ${best.lgRatio}`;
+    `흡수기 ${formatNumber(best.absorberModules || 0)}대 · 재생기 ${formatNumber(best.regeneratorModules || 0)}대 · 제습부 ${best.absorberTemperatureMode === "auto" ? `자동 ${formatNumber(best.absorberSolutionTempMin, 1)}~${formatNumber(best.absorberSolutionTempMax, 1)} °C` : `고정 ${formatNumber(input.absSolutionTemp, 1)} °C`} · 재생부 ${best.regeneratorTemperatureMode === "auto" ? `자동 ${formatNumber(best.regeneratorSolutionTempMin, 1)}~${formatNumber(best.regeneratorSolutionTempMax, 1)} °C` : `고정 ${formatNumber(input.regenTemp, 1)} °C`} · L/G 고정 ${best.lgRatio}`;
 }
 
 function renderRegionResults(results) {
