@@ -1229,7 +1229,7 @@ function renderUnmetTrend(entries) {
     ...item,
     color: regionComparisonColor(item.key),
     label: weatherDatasets[item.key]?.label?.replace(" · TMYx 2011–2025", "") || item.key,
-    trend: item.result?.unmetTrend || { totalHours: 0, totalShortfall: 0, maxHumidityExcess: 0, daily: [], events: [] },
+    trend: item.result?.unmetTrend || { totalHours: 0, maxHumidityExcess: 0, averageHumidityExcess: 0, daily: [], events: [] },
   }));
   if (!series.length) {
     cards.innerHTML = "";
@@ -1241,17 +1241,18 @@ function renderUnmetTrend(entries) {
     <article class="unmet-summary-card" style="--region-color:${item.color}">
       <strong>${item.label}</strong>
       <span>${formatNumber(item.trend.totalHours, 1)} h</span>
-      <small>누적 부족 ${formatNumber(item.trend.totalShortfall, 1)} kg · 최대 상한초과 ${formatNumber(item.trend.maxHumidityExcess, 2)} g/kg</small>
+      <small>평균 상한초과 ${formatNumber(item.trend.averageHumidityExcess, 2)} g/kg · 최대 ${formatNumber(item.trend.maxHumidityExcess, 2)} g/kg</small>
     </article>
   `).join("");
   const points = series.flatMap((item) => item.trend.daily.map((day) => ({ ...day, label: item.label, color: item.color })));
-  const maxShortfall = Math.max(...points.map((point) => Number(point.shortfall) || 0), 1);
+  const maxExcess = Math.max(...points.map((point) => Number(point.maxHumidityExcess) || 0), 0.1);
   chart.style.minWidth = `${Math.max(720, points.length * 22)}px`;
   chart.innerHTML = points.length ? points.map((point) => {
-    const height = clamp((Number(point.shortfall) / maxShortfall) * 180, 4, 180);
-    return `<div class="unmet-day" title="${point.label} ${point.date} · 부족 ${formatNumber(point.shortfall, 2)} kg · ${formatNumber(point.hours, 1)} h">
-      <span class="unmet-day-value">${formatNumber(point.shortfall, 1)}</span>
-      <i style="height:${height}px;background:${point.color}"></i>
+    const averageHeight = clamp((Number(point.averageHumidityExcess) / maxExcess) * 180, 4, 180);
+    const maximumHeight = clamp((Number(point.maxHumidityExcess) / maxExcess) * 180, 4, 180);
+    return `<div class="unmet-day" title="${point.label} ${point.date} · 평균 초과 ${formatNumber(point.averageHumidityExcess, 2)} g/kg · 최대 초과 ${formatNumber(point.maxHumidityExcess, 2)} g/kg · ${formatNumber(point.hours, 1)} h">
+      <span class="unmet-day-value">평 ${formatNumber(point.averageHumidityExcess, 2)} / 최 ${formatNumber(point.maxHumidityExcess, 2)}</span>
+      <div class="unmet-day-bars"><i class="average" style="height:${averageHeight}px;background:${point.color}"></i><i class="maximum" style="height:${maximumHeight}px;--region-color:${point.color}"></i></div>
       <small>${point.date.slice(5)}</small>
     </div>`;
   }).join("") : `<p class="result-empty">선택한 조건에서는 목표 제습 미충족 시간이 없습니다.</p>`;
@@ -1259,7 +1260,7 @@ function renderUnmetTrend(entries) {
   rows.innerHTML = events.length ? events.map((event) => `
     <tr><td>${event.label}</td><td>${event.time}</td><td>${formatNumber(event.durationHours, 2)} h</td><td>${formatNumber(event.requiredRate, 2)} kg/h</td><td>${formatNumber(event.actualRate, 2)} kg/h</td><td>${formatNumber(event.shortfall, 2)} kg</td><td>${formatNumber(event.supplyHumidity, 2)} g/kg</td><td>${formatNumber(event.humidityExcess, 2)} g/kg</td></tr>
   `).join("") : `<tr><td colspan="8">미충족 구간이 없습니다.</td></tr>`;
-  $("unmetTrendSummary").textContent = `허용상한 기준 시간별 부족량을 적분한 결과 · ${events.length}개 미충족 구간`;
+  $("unmetTrendSummary").textContent = `허용상한 대비 날짜별 평균·최대 초과량 · 평균은 미충족 지속시간을 반영한 시간가중값 · ${events.length}개 미충족 구간`;
 }
 
 function renderCandidateMonthlyComparison(selections) {

@@ -999,7 +999,12 @@ button:focus-visible {
   border-bottom: 1px solid #cbd7e2;
 }
 .unmet-day { display: grid; align-items: end; justify-items: center; gap: 4px; min-width: 18px; height: 215px; }
-.unmet-day i { width: 14px; border-radius: 4px 4px 0 0; }
+.unmet-day-bars { display: flex; align-items: end; gap: 2px; height: 180px; }
+.unmet-day-bars i { width: 7px; border-radius: 3px 3px 0 0; }
+.unmet-day-bars .maximum {
+  border: 2px solid var(--region-color);
+  background: color-mix(in srgb, var(--region-color) 18%, white);
+}
 .unmet-day small { font-size: 9px; color: var(--muted); writing-mode: vertical-rl; }
 .unmet-day-value { font-size: 9px; color: var(--muted); }
 .unmet-event-wrap { max-height: 330px; margin-top: 14px; }

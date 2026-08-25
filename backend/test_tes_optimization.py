@@ -109,6 +109,8 @@ class TesOptimizationTests(unittest.TestCase):
         self.assertAlmostEqual(metrics["unmetShortfall"], 1.5)
         self.assertAlmostEqual(trend["totalHours"], 1.5)
         self.assertAlmostEqual(trend["events"][0]["humidityExcess"], 0.2)
+        self.assertAlmostEqual(trend["averageHumidityExcess"], 0.2)
+        self.assertAlmostEqual(trend["daily"][0]["averageHumidityExcess"], 0.2)
 
     def test_area_sweep_returns_target_area_and_hourly_dispatch(self):
         result = self.result_frame([0.0, 40.0, 40.0, 0.0], [900.0, 200.0, 0.0, 700.0])

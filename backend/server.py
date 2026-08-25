@@ -281,14 +281,17 @@ def unmet_dehumidification_trend(result, accepted_upper_humidity):
     ).clip(lower=0)
     unmet = trend.loc[trend["shortfall"] > 1e-9].copy()
     if unmet.empty:
-        return {"totalHours": 0.0, "totalShortfall": 0.0, "maxHumidityExcess": 0.0, "daily": [], "events": []}
+        return {"totalHours": 0.0, "totalShortfall": 0.0, "maxHumidityExcess": 0.0, "averageHumidityExcess": 0.0, "daily": [], "events": []}
     unmet["date"] = unmet["time"].dt.strftime("%Y-%m-%d")
+    unmet["humidityExcessTime"] = unmet["humidityExcess"] * unmet["dt_h"]
     daily = unmet.groupby("date", as_index=False).agg(
         hours=("dt_h", "sum"),
         shortfall=("shortfall", "sum"),
         maxShortfallRate=("shortfallRate", "max"),
         maxHumidityExcess=("humidityExcess", "max"),
+        humidityExcessTime=("humidityExcessTime", "sum"),
     )
+    daily["averageHumidityExcess"] = daily["humidityExcessTime"] / daily["hours"].clip(lower=1e-9)
     events = [
         {
             "time": row.time.strftime("%Y-%m-%d %H:%M"),
@@ -306,6 +309,9 @@ def unmet_dehumidification_trend(result, accepted_upper_humidity):
         "totalHours": clean_value(unmet["dt_h"].sum()),
         "totalShortfall": clean_value(unmet["shortfall"].sum()),
         "maxHumidityExcess": clean_value(unmet["humidityExcess"].max()),
+        "averageHumidityExcess": clean_value(
+            unmet["humidityExcessTime"].sum() / max(unmet["dt_h"].sum(), 1e-9)
+        ),
         "daily": [
             {
                 "date": row.date,
@@ -313,6 +319,7 @@ def unmet_dehumidification_trend(result, accepted_upper_humidity):
                 "shortfall": clean_value(row.shortfall),
                 "maxShortfallRate": clean_value(row.maxShortfallRate),
                 "maxHumidityExcess": clean_value(row.maxHumidityExcess),
+                "averageHumidityExcess": clean_value(row.averageHumidityExcess),
             }
             for row in daily.itertuples(index=False)
         ],
