@@ -1241,26 +1241,49 @@ function renderUnmetTrend(entries) {
     <article class="unmet-summary-card" style="--region-color:${item.color}">
       <strong>${item.label}</strong>
       <span>${formatNumber(item.trend.totalHours, 1)} h</span>
-      <small>평균 상한초과 ${formatNumber(item.trend.averageHumidityExcess, 2)} g/kg · 최대 ${formatNumber(item.trend.maxHumidityExcess, 2)} g/kg</small>
+      <small>미충족 평균 급기 ${formatNumber(Number(item.result.best.acceptedUpperHumidity) + Number(item.trend.averageHumidityExcess), 2)} g/kg · 최대 ${formatNumber(Number(item.result.best.acceptedUpperHumidity) + Number(item.trend.maxHumidityExcess), 2)} g/kg</small>
     </article>
   `).join("");
-  const points = series.flatMap((item) => item.trend.daily.map((day) => ({ ...day, label: item.label, color: item.color })));
-  const maxExcess = Math.max(...points.map((point) => Number(point.maxHumidityExcess) || 0), 0.1);
-  chart.style.minWidth = `${Math.max(720, points.length * 22)}px`;
-  chart.innerHTML = points.length ? points.map((point) => {
-    const averageHeight = clamp((Number(point.averageHumidityExcess) / maxExcess) * 180, 4, 180);
-    const maximumHeight = clamp((Number(point.maxHumidityExcess) / maxExcess) * 180, 4, 180);
-    return `<div class="unmet-day" title="${point.label} ${point.date} · 평균 초과 ${formatNumber(point.averageHumidityExcess, 2)} g/kg · 최대 초과 ${formatNumber(point.maxHumidityExcess, 2)} g/kg · ${formatNumber(point.hours, 1)} h">
-      <span class="unmet-day-value">평 ${formatNumber(point.averageHumidityExcess, 2)} / 최 ${formatNumber(point.maxHumidityExcess, 2)}</span>
-      <div class="unmet-day-bars"><i class="average" style="height:${averageHeight}px;background:${point.color}"></i><i class="maximum" style="height:${maximumHeight}px;--region-color:${point.color}"></i></div>
-      <small>${point.date.slice(5)}</small>
-    </div>`;
-  }).join("") : `<p class="result-empty">선택한 조건에서는 목표 제습 미충족 시간이 없습니다.</p>`;
   const events = series.flatMap((item) => item.trend.events.map((event) => ({ ...event, label: item.label })));
+  const plotEvents = series.flatMap((item) => item.trend.events.map((event) => ({ ...event, key: item.key, label: item.label, color: item.color })));
+  if (plotEvents.length) {
+    const parsedTimes = plotEvents.map((event) => new Date(event.time.replace(" ", "T")).getTime());
+    const minTime = Math.min(...parsedTimes);
+    const maxTime = Math.max(...parsedTimes);
+    const acceptedUppers = series.map((item) => Number(item.result.best.acceptedUpperHumidity) || 10.5);
+    const minY = Math.max(0, Math.min(...acceptedUppers) - 0.5);
+    const maxY = Math.max(...plotEvents.map((event) => Number(event.supplyHumidity) || 0), ...acceptedUppers) + 0.5;
+    const width = Math.max(920, Math.min(1800, ((maxTime - minTime) / 86400000) * 4));
+    const height = 330;
+    const margin = { left: 58, right: 24, top: 28, bottom: 42 };
+    const plotWidth = width - margin.left - margin.right;
+    const plotHeight = height - margin.top - margin.bottom;
+    const x = (time) => margin.left + ((time - minTime) / Math.max(maxTime - minTime, 1)) * plotWidth;
+    const y = (value) => margin.top + (1 - (value - minY) / Math.max(maxY - minY, 0.1)) * plotHeight;
+    const yTicks = Array.from({ length: 6 }, (_, index) => minY + (maxY - minY) * index / 5);
+    const xTicks = Array.from({ length: 7 }, (_, index) => minTime + (maxTime - minTime) * index / 6);
+    const grid = yTicks.map((tick) => `<line x1="${margin.left}" y1="${y(tick)}" x2="${width - margin.right}" y2="${y(tick)}" class="humidity-grid"/><text x="${margin.left - 8}" y="${y(tick) + 4}" text-anchor="end">${formatNumber(tick, 1)}</text>`).join("");
+    const xLabels = xTicks.map((tick) => `<text x="${x(tick)}" y="${height - 14}" text-anchor="middle">${new Date(tick).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" })}</text>`).join("");
+    const lines = series.map((item) => {
+      const itemEvents = item.trend.events;
+      if (!itemEvents.length) return "";
+      const path = itemEvents.map((event, index) => `${index ? "L" : "M"}${x(new Date(event.time.replace(" ", "T")).getTime()).toFixed(1)},${y(Number(event.supplyHumidity)).toFixed(1)}`).join(" ");
+      const upper = Number(item.result.best.acceptedUpperHumidity) || 10.5;
+      const averageSupply = upper + Number(item.trend.averageHumidityExcess || 0);
+      return `<path d="${path}" fill="none" stroke="${item.color}" stroke-width="2.2"/><line x1="${margin.left}" y1="${y(averageSupply)}" x2="${width - margin.right}" y2="${y(averageSupply)}" stroke="${item.color}" class="humidity-average-line"/><text x="${width - margin.right - 4}" y="${y(averageSupply) - 5}" text-anchor="end" fill="${item.color}">${item.label} 평균 ${formatNumber(averageSupply, 2)}</text>`;
+    }).join("");
+    const upper = Math.min(...acceptedUppers);
+    const legend = series.map((item) => `<span><i style="background:${item.color}"></i>${item.label} 급기 절대습도</span>`).join("");
+    chart.style.minWidth = `${width}px`;
+    chart.innerHTML = `<div class="humidity-line-legend">${legend}<span><i class="upper-limit-swatch"></i>허용상한 ${formatNumber(upper, 1)} g/kg</span><span><i class="average-line-swatch"></i>미충족 평균</span></div><svg viewBox="0 0 ${width} ${height}" role="img"><text x="12" y="16" class="humidity-axis-title">g/kgDA</text>${grid}${xLabels}<line x1="${margin.left}" y1="${y(upper)}" x2="${width - margin.right}" y2="${y(upper)}" class="humidity-upper-line"/>${lines}</svg>`;
+  } else {
+    chart.style.minWidth = "720px";
+    chart.innerHTML = `<p class="result-empty">선택한 조건에서는 목표 제습 미충족 시간이 없습니다.</p>`;
+  }
   rows.innerHTML = events.length ? events.map((event) => `
-    <tr><td>${event.label}</td><td>${event.time}</td><td>${formatNumber(event.durationHours, 2)} h</td><td>${formatNumber(event.requiredRate, 2)} kg/h</td><td>${formatNumber(event.actualRate, 2)} kg/h</td><td>${formatNumber(event.shortfall, 2)} kg</td><td>${formatNumber(event.supplyHumidity, 2)} g/kg</td><td>${formatNumber(event.humidityExcess, 2)} g/kg</td></tr>
-  `).join("") : `<tr><td colspan="8">미충족 구간이 없습니다.</td></tr>`;
-  $("unmetTrendSummary").textContent = `허용상한 대비 날짜별 평균·최대 초과량 · 평균은 미충족 지속시간을 반영한 시간가중값 · ${events.length}개 미충족 구간`;
+    <tr><td>${event.label}</td><td>${event.time}</td><td>${formatNumber(event.durationHours, 2)} h</td><td>${formatNumber(event.supplyHumidity, 2)} g/kg</td><td>${formatNumber(event.humidityExcess, 2)} g/kg</td></tr>
+  `).join("") : `<tr><td colspan="5">미충족 구간이 없습니다.</td></tr>`;
+  $("unmetTrendSummary").textContent = `시간별 급기 절대습도와 허용상한·미충족 평균 비교 · ${events.length}개 미충족 구간`;
 }
 
 function renderCandidateMonthlyComparison(selections) {

@@ -991,22 +991,20 @@ button:focus-visible {
 .unmet-summary-card small { color: var(--muted); }
 .unmet-chart-scroll { overflow-x: auto; padding: 8px 0; }
 .unmet-trend-chart {
-  display: flex;
-  align-items: end;
-  gap: 6px;
-  min-height: 240px;
-  padding: 24px 10px 4px;
-  border-bottom: 1px solid #cbd7e2;
+  min-height: 360px;
+  padding: 8px;
 }
-.unmet-day { display: grid; align-items: end; justify-items: center; gap: 4px; min-width: 18px; height: 215px; }
-.unmet-day-bars { display: flex; align-items: end; gap: 2px; height: 180px; }
-.unmet-day-bars i { width: 7px; border-radius: 3px 3px 0 0; }
-.unmet-day-bars .maximum {
-  border: 2px solid var(--region-color);
-  background: color-mix(in srgb, var(--region-color) 18%, white);
-}
-.unmet-day small { font-size: 9px; color: var(--muted); writing-mode: vertical-rl; }
-.unmet-day-value { font-size: 9px; color: var(--muted); }
+.unmet-trend-chart svg { display: block; width: 100%; min-height: 330px; }
+.unmet-trend-chart svg text { font-size: 10px; fill: var(--muted); }
+.humidity-line-legend { display: flex; flex-wrap: wrap; gap: 12px; padding: 4px 8px; font-size: 11px; font-weight: 800; }
+.humidity-line-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.humidity-line-legend i { width: 18px; height: 3px; border-radius: 2px; }
+.humidity-grid { stroke: #e0e8f0; stroke-width: 1; }
+.humidity-upper-line { stroke: #d64545; stroke-width: 1.6; stroke-dasharray: 7 5; }
+.humidity-average-line { stroke-width: 1.5; stroke-dasharray: 3 5; opacity: 0.9; }
+.upper-limit-swatch { background: repeating-linear-gradient(90deg, #d64545 0 5px, transparent 5px 8px); }
+.average-line-swatch { background: repeating-linear-gradient(90deg, var(--navy) 0 3px, transparent 3px 7px); }
+.humidity-axis-title { font-weight: 900; fill: var(--navy) !important; }
 .unmet-event-wrap { max-height: 330px; margin-top: 14px; }
 
 .region-area-row {
