@@ -1436,14 +1436,15 @@ def build_summary(
         "ABS_bypass_hours": int((abs_on & (result["ABS_PROCESS_AIR_FRACTION"] < 1 - 1e-9)).sum()),
         "SUPPLY_mean_T_LD_degC": result.loc[abs_on, "SUPPLY_AIR_T_degC"].mean(),
         "SUPPLY_mean_RH_LD_pct": result.loc[abs_on, "SUPPLY_AIR_RH_pct"].mean(),
-        "TARGET_HUMIDITY_UNMET_hours": int(
-            (
+        "TARGET_HUMIDITY_UNMET_hours": (
+            result.loc[
                 abs_on
                 & (
                     result["SUPPLY_AIR_w_kgkg"] * 1000
                     > config.target_supply_w_g_kg + config.target_humidity_tolerance_g_kg + 1e-9
-                )
-            ).sum()
+                ),
+                "dt_h",
+            ].sum()
         ),
     }
     return pd.DataFrame([summary])

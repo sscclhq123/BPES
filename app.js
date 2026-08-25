@@ -1064,6 +1064,9 @@ function renderRegionResults(results) {
   renderDehumidificationComparison(
     latestRegionResults.filter((item) => selectedRegionComparisonKeys.has(item.key)),
   );
+  renderUnmetTrend(
+    latestRegionResults.filter((item) => selectedRegionComparisonKeys.has(item.key)),
+  );
 }
 
 function toggleRegionComparison(key) {
@@ -1215,6 +1218,48 @@ function renderDehumidificationComparison(entries) {
   $("dehumidificationSummary").textContent = totals.map((best, index) =>
     `${series[index].label} 실제 ${formatNumber(best.actualDehumidification)} kg · 목표 ${formatNumber(best.targetDehumidification)} kg · 허용 최소 ${formatNumber(best.acceptableMinDehumidification)} kg (${formatNumber(best.dehumidificationAchievement * 100, 1)}%) · ${best.dehumidificationAccepted ? "달성" : "미달"} · 허용 ${formatNumber(best.targetSupplyHumidity, 1)}~${formatNumber(best.acceptedUpperHumidity, 1)} g/kg`,
   ).join(" · ");
+}
+
+function renderUnmetTrend(entries) {
+  const chart = $("unmetTrendChart");
+  const cards = $("unmetTrendCards");
+  const rows = $("unmetEventRows");
+  if (!chart || !cards || !rows) return;
+  const series = entries.map((item) => ({
+    ...item,
+    color: regionComparisonColor(item.key),
+    label: weatherDatasets[item.key]?.label?.replace(" · TMYx 2011–2025", "") || item.key,
+    trend: item.result?.unmetTrend || { totalHours: 0, totalShortfall: 0, maxHumidityExcess: 0, daily: [], events: [] },
+  }));
+  if (!series.length) {
+    cards.innerHTML = "";
+    chart.innerHTML = `<p class="result-empty">비교할 지역 계산 결과가 없습니다.</p>`;
+    rows.innerHTML = `<tr><td colspan="8">비교할 데이터가 없습니다.</td></tr>`;
+    return;
+  }
+  cards.innerHTML = series.map((item) => `
+    <article class="unmet-summary-card" style="--region-color:${item.color}">
+      <strong>${item.label}</strong>
+      <span>${formatNumber(item.trend.totalHours, 1)} h</span>
+      <small>누적 부족 ${formatNumber(item.trend.totalShortfall, 1)} kg · 최대 상한초과 ${formatNumber(item.trend.maxHumidityExcess, 2)} g/kg</small>
+    </article>
+  `).join("");
+  const points = series.flatMap((item) => item.trend.daily.map((day) => ({ ...day, label: item.label, color: item.color })));
+  const maxShortfall = Math.max(...points.map((point) => Number(point.shortfall) || 0), 1);
+  chart.style.minWidth = `${Math.max(720, points.length * 22)}px`;
+  chart.innerHTML = points.length ? points.map((point) => {
+    const height = clamp((Number(point.shortfall) / maxShortfall) * 180, 4, 180);
+    return `<div class="unmet-day" title="${point.label} ${point.date} · 부족 ${formatNumber(point.shortfall, 2)} kg · ${formatNumber(point.hours, 1)} h">
+      <span class="unmet-day-value">${formatNumber(point.shortfall, 1)}</span>
+      <i style="height:${height}px;background:${point.color}"></i>
+      <small>${point.date.slice(5)}</small>
+    </div>`;
+  }).join("") : `<p class="result-empty">선택한 조건에서는 목표 제습 미충족 시간이 없습니다.</p>`;
+  const events = series.flatMap((item) => item.trend.events.map((event) => ({ ...event, label: item.label })));
+  rows.innerHTML = events.length ? events.map((event) => `
+    <tr><td>${event.label}</td><td>${event.time}</td><td>${formatNumber(event.durationHours, 2)} h</td><td>${formatNumber(event.requiredRate, 2)} kg/h</td><td>${formatNumber(event.actualRate, 2)} kg/h</td><td>${formatNumber(event.shortfall, 2)} kg</td><td>${formatNumber(event.supplyHumidity, 2)} g/kg</td><td>${formatNumber(event.humidityExcess, 2)} g/kg</td></tr>
+  `).join("") : `<tr><td colspan="8">미충족 구간이 없습니다.</td></tr>`;
+  $("unmetTrendSummary").textContent = `허용상한 기준 시간별 부족량을 적분한 결과 · ${events.length}개 미충족 구간`;
 }
 
 function renderCandidateMonthlyComparison(selections) {
@@ -1496,6 +1541,7 @@ function renderPythonResult(result, input) {
   renderMetrics(best, input);
   renderBackendChart(result.monthly);
   renderDehumidificationComparison([{ key: input.weatherKey || "selected", result }]);
+  renderUnmetTrend([{ key: input.weatherKey || "selected", result }]);
   $("seasonSummary").textContent =
     `Python 엔진 · 요구 재생열 ${formatNumber(best.regenNeed)} kWh · TES 실사용 ${formatNumber(best.usefulSolar)} kWh · 실사용 커버율 ${formatNumber(best.solarUseCoverage * 100, 1)} % · 태양열 생산비 ${formatNumber(best.solarProductionRatio * 100, 1)} %`;
   renderCandidateRows(result.areaResults || result.candidates || [best]);

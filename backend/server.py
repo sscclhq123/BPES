@@ -204,6 +204,11 @@ def empirical_warnings(payload):
 def monthly_rows(result):
     monthly = result.copy()
     monthly["month"] = pd.to_datetime(monthly["time"]).dt.month
+    monthly["unmet_shortfall_kg"] = (
+        monthly["ACCEPTABLE_MIN_MOISTURE_REMOVAL_kg_h"]
+        - monthly["ABS_WATER_ABSORB_kg_h"]
+    ).clip(lower=0) * monthly["dt_h"]
+    monthly["unmet_hours"] = monthly["dt_h"].where(monthly["unmet_shortfall_kg"] > 1e-9, 0)
     grouped = monthly.groupby("month", as_index=False).agg(
         reg_need_kWh=("REG_HX_HEAT_NEED_kWh", "sum"),
         tes_to_reg_kWh=("REG_HX_HEAT_FROM_TES_kWh", "sum"),
@@ -212,6 +217,8 @@ def monthly_rows(result):
         target_dehumid_kg=("TARGET_MOISTURE_REMOVAL_kg_h", lambda values: float((values * monthly.loc[values.index, "dt_h"]).sum())),
         acceptable_min_dehumid_kg=("ACCEPTABLE_MIN_MOISTURE_REMOVAL_kg_h", lambda values: float((values * monthly.loc[values.index, "dt_h"]).sum())),
         actual_dehumid_kg=("ABS_WATER_ABSORB_kg_h", lambda values: float((values * monthly.loc[values.index, "dt_h"]).sum())),
+        unmet_shortfall_kg=("unmet_shortfall_kg", "sum"),
+        unmet_hours=("unmet_hours", "sum"),
     )
     return [
         {
@@ -223,8 +230,10 @@ def monthly_rows(result):
             "targetDehumidification": clean_value(row.target_dehumid_kg),
             "acceptableMinDehumidification": clean_value(row.acceptable_min_dehumid_kg),
             "actualDehumidification": clean_value(row.actual_dehumid_kg),
+            "unmetShortfall": clean_value(row.unmet_shortfall_kg),
+            "unmetHours": clean_value(row.unmet_hours),
             "dehumidificationAccepted": (
-                bool(row.actual_dehumid_kg + 1e-9 >= row.acceptable_min_dehumid_kg)
+                bool(row.unmet_hours <= 1e-9)
                 if row.target_dehumid_kg > 0 else None
             ),
             "dehumidificationAchievement": clean_value(
@@ -240,14 +249,74 @@ def dehumidification_metrics(result):
     target = float((result["TARGET_MOISTURE_REMOVAL_kg_h"] * result["dt_h"]).sum(skipna=True))
     acceptable_min = float((result["ACCEPTABLE_MIN_MOISTURE_REMOVAL_kg_h"] * result["dt_h"]).sum(skipna=True))
     actual = float((result["ABS_WATER_ABSORB_kg_h"] * result["dt_h"]).sum(skipna=True))
+    shortfall_rate = (
+        result["ACCEPTABLE_MIN_MOISTURE_REMOVAL_kg_h"]
+        - result["ABS_WATER_ABSORB_kg_h"]
+    ).clip(lower=0)
+    unmet_shortfall = float((shortfall_rate * result["dt_h"]).sum(skipna=True))
+    unmet_hours = float(result.loc[shortfall_rate > 1e-9, "dt_h"].sum(skipna=True))
     served = min(actual, target)
     return {
         "targetDehumidification": clean_value(target),
         "acceptableMinDehumidification": clean_value(acceptable_min),
         "actualDehumidification": clean_value(actual),
-        "dehumidificationAccepted": bool(actual + 1e-9 >= acceptable_min) if target > 0 else None,
+        "dehumidificationAccepted": bool(unmet_hours <= 1e-9) if target > 0 else None,
+        "unmetShortfall": clean_value(unmet_shortfall),
+        "unmetHours": clean_value(unmet_hours),
         "servedDehumidification": clean_value(served),
         "dehumidificationAchievement": clean_value(served / target if target > 0 else None),
+    }
+
+
+def unmet_dehumidification_trend(result, accepted_upper_humidity):
+    trend = result.copy()
+    trend["time"] = pd.to_datetime(trend["time"])
+    trend["shortfallRate"] = (
+        trend["ACCEPTABLE_MIN_MOISTURE_REMOVAL_kg_h"]
+        - trend["ABS_WATER_ABSORB_kg_h"]
+    ).clip(lower=0)
+    trend["shortfall"] = trend["shortfallRate"] * trend["dt_h"]
+    trend["humidityExcess"] = (
+        trend["SUPPLY_AIR_w_kgkg"] * 1000 - accepted_upper_humidity
+    ).clip(lower=0)
+    unmet = trend.loc[trend["shortfall"] > 1e-9].copy()
+    if unmet.empty:
+        return {"totalHours": 0.0, "totalShortfall": 0.0, "maxHumidityExcess": 0.0, "daily": [], "events": []}
+    unmet["date"] = unmet["time"].dt.strftime("%Y-%m-%d")
+    daily = unmet.groupby("date", as_index=False).agg(
+        hours=("dt_h", "sum"),
+        shortfall=("shortfall", "sum"),
+        maxShortfallRate=("shortfallRate", "max"),
+        maxHumidityExcess=("humidityExcess", "max"),
+    )
+    events = [
+        {
+            "time": row.time.strftime("%Y-%m-%d %H:%M"),
+            "durationHours": clean_value(row.dt_h),
+            "requiredRate": clean_value(row.ACCEPTABLE_MIN_MOISTURE_REMOVAL_kg_h),
+            "actualRate": clean_value(row.ABS_WATER_ABSORB_kg_h),
+            "shortfallRate": clean_value(row.shortfallRate),
+            "shortfall": clean_value(row.shortfall),
+            "supplyHumidity": clean_value(row.SUPPLY_AIR_w_kgkg * 1000),
+            "humidityExcess": clean_value(row.humidityExcess),
+        }
+        for row in unmet.itertuples(index=False)
+    ]
+    return {
+        "totalHours": clean_value(unmet["dt_h"].sum()),
+        "totalShortfall": clean_value(unmet["shortfall"].sum()),
+        "maxHumidityExcess": clean_value(unmet["humidityExcess"].max()),
+        "daily": [
+            {
+                "date": row.date,
+                "hours": clean_value(row.hours),
+                "shortfall": clean_value(row.shortfall),
+                "maxShortfallRate": clean_value(row.maxShortfallRate),
+                "maxHumidityExcess": clean_value(row.maxHumidityExcess),
+            }
+            for row in daily.itertuples(index=False)
+        ],
+        "events": events,
     }
 
 
@@ -1027,20 +1096,25 @@ def simulate(payload):
     row["TARGET_DEHUMIDIFICATION_total_kg"] = dehumidification["targetDehumidification"]
     row["ACTUAL_DEHUMIDIFICATION_total_kg"] = dehumidification["actualDehumidification"]
     row["DEHUMIDIFICATION_ACHIEVEMENT"] = dehumidification["dehumidificationAchievement"]
-    target_unmet_hours = int(row.get("TARGET_HUMIDITY_UNMET_hours", 0) or 0)
+    target_unmet_hours = float(row.get("TARGET_HUMIDITY_UNMET_hours", 0) or 0)
     solar_share = tes_to_reg / reg_need if reg_need > 0 else 0
     warnings = empirical_warnings(payload)
     if target_unmet_hours > 0:
+        lg_control_text = (
+            f"L/G를 {config.lg_ratio_min:.2f}~{config.lg_ratio_max:.2f}에서 자동제어"
+            if config.lg_auto_control
+            else f"L/G를 {config.lg_ratio_abs:.2f}로 고정"
+        )
         if config.reg_temp_auto_control:
             warnings.append(
-                f"L/G를 {config.lg_ratio_abs:.2f}로 고정하고 재생부 용액온도를 "
+                f"{lg_control_text}하고 재생부 용액온도를 "
                 f"{config.reg_temp_min_c:.1f}~{config.reg_temp_max_c:.1f} °C에서 자동제어했지만, "
                 f"목표 급기 절대습도 미충족 시간이 {target_unmet_hours} h입니다. "
                 "현재 실험식 권장 재생온도 범위만으로는 해당 피크 조건을 달성할 수 없습니다."
             )
         else:
             warnings.append(
-                f"재생부 용액온도 {config.t_reg_in_target_c:.1f} °C 고정조건에서 "
+                f"{lg_control_text}하고 재생부 용액온도 {config.t_reg_in_target_c:.1f} °C 고정조건에서 "
                 f"목표 급기 절대습도 미충족 시간이 {target_unmet_hours} h입니다."
             )
     monthly_candidate_cache = {}
@@ -1097,6 +1171,10 @@ def simulate(payload):
         "warnings": warnings,
         "summary": {key: clean_value(value) for key, value in row.items()},
         "monthly": monthly_rows(result),
+        "unmetTrend": unmet_dehumidification_trend(
+            result,
+            config.target_supply_w_g_kg + config.target_humidity_tolerance_g_kg,
+        ),
         "best": {
             **{key: value for key, value in best.items() if key != "searchHierarchy"},
             "lgRatio": clean_value(row["LG_ratio_abs"]),

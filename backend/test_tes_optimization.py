@@ -11,6 +11,9 @@ from backend.server import (
     simulate_tes_tank,
     tes_energy_density_kwh_m3,
     tes_heat_loss_ua_w_k,
+    dehumidification_metrics,
+    monthly_rows,
+    unmet_dehumidification_trend,
 )
 from backend.solar_ld_engine import CollectorConfig, SystemConfig
 
@@ -78,10 +81,34 @@ class TesOptimizationTests(unittest.TestCase):
     def test_large_collector_range_gets_adaptive_refinement(self):
         coarse = initial_collector_area_candidates(20, 4000)
         refined = refined_collector_area_candidates(coarse, [coarse[4], coarse[8], coarse[12]])
-
         self.assertEqual(len(coarse), 17)
         self.assertGreater(len(refined), 0)
         self.assertLess(min(abs(value - coarse[4]) for value in refined), coarse[1] - coarse[0])
+
+    def test_hourly_unmet_is_not_hidden_by_monthly_surplus(self):
+        result = pd.DataFrame({
+            "time": pd.to_datetime(["2025-08-01 09:00", "2025-08-01 10:00"]),
+            "dt_h": [0.5, 1.5],
+            "TARGET_MOISTURE_REMOVAL_kg_h": [10.0, 10.0],
+            "ACCEPTABLE_MIN_MOISTURE_REMOVAL_kg_h": [9.0, 9.0],
+            "ABS_WATER_ABSORB_kg_h": [14.0, 8.0],
+            "SUPPLY_AIR_w_kgkg": [0.0100, 0.0107],
+            "REG_HX_HEAT_NEED_kWh": [0.0, 0.0],
+            "REG_HX_HEAT_FROM_TES_kWh": [0.0, 0.0],
+            "REG_HX_HEAT_FROM_AUX_kWh": [0.0, 0.0],
+            "COLLECTOR_QU_TOTAL_kWh": [0.0, 0.0],
+        })
+        metrics = dehumidification_metrics(result)
+        monthly = monthly_rows(result)[0]
+        trend = unmet_dehumidification_trend(result, 10.5)
+
+        self.assertGreater(metrics["actualDehumidification"], metrics["acceptableMinDehumidification"])
+        self.assertFalse(metrics["dehumidificationAccepted"])
+        self.assertFalse(monthly["dehumidificationAccepted"])
+        self.assertAlmostEqual(metrics["unmetHours"], 1.5)
+        self.assertAlmostEqual(metrics["unmetShortfall"], 1.5)
+        self.assertAlmostEqual(trend["totalHours"], 1.5)
+        self.assertAlmostEqual(trend["events"][0]["humidityExcess"], 0.2)
 
     def test_area_sweep_returns_target_area_and_hourly_dispatch(self):
         result = self.result_frame([0.0, 40.0, 40.0, 0.0], [900.0, 200.0, 0.0, 700.0])
