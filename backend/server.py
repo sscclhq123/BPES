@@ -332,7 +332,6 @@ def solar_utilization_metrics(collector_production, solar_used, regen_need):
     used = max(float(solar_used or 0), 0.0)
     demand = max(float(regen_need or 0), 0.0)
     return {
-        "solarProductionRatio": clean_value(production / demand if demand > 0 else 0.0),
         "solarUseCoverage": clean_value(used / demand if demand > 0 else 0.0),
         "unutilizedSolar": clean_value(max(production - used, 0.0)),
     }

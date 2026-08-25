@@ -1016,7 +1016,6 @@ function renderMetrics(best, input) {
   $("optimalTes").textContent = "월내 무손실";
   $("optimalTesFlow").textContent = "추후 산정";
   $("solarShare").textContent = `${formatNumber(best.monthlyMinimumCoverage * 100, 1)} %`;
-  $("solarProductionRatio").textContent = `${formatNumber(best.solarProductionRatio * 100, 1)} %`;
   $("unutilizedSolar").textContent = `${formatNumber(best.unutilizedSolar)} kWh/선택기간`;
   $("auxEnergy").textContent = `${formatNumber(best.auxEnergy)} kWh/선택기간`;
   $("unmetHours").textContent = `${formatNumber(best.unmetHours)} h/선택기간`;
@@ -1036,7 +1035,7 @@ function renderRegionResults(results) {
   $("cityList").innerHTML = results.map(({ key, result, error }) => {
     const label = weatherDatasets[key]?.label?.replace(" · TMYx 2011–2025", "") || key;
     if (error) {
-      return `<tr><td>${label}</td><td colspan="9">계산 실패 · ${error}</td></tr>`;
+      return `<tr><td>${label}</td><td colspan="8">계산 실패 · ${error}</td></tr>`;
     }
     const best = result.best;
     return `
@@ -1045,7 +1044,6 @@ function renderRegionResults(results) {
         <td>${formatNumber(best.collectorArea)} m²</td>
         <td>${formatNumber(best.monthlyMinimumCoverage * 100, 1)} %</td>
         <td>${formatNumber(best.usefulSolar)} kWh</td>
-        <td>${formatNumber(best.solarProductionRatio * 100, 1)} %</td>
         <td>${formatNumber(best.unutilizedSolar)} kWh</td>
         <td>${formatNumber(best.auxEnergy)} kWh</td>
         <td>${formatNumber(best.targetDehumidification)} kg</td>
@@ -1053,7 +1051,7 @@ function renderRegionResults(results) {
         <td>${formatNumber(best.dehumidificationAchievement * 100, 1)} %</td>
       </tr>
     `;
-  }).join("") || `<tr><td colspan="10">선택된 지역 계산 결과가 없습니다.</td></tr>`;
+  }).join("") || `<tr><td colspan="9">선택된 지역 계산 결과가 없습니다.</td></tr>`;
 
   renderRegionMonthlyComparison(
     latestRegionResults.filter((item) => selectedRegionComparisonKeys.has(item.key)),
@@ -1097,7 +1095,6 @@ function renderCandidateRows(candidates) {
           <td>${formatNumber(candidate.regenNeed)} kWh</td>
           <td>${formatNumber(candidate.usefulSolar)} kWh</td>
           <td>${formatNumber(candidate.monthlyMinimumCoverage * 100, 1)} %</td>
-          <td>${formatNumber(candidate.solarProductionRatio * 100, 1)} %</td>
           <td>${formatNumber(candidate.unutilizedSolar)} kWh</td>
           <td>${formatNumber(candidate.auxEnergy)} kWh</td>
           <td>${candidate.targetAchieved ? "충족" : "-"}</td>
@@ -1107,7 +1104,7 @@ function renderCandidateRows(candidates) {
         </tr>
       `,
     )
-    .join("") || `<tr class="empty-result-row"><td colspan="11">면적별 계산 결과가 없습니다.</td></tr>`;
+    .join("") || `<tr class="empty-result-row"><td colspan="10">면적별 계산 결과가 없습니다.</td></tr>`;
 }
 
 const monthlyComparisonColors = ["#173f73", "#e18424", "#147d91", "#2f855a", "#c84b4b", "#7157a5", "#2f64a3", "#9a6b16", "#b04f86", "#5f7f35", "#bd6b35", "#3f7f88", "#7b5c3f", "#5964a9"];
@@ -1129,7 +1126,6 @@ function renderRegionAreaComparison(entries) {
         <td>${formatNumber(candidate.regenNeed)} kWh</td>
         <td>${formatNumber(candidate.usefulSolar)} kWh</td>
         <td>${formatNumber(candidate.monthlyMinimumCoverage * 100, 1)} %</td>
-        <td>${formatNumber(candidate.solarProductionRatio * 100, 1)} %</td>
         <td>${formatNumber(candidate.unutilizedSolar)} kWh</td>
         <td>${formatNumber(candidate.auxEnergy)} kWh</td>
         <td>${candidate.targetAchieved ? "충족" : "-"}</td>
@@ -1576,7 +1572,7 @@ function renderPythonResult(result, input) {
   renderDehumidificationComparison([{ key: input.weatherKey || "selected", result }]);
   renderUnmetTrend([{ key: input.weatherKey || "selected", result }]);
   $("seasonSummary").textContent =
-    `Python 엔진 · 요구 재생열 ${formatNumber(best.regenNeed)} kWh · TES 실사용 ${formatNumber(best.usefulSolar)} kWh · 실사용 커버율 ${formatNumber(best.solarUseCoverage * 100, 1)} % · 태양열 생산비 ${formatNumber(best.solarProductionRatio * 100, 1)} %`;
+    `Python 엔진 · 요구 재생열 ${formatNumber(best.regenNeed)} kWh · TES 실사용 ${formatNumber(best.usefulSolar)} kWh · 실사용 커버율 ${formatNumber(best.solarUseCoverage * 100, 1)} %`;
   renderCandidateRows(result.areaResults || result.candidates || [best]);
 }
 
@@ -1602,7 +1598,7 @@ function clearResultOutputs(message = "입력값을 확인한 뒤 계산을 실�
   $("heroResultLabel").textContent = "계산 대기";
   $("optimalDesign").textContent = "-";
   $("designNote").textContent = message;
-  ["optimalCollector", "optimalTes", "optimalTesFlow", "solarShare", "solarProductionRatio", "unutilizedSolar", "auxEnergy", "unmetHours", "recommendedOps"]
+  ["optimalCollector", "optimalTes", "optimalTesFlow", "solarShare", "unutilizedSolar", "auxEnergy", "unmetHours", "recommendedOps"]
     .forEach((id) => { $(id).textContent = "-"; });
   $("seasonSummary").textContent = message;
   $("monthlyLegend").innerHTML = "";
