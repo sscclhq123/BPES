@@ -11,6 +11,7 @@ from backend.solar_ld_engine import (
     moist_air_enthalpy,
     parallel_absorber_block,
     controlled_parallel_absorber_block,
+    controlled_regenerator_solution_temperature,
     required_parallel_modules,
     staged_regenerator_flow,
 )
@@ -184,6 +185,23 @@ class ParallelModuleTests(unittest.TestCase):
         self.assertEqual(active_modules, 1)
         self.assertAlmostEqual(solution_flow, 0.44, places=12)
         self.assertAlmostEqual(air_flow, 0.40, places=12)
+
+    def test_regenerator_temperature_is_last_stage_control(self):
+        auto_config = SystemConfig(reg_temp_auto_control=True)
+        self.assertAlmostEqual(
+            controlled_regenerator_solution_temperature(auto_config, auto_config.xi_target, False),
+            auto_config.reg_temp_min_c,
+        )
+        self.assertAlmostEqual(
+            controlled_regenerator_solution_temperature(auto_config, auto_config.xi_target, True),
+            auto_config.reg_temp_max_c,
+        )
+
+        fixed_config = SystemConfig(reg_temp_auto_control=False, t_reg_in_target_c=55.0)
+        self.assertAlmostEqual(
+            controlled_regenerator_solution_temperature(fixed_config, fixed_config.xi_target, True),
+            55.0,
+        )
 
     def test_parallel_count_is_set_by_process_airflow(self):
         modules = required_parallel_modules(

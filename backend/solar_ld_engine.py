@@ -558,7 +558,7 @@ def controlled_parallel_absorber_block(
     # L/G is the primary variable. When it reaches a permitted boundary without
     # meeting the target, optionally use absorber solution temperature as the
     # secondary control selected by the user.
-    if auto_lg_control and auto_temperature_control and abs(float(selected["w_air_out"]) - target_w_kgkg) > 1e-7:
+    if auto_lg_control and auto_temperature_control and float(selected["w_air_out"]) > target_w_kgkg + 1e-7:
         selected_solution_flow = float(selected["ABS_LG_CONTROLLED"] * total_air_kg_s)
         low_t = float(solution_t_min_c)
         high_t = float(solution_t_max_c)
@@ -599,6 +599,25 @@ def controlled_parallel_absorber_block(
     controlled["ABS_LG_CONTROL_ACTIVE"] = bool(auto_lg_control)
     controlled["ABS_SOL_IN_mdot_kg_s"] = controlled_solution_flow
     return controlled
+
+
+def controlled_regenerator_solution_temperature(config, solution_xi, absorber_target_unmet):
+    """Use regeneration temperature only after absorber-side controls remain insufficient."""
+    if not config.reg_temp_auto_control:
+        return float(np.clip(
+            config.t_reg_in_target_c,
+            config.reg_temp_min_c,
+            config.reg_temp_max_c,
+        ))
+    if absorber_target_unmet:
+        return float(config.reg_temp_max_c)
+    concentration_deficit = max(config.xi_target - solution_xi, 0.0)
+    control_band = max(config.xi_target - config.xi_regen_on, 1e-9)
+    control_fraction = float(np.clip(concentration_deficit / control_band, 0.0, 1.0))
+    return float(
+        config.reg_temp_min_c
+        + control_fraction * (config.reg_temp_max_c - config.reg_temp_min_c)
+    )
 
 
 def regenerator_block(
@@ -1070,21 +1089,25 @@ def run_simulation(
                 last_abs = abs_res
                 hour_abs_on = True
 
+            absorber_target_unmet = bool(
+                abs_on
+                and float(last_abs["w_air_out"])
+                > config.target_supply_w_g_kg / 1000 + 1e-9
+            )
+            # Staged priority: L/G -> absorber solution temperature ->
+            # regenerator solution temperature. Regeneration changes the tank
+            # concentration and therefore improves subsequent internal steps.
+            if config.reg_temp_auto_control and absorber_target_unmet:
+                regen_by_aux = True
+                reg_on_request = True
+                regen_reason = "humidity_target_concentration_recovery"
+
             if reg_on_request:
-                if config.reg_temp_auto_control:
-                    concentration_deficit = max(config.xi_target - xi_0, 0.0)
-                    control_band = max(config.xi_target - config.xi_regen_on, 1e-9)
-                    control_fraction = float(np.clip(concentration_deficit / control_band, 0.0, 1.0))
-                    reg_solution_t_controlled = (
-                        config.reg_temp_min_c
-                        + control_fraction * (config.reg_temp_max_c - config.reg_temp_min_c)
-                    )
-                else:
-                    reg_solution_t_controlled = float(np.clip(
-                        config.t_reg_in_target_c,
-                        config.reg_temp_min_c,
-                        config.reg_temp_max_c,
-                    ))
+                reg_solution_t_controlled = controlled_regenerator_solution_temperature(
+                    config,
+                    xi_0,
+                    absorber_target_unmet,
+                )
                 cp_reg = cp_licl_solution_kjkgk(xi_0, (t_sol_0 + reg_solution_t_controlled) / 2)
                 m_water_at_target = m_salt_0 * (1 / config.xi_target - 1)
                 water_removable_to_target = max(m_water_0 - m_water_at_target, 0)
@@ -1193,7 +1216,9 @@ def run_simulation(
                 last_reg = reg_res
                 hour_reg_on = True
                 hour_aux_on = hour_aux_on or (qaux_w > 1e-6)
-                regen_reason = "LD_need_low_xi_aux" if regen_by_aux else (regen_reason or "solar_TES_concentration_recovery")
+                regen_reason = regen_reason or (
+                    "LD_need_low_xi_aux" if regen_by_aux else "solar_TES_concentration_recovery"
+                )
 
             m_salt_in = abs_ret_m * abs_ret_xi + reg_ret_m * reg_ret_xi
             m_water_in = abs_ret_m * (1 - abs_ret_xi) + reg_ret_m * (1 - reg_ret_xi)

@@ -298,8 +298,8 @@
               <label class="mode-row">
                 <span>제습부 용액온도</span>
                 <select id="absTempMode">
-                  <option value="fixed">입력값 고정</option>
                   <option value="auto">보조 자동제어</option>
+                  <option value="fixed">입력값 고정</option>
                 </select>
               </label>
               <label class="mode-row">
@@ -318,12 +318,12 @@
               <label class="mode-row">
                 <span>재생기 용액온도</span>
                 <select id="regenMode">
+                  <option value="auto">최종단계 보조제어</option>
                   <option value="fixed">입력값 고정</option>
-                  <option value="auto">농도 연동 보조제어</option>
                 </select>
               </label>
             </div>
-            <div class="dataset-note">기본 자동제어는 L/G를 실험식 권장범위 1.09~2.00 안에서 조절합니다. 제습부·재생부 용액온도 자동제어는 선택 옵션입니다.</div>
+            <div class="dataset-note">자동제어 우선순위: ① L/G 1.09~2.00 조절 → ② 미충족 시 제습부 용액온도 8.05~31.40 °C 조절 → ③ 계속 미충족 시 재생기 용액온도 48.5~59.4 °C 조절. 각 온도는 입력값 고정으로 변경할 수 있습니다.</div>
             <div class="validity-panel" id="validityPanel">
               <strong>실험식 권장 범위</strong>
               <p>LiCl 농도 36.4~39.0 %, 제습부 용액온도 8.05~31.40 °C, 재생부 용액온도 48.5~59.4 °C, L/G 1.09~2.00. 모듈당 권장 유량은 제습부 공기 0.15~0.73 kg/s·용액 0.63~2.08 kg/s, 재생부 공기 0.24~0.40 kg/s·용액 0.26~0.48 kg/s입니다. 제습 효율 계산값이 0.70을 초과하면 0.69로 고정하여 적용합니다.</p>
