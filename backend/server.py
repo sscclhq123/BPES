@@ -155,10 +155,11 @@ def build_configs(payload):
     config.xi_abs_stop = max(config.xi_tank_init - 0.020, 0.20)
     config.lg_ratio_abs = to_number(payload, "lgRatio", config.lg_ratio_abs)
     config.lg_ratio_reg_design = to_number(payload, "lgRatio", config.lg_ratio_reg_design)
+    config.lg_auto_control = payload.get("lgMode", "auto") == "auto"
     config.t_abs_in_target_c = to_number(payload, "absSolutionTemp", config.t_abs_in_target_c)
-    config.abs_temp_auto_control = payload.get("absTempMode", "auto") == "auto"
+    config.abs_temp_auto_control = payload.get("absTempMode", "fixed") == "auto"
     config.t_reg_in_target_c = to_number(payload, "regenTemp", config.t_reg_in_target_c)
-    config.reg_temp_auto_control = payload.get("regenMode", "auto") == "auto"
+    config.reg_temp_auto_control = payload.get("regenMode", "fixed") == "auto"
     config.t_tes_min_c = to_number(payload, "tesReturnTemp", config.t_tes_min_c)
     config.t_tes_max_c = to_number(payload, "tesSupplyTemp", config.t_tes_max_c)
     config.t_tes_init_c = to_number(payload, "tesInitialTemp", config.t_tes_init_c)
@@ -1071,6 +1072,10 @@ def simulate(payload):
             **candidate,
             **monthly_candidate_cache[cache_key],
             "lgRatio": clean_value(row["LG_ratio_abs"]),
+            "lgMode": "auto" if config.lg_auto_control else "fixed",
+            "lgRatioMean": clean_value(row["LG_control_mean"]),
+            "lgRatioMin": clean_value(row["LG_control_min"]),
+            "lgRatioMax": clean_value(row["LG_control_max"]),
             "absorberModules": int(row["ABS_module_count"]),
             "regeneratorModules": int(row["REG_module_count"]),
             "unmetHours": target_unmet_hours,

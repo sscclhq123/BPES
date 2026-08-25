@@ -143,6 +143,37 @@ class ParallelModuleTests(unittest.TestCase):
             0.010,
             False,
         )
+        self.assertAlmostEqual(result["ABS_SOL_IN_T_CONTROLLED_degC"], 25.0)
+        self.assertFalse(result["ABS_TEMP_CONTROL_ACTIVE"])
+
+    def test_auto_lg_control_stays_in_empirical_range(self):
+        outdoor_temp = 31.0
+        outdoor_rh = 75.0
+        outdoor_w = humidity_ratio_from_trh(outdoor_temp, outdoor_rh)
+        result = controlled_parallel_absorber_block(
+            outdoor_temp,
+            outdoor_rh,
+            outdoor_w,
+            moist_air_enthalpy(outdoor_temp, outdoor_w),
+            self.config.p_atm_kpa,
+            self.air_flow,
+            self.solution_flow,
+            4,
+            25.0,
+            0.38,
+            self.config.eff_enthalpy,
+            0.010,
+            False,
+            auto_lg_control=True,
+        )
+        self.assertTrue(result["ABS_LG_CONTROL_ACTIVE"])
+        self.assertGreaterEqual(result["ABS_LG_CONTROLLED"], 1.09)
+        self.assertLessEqual(result["ABS_LG_CONTROLLED"], 2.00)
+        self.assertAlmostEqual(
+            result["ABS_SOL_IN_mdot_kg_s"],
+            result["ABS_LG_CONTROLLED"] * self.air_flow,
+            places=8,
+        )
 
         self.assertAlmostEqual(result["ABS_SOL_IN_T_CONTROLLED_degC"], 25.0)
         self.assertFalse(result["ABS_TEMP_CONTROL_ACTIVE"])

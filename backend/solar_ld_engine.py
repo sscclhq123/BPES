@@ -67,6 +67,9 @@ class SystemConfig:
     sa_abs_m3h: float = 1200.0
     rho_air_kg_m3: float = 1.2
     lg_ratio_abs: float = 1.0
+    lg_auto_control: bool = True
+    lg_ratio_min: float = 1.09
+    lg_ratio_max: float = 2.00
     sa_reg_factor: float = 1.0
     lg_ratio_reg_design: float = 1.0
     reg_flow_control_by_tes: bool = True
@@ -471,10 +474,13 @@ def controlled_parallel_absorber_block(
     auto_temperature_control=True,
     solution_t_min_c=8.05,
     solution_t_max_c=31.4,
+    auto_lg_control=False,
+    lg_ratio_min=1.09,
+    lg_ratio_max=2.00,
 ):
-    """Control absorber inlet solution temperature before using bypass as a safeguard."""
+    """Control L/G first, then optionally solution temperature, with bypass as safeguard."""
 
-    def evaluate(solution_t_c):
+    def evaluate(solution_t_c, solution_flow_kg_s=total_solution_kg_s):
         result = parallel_absorber_block(
             ta,
             rh,
@@ -482,7 +488,7 @@ def controlled_parallel_absorber_block(
             h_oa,
             p_atm,
             total_air_kg_s,
-            total_solution_kg_s,
+            solution_flow_kg_s,
             module_count,
             solution_t_c,
             xi_in,
@@ -490,6 +496,9 @@ def controlled_parallel_absorber_block(
         )
         result["ABS_SOL_IN_T_CONTROLLED_degC"] = float(solution_t_c)
         result["ABS_TEMP_CONTROL_ACTIVE"] = bool(auto_temperature_control)
+        result["ABS_LG_CONTROLLED"] = float(solution_flow_kg_s / max(total_air_kg_s, 1e-9))
+        result["ABS_LG_CONTROL_ACTIVE"] = bool(auto_lg_control)
+        result["ABS_SOL_IN_mdot_kg_s"] = float(solution_flow_kg_s)
         return result
 
     requested_solution_t_c = float(np.clip(
@@ -497,7 +506,27 @@ def controlled_parallel_absorber_block(
         solution_t_min_c,
         solution_t_max_c,
     ))
-    if not auto_temperature_control:
+    if auto_lg_control:
+        low_lg = float(lg_ratio_min)
+        high_lg = float(lg_ratio_max)
+        low_result = evaluate(requested_solution_t_c, low_lg * total_air_kg_s)
+        high_result = evaluate(requested_solution_t_c, high_lg * total_air_kg_s)
+        if float(low_result["w_air_out"]) <= target_w_kgkg:
+            selected = low_result
+        elif float(high_result["w_air_out"]) > target_w_kgkg:
+            selected = high_result
+        else:
+            selected = high_result
+            for _ in range(18):
+                mid_lg = (low_lg + high_lg) / 2
+                mid_result = evaluate(requested_solution_t_c, mid_lg * total_air_kg_s)
+                if float(mid_result["w_air_out"]) <= target_w_kgkg:
+                    high_lg = mid_lg
+                    selected = mid_result
+                else:
+                    low_lg = mid_lg
+            selected = evaluate(requested_solution_t_c, high_lg * total_air_kg_s)
+    elif not auto_temperature_control:
         selected = evaluate(requested_solution_t_c)
     else:
         low_t = float(solution_t_min_c)
@@ -526,7 +555,32 @@ def controlled_parallel_absorber_block(
                 selected = mid_result
             selected = evaluate(high_t)
 
+    # L/G is the primary variable. When it reaches a permitted boundary without
+    # meeting the target, optionally use absorber solution temperature as the
+    # secondary control selected by the user.
+    if auto_lg_control and auto_temperature_control and abs(float(selected["w_air_out"]) - target_w_kgkg) > 1e-7:
+        selected_solution_flow = float(selected["ABS_LG_CONTROLLED"] * total_air_kg_s)
+        low_t = float(solution_t_min_c)
+        high_t = float(solution_t_max_c)
+        low_result = evaluate(low_t, selected_solution_flow)
+        high_result = evaluate(high_t, selected_solution_flow)
+        if float(low_result["w_air_out"]) > target_w_kgkg:
+            selected = low_result
+        elif float(high_result["w_air_out"]) < target_w_kgkg:
+            selected = high_result
+        else:
+            for _ in range(18):
+                mid_t = (low_t + high_t) / 2
+                mid_result = evaluate(mid_t, selected_solution_flow)
+                if float(mid_result["w_air_out"]) < target_w_kgkg:
+                    low_t = mid_t
+                else:
+                    high_t = mid_t
+                selected = mid_result
+            selected = evaluate(high_t, selected_solution_flow)
+
     controlled_t = float(selected["ABS_SOL_IN_T_CONTROLLED_degC"])
+    controlled_solution_flow = float(selected["ABS_LG_CONTROLLED"] * total_air_kg_s)
     controlled = apply_absorber_target_control(
         selected,
         target_w_kgkg,
@@ -534,13 +588,16 @@ def controlled_parallel_absorber_block(
         w_oa,
         h_oa,
         total_air_kg_s,
-        total_solution_kg_s,
+        controlled_solution_flow,
         xi_in,
         controlled_t,
         eff_enthalpy,
     )
     controlled["ABS_SOL_IN_T_CONTROLLED_degC"] = controlled_t
     controlled["ABS_TEMP_CONTROL_ACTIVE"] = bool(auto_temperature_control)
+    controlled["ABS_LG_CONTROLLED"] = float(selected["ABS_LG_CONTROLLED"])
+    controlled["ABS_LG_CONTROL_ACTIVE"] = bool(auto_lg_control)
+    controlled["ABS_SOL_IN_mdot_kg_s"] = controlled_solution_flow
     return controlled
 
 
@@ -926,6 +983,8 @@ def run_simulation(
             "reg_module_time": 0.0,
             "reg_temp_time": 0.0,
             "reg_active_time": 0.0,
+            "abs_lg_time": 0.0,
+            "abs_active_time": 0.0,
             "incident_kWh": 0.0,
             "absorbed_kWh": 0.0,
             "collector_kWh": 0.0,
@@ -995,13 +1054,19 @@ def run_simulation(
                     config.eff_enthalpy,
                     config.target_supply_w_g_kg / 1000,
                     config.abs_temp_auto_control,
+                    auto_lg_control=config.lg_auto_control,
+                    lg_ratio_min=config.lg_ratio_min,
+                    lg_ratio_max=config.lg_ratio_max,
                 )
                 abs_solution_t_controlled = abs_res["ABS_SOL_IN_T_CONTROLLED_degC"]
+                m_abs_in = abs_res["ABS_SOL_IN_mdot_kg_s"]
                 h_abs_in = solution_enthalpy(xi_0, abs_solution_t_controlled)
                 qcool_abs_w = m_abs_in * max(h_sol_0 - h_abs_in, 0) * 1000
                 abs_ret_m, abs_ret_xi, abs_ret_h = abs_res["m_sol_out"], abs_res["xi_out"], abs_res["h_sol_out"]
                 acc["abs_water"] += abs_res["m_water_absorb"] * dt_sub_s
                 acc["abs_cooling_kWh"] += qcool_abs_w * dt_sub_h / 1000
+                acc["abs_lg_time"] += abs_res["ABS_LG_CONTROLLED"] * dt_sub_s
+                acc["abs_active_time"] += dt_sub_s
                 last_abs = abs_res
                 hour_abs_on = True
 
@@ -1224,6 +1289,8 @@ def run_simulation(
                 "ABS_PROCESS_AIR_FRACTION": last_abs.get("process_air_fraction", 0.0),
                 "ABS_SOL_IN_T_CONTROLLED_degC": last_abs.get("ABS_SOL_IN_T_CONTROLLED_degC", np.nan),
                 "ABS_TEMP_CONTROL_ACTIVE": last_abs.get("ABS_TEMP_CONTROL_ACTIVE", False),
+                "ABS_LG_CONTROL_ACTIVE": last_abs.get("ABS_LG_CONTROL_ACTIVE", False),
+                "ABS_LG_CONTROLLED": safe_div(acc["abs_lg_time"], acc["abs_active_time"]),
                 "ABS_AIR_OUT_m3_h": dry_air_volume_flow_m3h(m_dot_oa_abs, last_abs["T_air_out"], last_abs["w_air_out"], config.p_atm_kpa),
                 "ABS_SOL_OUT_T_degC": last_abs["T_sol_out"],
                 "ABS_SOL_OUT_xi": last_abs["xi_out"],
@@ -1309,6 +1376,10 @@ def build_summary(
         "ABS_module_air_kg_s": m_dot_oa_abs / abs_module_count,
         "ABS_module_solution_kg_s": m_dot_sol_abs_cmd / abs_module_count,
         "LG_ratio_abs": m_dot_sol_abs_cmd / m_dot_oa_abs,
+        "LG_control_mode": "auto" if config.lg_auto_control else "fixed",
+        "LG_control_mean": result.loc[abs_on, "ABS_LG_CONTROLLED"].mean(),
+        "LG_control_min": result.loc[abs_on, "ABS_LG_CONTROLLED"].min(),
+        "LG_control_max": result.loc[abs_on, "ABS_LG_CONTROLLED"].max(),
         "SA_reg_factor": config.sa_reg_factor,
         "SA_reg_m3h": config.sa_abs_m3h * config.sa_reg_factor,
         "LG_ratio_reg_design": m_dot_sol_reg_design / m_dot_oa_reg,
