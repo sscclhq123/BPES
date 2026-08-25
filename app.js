@@ -1079,8 +1079,17 @@ function toggleRegionComparison(key) {
   renderRegionResults(latestRegionResults);
 }
 
+function targetAreaNeighborhood(candidates, radius = 2) {
+  if (!Array.isArray(candidates) || candidates.length <= radius * 2 + 1) return candidates || [];
+  const targetIndex = candidates.findIndex((candidate) => candidate.targetAchieved);
+  const centerIndex = targetIndex >= 0 ? targetIndex : candidates.length - 1;
+  const windowSize = radius * 2 + 1;
+  const start = clamp(centerIndex - radius, 0, candidates.length - windowSize);
+  return candidates.slice(start, start + windowSize);
+}
+
 function renderCandidateRows(candidates) {
-  $("candidateRows").innerHTML = candidates
+  $("candidateRows").innerHTML = targetAreaNeighborhood(candidates)
     .map(
       (candidate) => `
         <tr class="candidate-row${candidate.targetAchieved ? " active" : ""}">
@@ -1114,7 +1123,7 @@ function renderRegionAreaComparison(entries) {
     const label = weatherDatasets[item.key]?.label?.replace(" · TMYx 2011–2025", "") || item.key;
     const color = regionComparisonColor(item.key);
     const candidates = item.result.areaResults || item.result.candidates || [item.result.best];
-    return candidates.map((candidate) => `
+    return targetAreaNeighborhood(candidates).map((candidate) => `
       <tr class="candidate-row region-area-row${candidate.targetAchieved ? " active" : ""}" style="--region-color:${color}">
         <td><span class="region-area-label"><i style="background:${color}"></i>${label}</span><br>${formatNumber(candidate.collectorArea)} m²</td>
         <td>${formatNumber(candidate.regenNeed)} kWh</td>
@@ -1132,7 +1141,7 @@ function renderRegionAreaComparison(entries) {
   });
   $("candidateRows").innerHTML = rows.join("");
   const labels = entries.map((item) => weatherDatasets[item.key]?.label?.replace(" · TMYx 2011–2025", "") || item.key);
-  $("areaBasisSummary").textContent = `${labels.join(", ")} 실제 기상계산 기준 · 모든 부하 발생월이 목표 커버율 이상이 되도록 면적 산정`;
+  $("areaBasisSummary").textContent = `${labels.join(", ")} 실제 기상계산 기준 · 목표 커버율 충족 면적과 전·후 2개 면적만 표시`;
 }
 
 function renderRegionMonthlyComparison(entries) {
