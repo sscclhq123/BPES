@@ -203,6 +203,8 @@ def empirical_warnings(payload):
 
 def monthly_rows(result):
     monthly = result.copy()
+    if "TES_DUMP_SIZED_kWh" not in monthly:
+        monthly["TES_DUMP_SIZED_kWh"] = 0.0
     monthly["month"] = pd.to_datetime(monthly["time"]).dt.month
     monthly["unmet_shortfall_kg"] = (
         monthly["ACCEPTABLE_MIN_MOISTURE_REMOVAL_kg_h"]
@@ -214,6 +216,7 @@ def monthly_rows(result):
         tes_to_reg_kWh=("REG_HX_HEAT_FROM_TES_kWh", "sum"),
         aux_kWh=("REG_HX_HEAT_FROM_AUX_kWh", "sum"),
         collector_kWh=("COLLECTOR_QU_TOTAL_kWh", "sum"),
+        unused_solar_kWh=("TES_DUMP_SIZED_kWh", "sum"),
         target_dehumid_kg=("TARGET_MOISTURE_REMOVAL_kg_h", lambda values: float((values * monthly.loc[values.index, "dt_h"]).sum())),
         acceptable_min_dehumid_kg=("ACCEPTABLE_MIN_MOISTURE_REMOVAL_kg_h", lambda values: float((values * monthly.loc[values.index, "dt_h"]).sum())),
         actual_dehumid_kg=("ABS_WATER_ABSORB_kg_h", lambda values: float((values * monthly.loc[values.index, "dt_h"]).sum())),
@@ -227,6 +230,7 @@ def monthly_rows(result):
             "solar": clean_value(row.tes_to_reg_kWh),
             "aux": clean_value(row.aux_kWh),
             "collector": clean_value(row.collector_kWh),
+            "unusedSolar": clean_value(row.unused_solar_kWh),
             "targetDehumidification": clean_value(row.target_dehumid_kg),
             "acceptableMinDehumidification": clean_value(row.acceptable_min_dehumid_kg),
             "actualDehumidification": clean_value(row.actual_dehumid_kg),

@@ -1005,6 +1005,13 @@ button:focus-visible {
 .upper-limit-swatch { background: repeating-linear-gradient(90deg, #d64545 0 5px, transparent 5px 8px); }
 .average-line-swatch { background: repeating-linear-gradient(90deg, var(--navy) 0 3px, transparent 3px 7px); }
 .humidity-axis-title { font-weight: 900; fill: var(--navy) !important; }
+.unused-solar-bar {
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--region-color, #8a96a8) 75%, white) 0 4px, #eef2f6 4px 8px);
+  border: 1px solid var(--region-color, #8a96a8);
+}
+.unused-solar-swatch {
+  background: repeating-linear-gradient(135deg, var(--region-color, #8a96a8) 0 3px, #eef2f6 3px 6px) !important;
+}
 .unmet-event-wrap { max-height: 330px; margin-top: 14px; }
 
 .region-area-row {

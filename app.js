@@ -1152,26 +1152,30 @@ function renderRegionMonthlyComparison(entries) {
     ...series.flatMap((item) => [
       Number(item.result.monthly[monthIndex]?.load) || 0,
       Number(item.result.monthly[monthIndex]?.solar) || 0,
+      Number(item.result.monthly[monthIndex]?.unusedSolar) || 0,
     ]),
   )), 1);
-  const barWidth = Math.max(3, Math.min(12, 64 / (series.length * 2)));
+  const barWidth = Math.max(3, Math.min(11, 72 / (series.length * 3)));
   $("monthlyChart").style.setProperty("--month-count", Math.max(months.length, 1));
   $("monthlyChart").innerHTML = months.map((month, monthIndex) => {
     const bars = series.map((item) => {
       const load = Number(item.result.monthly[monthIndex]?.load) || 0;
       const solar = Number(item.result.monthly[monthIndex]?.solar) || 0;
+      const unused = Number(item.result.monthly[monthIndex]?.unusedSolar) || 0;
       const loadHeight = clamp((load / maxValue) * 210, 5, 210);
       const solarHeight = clamp((solar / maxValue) * 210, 5, 210);
+      const unusedHeight = clamp((unused / maxValue) * 210, unused > 0 ? 5 : 0, 210);
       return `
         <div class="bar comparison-series" style="height:${loadHeight}px;width:${barWidth}px;background:${item.color}" title="${item.label} 재생열 요구량: ${formatNumber(load)} kWh"><span class="sr-only">${item.label} 재생열 요구량 ${formatNumber(load)} kWh</span></div>
-        <div class="bar solar comparison-series region-solar-bar" style="height:${solarHeight}px;width:${barWidth}px;--region-color:${item.color}" title="${item.label} 태양열 공급량: ${formatNumber(solar)} kWh"><span class="sr-only">${item.label} 태양열 공급량 ${formatNumber(solar)} kWh</span></div>`;
+        <div class="bar solar comparison-series region-solar-bar" style="height:${solarHeight}px;width:${barWidth}px;--region-color:${item.color}" title="${item.label} 태양열 실사용: ${formatNumber(solar)} kWh"><span class="sr-only">${item.label} 태양열 실사용 ${formatNumber(solar)} kWh</span></div>
+        <div class="bar comparison-series unused-solar-bar" style="height:${unusedHeight}px;width:${barWidth}px;--region-color:${item.color}" title="${item.label} 미활용 태양열: ${formatNumber(unused)} kWh"><span class="sr-only">${item.label} 미활용 태양열 ${formatNumber(unused)} kWh</span></div>`;
     }).join("");
     return `<div class="month-group"><div class="bars">${bars}</div><div class="month-label">${month.month}</div></div>`;
   }).join("");
   $("monthlyLegend").innerHTML = series.map((item) =>
-    `<span><i style="background:${item.color}"></i>${item.label} 재생열 요구량</span><span><i class="region-solar-swatch" style="--region-color:${item.color}"></i>${item.label} 태양열 공급량</span>`,
+    `<span><i style="background:${item.color}"></i>${item.label} 재생열 요구량</span><span><i class="region-solar-swatch" style="--region-color:${item.color}"></i>${item.label} 태양열 실사용</span><span><i class="unused-solar-swatch" style="--region-color:${item.color}"></i>${item.label} 미활용 태양열</span>`,
   ).join("");
-  $("seasonSummary").textContent = `${series.length}개 지역의 월별 재생열 요구량·태양열 공급량 비교 · 표의 지역 행을 클릭하여 추가/해제`;
+  $("seasonSummary").textContent = `${series.length}개 지역 비교 · 미활용 태양열은 월 총생산 중 같은 달 재생부하에도 사용되지 못한 열`;
 }
 
 function renderDehumidificationComparison(entries) {
@@ -1308,17 +1312,20 @@ function renderCandidateMonthlyComparison(selections) {
     ...months.map((item, monthIndex) => Math.max(
       Number(item.load) || 0,
       ...comparison.map((selection) => Number(selection.candidate.monthly[monthIndex]?.solar) || 0),
+      ...comparison.map((selection) => Number(selection.candidate.monthly[monthIndex]?.unusedSolar) || 0),
     )),
     1,
   );
-  const seriesWidth = Math.max(4, Math.min(14, 68 / comparison.length));
+  const seriesWidth = Math.max(3, Math.min(11, 72 / (comparison.length * 2)));
 
   $("monthlyChart").innerHTML = months.map((item, monthIndex) => {
     const loadHeight = clamp(((Number(item.load) || 0) / maxValue) * 210, 5, 210);
     const solarBars = comparison.map((selection) => {
       const solar = Number(selection.candidate.monthly[monthIndex]?.solar) || 0;
+      const unused = Number(selection.candidate.monthly[monthIndex]?.unusedSolar) || 0;
       const height = clamp((solar / maxValue) * 210, 5, 210);
-      return `<div class="bar solar comparison-series" style="height:${height}px;width:${seriesWidth}px;background:${selection.color}" data-value="${formatNumber(solar / 1000, 1)}" title="${selection.label}: ${formatNumber(solar)} kWh"><span class="sr-only">${selection.label}</span></div>`;
+      const unusedHeight = clamp((unused / maxValue) * 210, unused > 0 ? 5 : 0, 210);
+      return `<div class="bar solar comparison-series" style="height:${height}px;width:${seriesWidth}px;background:${selection.color}" data-value="${formatNumber(solar / 1000, 1)}" title="${selection.label} 태양열 실사용: ${formatNumber(solar)} kWh"><span class="sr-only">${selection.label} 태양열 실사용</span></div><div class="bar comparison-series unused-solar-bar" style="height:${unusedHeight}px;width:${seriesWidth}px;--region-color:${selection.color}" title="${selection.label} 미활용 태양열: ${formatNumber(unused)} kWh"><span class="sr-only">${selection.label} 미활용 태양열</span></div>`;
     }).join("");
     return `
       <div class="month-group">
@@ -1333,7 +1340,7 @@ function renderCandidateMonthlyComparison(selections) {
 
   $("monthlyLegend").innerHTML = `
     <span><i style="background:var(--navy)"></i>재생열 요구량</span>
-    ${comparison.map((selection) => `<span><i style="background:${selection.color}"></i>${selection.label}</span>`).join("")}
+    ${comparison.map((selection) => `<span><i style="background:${selection.color}"></i>${selection.label} 실사용</span><span><i class="unused-solar-swatch" style="--region-color:${selection.color}"></i>${selection.label} 미활용</span>`).join("")}
   `;
   const totals = comparison.map((selection) => selection.candidate.monthly.reduce(
     (sum, item) => sum + (Number(item.solar) || 0),
@@ -1549,24 +1556,26 @@ function renderCandidateChart(candidates, chart = $("candidateChart"), options =
 
 function renderBackendChart(monthly) {
   $("monthlyChart").style.setProperty("--month-count", Math.max(monthly.length, 1));
-  const maxValue = Math.max(...monthly.map((item) => Math.max(item.load || 0, item.solar || 0, item.aux || 0)), 1);
+  const maxValue = Math.max(...monthly.map((item) => Math.max(item.load || 0, item.solar || 0, item.unusedSolar || 0, item.aux || 0)), 1);
 
   $("monthlyChart").innerHTML = monthly
     .map((item) => {
       const loadHeight = clamp(((item.load || 0) / maxValue) * 210, 5, 210);
       const solarHeight = clamp(((item.solar || 0) / maxValue) * 210, 5, 210);
+      const unusedHeight = clamp(((item.unusedSolar || 0) / maxValue) * 210, item.unusedSolar > 0 ? 5 : 0, 210);
       return `
         <div class="month-group">
           <div class="bars">
             <div class="bar need" style="height:${loadHeight}px" data-value="${formatNumber((item.load || 0) / 1000, 1)}"></div>
             <div class="bar solar" style="height:${solarHeight}px" data-value="${formatNumber((item.solar || 0) / 1000, 1)}"></div>
+            <div class="bar unused-solar-bar" style="height:${unusedHeight}px" data-value="${formatNumber((item.unusedSolar || 0) / 1000, 1)}"></div>
           </div>
           <div class="month-label">${item.month}</div>
         </div>
       `;
     })
     .join("");
-  $("monthlyLegend").innerHTML = `<span><i style="background:var(--navy)"></i>재생열 요구량</span><span><i style="background:var(--amber)"></i>태양열 공급</span>`;
+  $("monthlyLegend").innerHTML = `<span><i style="background:var(--navy)"></i>재생열 요구량</span><span><i style="background:var(--amber)"></i>태양열 실사용</span><span><i class="unused-solar-swatch"></i>미활용 태양열</span>`;
 }
 
 function renderPythonResult(result, input) {

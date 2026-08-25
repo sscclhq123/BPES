@@ -99,6 +99,7 @@ class TesOptimizationTests(unittest.TestCase):
             "REG_HX_HEAT_FROM_TES_kWh": [0.0, 0.0],
             "REG_HX_HEAT_FROM_AUX_kWh": [0.0, 0.0],
             "COLLECTOR_QU_TOTAL_kWh": [0.0, 0.0],
+            "TES_DUMP_SIZED_kWh": [2.0, 3.0],
         })
         metrics = dehumidification_metrics(result)
         monthly = monthly_rows(result)[0]
@@ -107,6 +108,7 @@ class TesOptimizationTests(unittest.TestCase):
         self.assertGreater(metrics["actualDehumidification"], metrics["acceptableMinDehumidification"])
         self.assertFalse(metrics["dehumidificationAccepted"])
         self.assertFalse(monthly["dehumidificationAccepted"])
+        self.assertAlmostEqual(monthly["unusedSolar"], 5.0)
         self.assertAlmostEqual(metrics["unmetHours"], 1.5)
         self.assertAlmostEqual(metrics["unmetShortfall"], 1.5)
         self.assertAlmostEqual(trend["totalHours"], 1.5)
