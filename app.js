@@ -1249,7 +1249,7 @@ function renderUnmetTrend(entries) {
       <small>미충족 평균 급기 ${formatNumber(Number(item.result.best.acceptedUpperHumidity) + Number(item.trend.averageHumidityExcess), 2)} g/kg · 최대 ${formatNumber(Number(item.result.best.acceptedUpperHumidity) + Number(item.trend.maxHumidityExcess), 2)} g/kg</small>
     </article>
   `).join("");
-  const events = series.flatMap((item) => item.trend.events.map((event) => ({ ...event, label: item.label })));
+  const events = series.flatMap((item) => item.trend.events.map((event) => ({ ...event, key: item.key, label: item.label, color: item.color })));
   const plotEvents = series.flatMap((item) => item.trend.events.map((event) => ({ ...event, key: item.key, label: item.label, color: item.color })));
   if (plotEvents.length) {
     const parsedTimes = plotEvents.map((event) => new Date(event.time.replace(" ", "T")).getTime());
@@ -1278,16 +1278,21 @@ function renderUnmetTrend(entries) {
       return `<path d="${path}" fill="none" stroke="${item.color}" stroke-width="2.2"/><line x1="${margin.left}" y1="${y(averageSupply)}" x2="${width - margin.right}" y2="${y(averageSupply)}" stroke="${item.color}" class="humidity-average-line"/><text x="${width - margin.right - 4}" y="${y(averageSupply) - 5}" text-anchor="end" fill="${item.color}">${item.label} 평균 ${formatNumber(averageSupply, 2)}</text>`;
     }).join("");
     const upper = Math.min(...acceptedUppers);
-    const legend = series.map((item) => `<span><i style="background:${item.color}"></i>${item.label} 급기 절대습도</span>`).join("");
+    const legend = series.map((item) => `<span style="color:${item.color}"><i style="background:${item.color}"></i>${item.label} 급기 절대습도</span>`).join("");
     chart.style.minWidth = `${width}px`;
     chart.innerHTML = `<div class="humidity-line-legend">${legend}<span><i class="upper-limit-swatch"></i>허용상한 ${formatNumber(upper, 1)} g/kg</span><span><i class="average-line-swatch"></i>미충족 평균</span></div><svg viewBox="0 0 ${width} ${height}" role="img"><text x="12" y="16" class="humidity-axis-title">g/kgDA</text>${grid}${xLabels}<line x1="${margin.left}" y1="${y(upper)}" x2="${width - margin.right}" y2="${y(upper)}" class="humidity-upper-line"/>${lines}</svg>`;
   } else {
     chart.style.minWidth = "720px";
     chart.innerHTML = `<p class="result-empty">선택한 조건에서는 목표 제습 미충족 시간이 없습니다.</p>`;
   }
+  const formatEventTime = (value) => {
+    const date = new Date(String(value).replace(" ", "T"));
+    if (Number.isNaN(date.getTime())) return value;
+    return `${date.getMonth() + 1}월 ${date.getDate()}일 ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  };
   rows.innerHTML = events.length ? events.map((event) => `
-    <tr><td>${event.label}</td><td>${event.time}</td><td>${formatNumber(event.durationHours, 2)} h</td><td>${formatNumber(event.supplyHumidity, 2)} g/kg</td><td>${formatNumber(event.humidityExcess, 2)} g/kg</td></tr>
-  `).join("") : `<tr><td colspan="5">미충족 구간이 없습니다.</td></tr>`;
+    <tr><td style="color:${event.color};font-weight:800">${event.label}</td><td>${formatEventTime(event.time)}</td><td>${formatNumber(event.durationHours, 2)} h</td><td>${formatNumber(event.outdoorTemp, 1)} °C</td><td>${formatNumber(event.outdoorHumidity, 2)} g/kgDA</td><td>${formatNumber(event.supplyHumidity, 2)} g/kgDA</td><td>${formatNumber(event.humidityExcess, 2)} g/kgDA</td></tr>
+  `).join("") : `<tr><td colspan="7">미충족 구간이 없습니다.</td></tr>`;
   $("unmetTrendSummary").textContent = `시간별 급기 절대습도와 허용상한·미충족 평균 비교 · ${events.length}개 미충족 구간`;
 }
 

@@ -93,6 +93,8 @@ class TesOptimizationTests(unittest.TestCase):
             "ACCEPTABLE_MIN_MOISTURE_REMOVAL_kg_h": [9.0, 9.0],
             "ABS_WATER_ABSORB_kg_h": [14.0, 8.0],
             "SUPPLY_AIR_w_kgkg": [0.0100, 0.0107],
+            "Ta_degC": [31.0, 32.0],
+            "OA_w_kgkg": [0.0160, 0.0170],
             "REG_HX_HEAT_NEED_kWh": [0.0, 0.0],
             "REG_HX_HEAT_FROM_TES_kWh": [0.0, 0.0],
             "REG_HX_HEAT_FROM_AUX_kWh": [0.0, 0.0],
@@ -109,6 +111,8 @@ class TesOptimizationTests(unittest.TestCase):
         self.assertAlmostEqual(metrics["unmetShortfall"], 1.5)
         self.assertAlmostEqual(trend["totalHours"], 1.5)
         self.assertAlmostEqual(trend["events"][0]["humidityExcess"], 0.2)
+        self.assertAlmostEqual(trend["events"][0]["outdoorTemp"], 32.0)
+        self.assertAlmostEqual(trend["events"][0]["outdoorHumidity"], 17.0)
         self.assertAlmostEqual(trend["averageHumidityExcess"], 0.2)
         self.assertAlmostEqual(trend["daily"][0]["averageHumidityExcess"], 0.2)
 

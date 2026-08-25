@@ -302,6 +302,8 @@ def unmet_dehumidification_trend(result, accepted_upper_humidity):
             "shortfall": clean_value(row.shortfall),
             "supplyHumidity": clean_value(row.SUPPLY_AIR_w_kgkg * 1000),
             "humidityExcess": clean_value(row.humidityExcess),
+            "outdoorTemp": clean_value(row.Ta_degC),
+            "outdoorHumidity": clean_value(row.OA_w_kgkg * 1000),
         }
         for row in unmet.itertuples(index=False)
     ]
