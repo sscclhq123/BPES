@@ -348,6 +348,7 @@ const defaults = {
   longitude: 126.97,
   buildingArea: 4982,
   parkingArea: 1800,
+  parkingCollectorCoverage: 35,
   operationHours: 9,
   targetAbsHumidity: 10.0,
   targetHumidityTolerance: 0.5,
@@ -360,7 +361,7 @@ const defaults = {
   collectorType: "evacuated",
   solutionMode: "fixed",
   lgMode: "auto",
-  regenMode: "fixed",
+  regenMode: "auto",
   targetSolarShare: 50,
   tesSupplyTemp: 75,
   tesReturnTemp: 42,
@@ -398,6 +399,7 @@ const fields = [
   "irradiance",
   "buildingArea",
   "parkingArea",
+  "parkingCollectorCoverage",
   "operationHours",
   "targetAbsHumidity",
   "targetHumidityTolerance",
@@ -565,13 +567,37 @@ function applyLoadDataset(datasetKey) {
     return;
   }
   $("buildingArea").value = dataset.buildingArea;
-  $("parkingArea").value = dataset.parkingArea ?? Math.round(dataset.buildingArea * 0.35);
+  const parkingEstimate = estimateInitialParkingArea(datasetKey, dataset.buildingArea);
+  $("parkingArea").value = dataset.parkingArea ?? parkingEstimate.area;
+  $("parkingBasisNote").textContent = parkingEstimate.note;
   $("operationHours").value = dataset.operationHours;
   $("targetAbsHumidity").value = dataset.targetAbsHumidity ?? 10.0;
   $("airflow").value = dataset.airflow;
   $("loadDataset").value = datasetKey;
   updateBuildingModeFields();
   updateLoadNote(datasetKey);
+}
+
+function estimateInitialParkingArea(datasetKey, buildingArea) {
+  const use = String(datasetKey).split("_")[0];
+  const minimumAreaPerSpace = {
+    office: 150,
+    mall: 150,
+    hospital: 150,
+    factory: 350,
+  }[use];
+  if (!minimumAreaPerSpace) {
+    return {
+      area: 0,
+      note: "주거·농업시설은 연면적만으로 법정 주차대수를 확정할 수 없습니다. 실제 도면값 또는 해당 지역 조례에 따른 주차면적을 입력하세요. 기본 집열 활용률 35%는 법정값이 아닌 보수적 초기설계 가정입니다.",
+    };
+  }
+  const spaces = Math.ceil(buildingArea / minimumAreaPerSpace);
+  const area = Math.round((spaces * 32.5) / 10) * 10;
+  return {
+    area,
+    note: `초기 추정: 시설면적 ${formatNumber(minimumAreaPerSpace)} m²당 1대 × ${formatNumber(spaces)}대 × 통로·회차 포함 32.5 m²/대 ≈ ${formatNumber(area)} m². 실제 도면과 지역 조례가 있으면 그 값을 우선하세요. 집열 활용률 35%는 법정값이 아닌 보수적 가정입니다.`,
+  };
 }
 
 function getTemplateLoadDatasetKey() {
@@ -635,10 +661,20 @@ function readInputs() {
   return data;
 }
 
+function updateRegeneratorMode() {
+  const automatic = $("regenMode").value === "auto";
+  $("regenTemp").readOnly = automatic;
+  $("regenTemp").classList.toggle("is-readonly", automatic);
+  $("regenModeNote").textContent = automatic
+    ? "자동제어: 용액 농도 저하량에 따라 실험식 범위 48.5~59.4 °C에서 재생온도를 조절하고, 제습 목표 미달 시 59.4 °C까지 올립니다. 아래 온도값은 자동제어 상한입니다."
+    : "입력값 고정: 사용자가 지정한 재생기 입구 용액온도를 전 운전시간에 적용합니다. 현재 실험식 권장 범위는 48.5~59.4 °C입니다.";
+}
+
 function validateDesignInputs(input) {
   const checks = [
     ["buildingArea", "적용 면적"],
     ["parkingArea", "주차장 면적"],
+    ["parkingCollectorCoverage", "주차장 집열 활용률"],
     ["targetAbsHumidity", "목표 급기 절대습도"],
     ["targetHumidityTolerance", "목표습도 허용편차"],
     ["airflow", "처리풍량"],
@@ -651,11 +687,14 @@ function validateDesignInputs(input) {
     ["tesReturnTemp", "TES 환수온도"],
   ];
   const messages = checks
-    .filter(([key]) => !Number.isFinite(input[key]) || (key === "parkingArea" ? input[key] < 0 : input[key] <= 0))
+    .filter(([key]) => !Number.isFinite(input[key]) || (["parkingArea", "parkingCollectorCoverage"].includes(key) ? input[key] < 0 : input[key] <= 0))
     .map(([, label]) => `${label}값을 올바른 숫자로 입력하세요.`);
 
   if (!input.simulationMonths.length) {
     messages.push("월별 다중선택에서는 계산할 월을 하나 이상 선택하세요.");
+  }
+  if (Number.isFinite(input.parkingCollectorCoverage) && (input.parkingCollectorCoverage < 0 || input.parkingCollectorCoverage > 100)) {
+    messages.push("주차장 집열 활용률은 0~100%로 입력하세요.");
   }
   if ($("weatherInputMode").value === "standard" && !input.weatherDatasets.length) {
     messages.push("계산할 표준 기상 지역을 하나 이상 선택하세요.");
@@ -1804,11 +1843,16 @@ function bindEvents() {
     applyBuildingSelection();
     markResultsPending();
   });
+  $("regenMode").addEventListener("change", () => {
+    updateRegeneratorMode();
+    markResultsPending();
+  });
   $("weatherUpload").addEventListener("change", uploadWeatherFile);
   $("loadUpload").addEventListener("change", stageLoadFile);
   $("runButton").addEventListener("click", runCalculation);
   $("resetButton").addEventListener("click", () => {
     setDefaults();
+    updateRegeneratorMode();
     markResultsPending();
   });
   fields.forEach((field) => {
@@ -1818,8 +1862,10 @@ function bindEvents() {
 
 const calculationBootstrap = window.__CALCULATION_BOOTSTRAP__;
 setDefaults();
+updateRegeneratorMode();
 if (calculationBootstrap?.input) {
   restoreCalculationInputs(calculationBootstrap.input);
+  updateRegeneratorMode();
 }
 bindEvents();
 loadWeatherTrend();

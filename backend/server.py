@@ -163,8 +163,8 @@ def build_configs(payload):
     config.lg_auto_control = payload.get("lgMode", "auto") == "auto"
     config.t_abs_in_target_c = to_number(payload, "absSolutionTemp", config.t_abs_in_target_c)
     config.abs_temp_auto_control = payload.get("absTempMode", "fixed") == "auto"
-    config.t_reg_in_target_c = 59.4
-    config.reg_temp_auto_control = False
+    config.t_reg_in_target_c = to_number(payload, "regenTemp", config.t_reg_in_target_c)
+    config.reg_temp_auto_control = payload.get("regenMode", "auto") == "auto"
     config.t_tes_min_c = to_number(payload, "tesReturnTemp", config.t_tes_min_c)
     config.t_tes_max_c = to_number(payload, "tesSupplyTemp", config.t_tes_max_c)
     config.t_tes_init_c = to_number(payload, "tesInitialTemp", config.t_tes_init_c)
@@ -195,8 +195,8 @@ def empirical_warnings(payload):
             f"제습부 입구 용액 목표온도 {to_number(payload, 'absSolutionTemp', 25):.1f} °C는 Lim 자동제어 범위 20.0~31.4 °C를 벗어납니다.",
         ),
         (
-            abs(to_number(payload, "regenTemp", 59.4) - 59.4) <= 1e-9,
-            f"재생부 입구 용액 목표온도 {to_number(payload, 'regenTemp', 59.4):.1f} °C는 현재 고정 계산값 59.4 °C와 다릅니다.",
+            48.5 <= to_number(payload, "regenTemp", 59.4) <= 59.4,
+            f"재생부 입구 용액 목표온도 {to_number(payload, 'regenTemp', 59.4):.1f} °C는 실험식 권장 범위 48.5~59.4 °C를 벗어납니다.",
         ),
         (
             1.0 <= to_number(payload, "lgRatio", 1.0) <= 3.0,
@@ -767,7 +767,13 @@ def optimize_tes_design(base_result, payload, base_collector, base_config):
     return_temp = to_number(payload, "tesReturnTemp", base_config.t_tes_min_c)
     available_area = max(
         to_number(payload, "buildingArea", 0)
-        + (to_number(payload, "parkingArea", 0) if payload.get("mallParking") == "yes" else 0),
+        + (
+            to_number(payload, "parkingArea", 0)
+            * float(np.clip(to_number(payload, "parkingCollectorCoverage", 35), 0, 100))
+            / 100
+            if payload.get("mallParking") == "yes"
+            else 0
+        ),
         0,
     )
     if supply_temp <= return_temp:
@@ -893,7 +899,13 @@ def calculate_collector_area_sweep(base_result, payload, base_collector, base_co
     target_share = np.clip(to_number(payload, "targetSolarShare", 50) / 100, 0.01, 1.0)
     available_area = max(
         to_number(payload, "buildingArea", 0)
-        + (to_number(payload, "parkingArea", 0) if payload.get("mallParking") == "yes" else 0),
+        + (
+            to_number(payload, "parkingArea", 0)
+            * float(np.clip(to_number(payload, "parkingCollectorCoverage", 35), 0, 100))
+            / 100
+            if payload.get("mallParking") == "yes"
+            else 0
+        ),
         0,
     )
     if supply_temp <= return_temp:

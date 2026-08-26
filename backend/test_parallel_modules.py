@@ -187,15 +187,20 @@ class ParallelModuleTests(unittest.TestCase):
         self.assertAlmostEqual(solution_flow, 0.44, places=12)
         self.assertAlmostEqual(air_flow, 0.40, places=12)
 
-    def test_regenerator_temperature_remains_fixed(self):
+    def test_regenerator_temperature_auto_control_tracks_concentration(self):
         auto_config = SystemConfig(reg_temp_auto_control=True)
         self.assertAlmostEqual(
             controlled_regenerator_solution_temperature(auto_config, auto_config.xi_target, False),
-            auto_config.t_reg_in_target_c,
+            auto_config.reg_temp_min_c,
         )
         self.assertAlmostEqual(
             controlled_regenerator_solution_temperature(auto_config, auto_config.xi_target, True),
             auto_config.t_reg_in_target_c,
+        )
+        midpoint = (auto_config.xi_target + auto_config.xi_regen_on) / 2
+        self.assertAlmostEqual(
+            controlled_regenerator_solution_temperature(auto_config, midpoint, False),
+            (auto_config.reg_temp_min_c + auto_config.t_reg_in_target_c) / 2,
         )
 
         fixed_config = SystemConfig(reg_temp_auto_control=False, t_reg_in_target_c=55.0)

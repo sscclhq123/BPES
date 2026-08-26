@@ -598,18 +598,28 @@ def controlled_parallel_absorber_block(
 
 
 def controlled_regenerator_solution_temperature(config, solution_xi, absorber_target_unmet):
-    """Return the fixed regeneration setpoint used by the current correlation."""
+    """Stage regeneration temperature inside the correlation's valid range.
+
+    Automatic mode raises the setpoint as the tank concentration falls from
+    its target toward the regeneration-on threshold. An unmet absorber target
+    requests the user-configured upper setpoint immediately.
+    """
     if not config.reg_temp_auto_control:
         return float(np.clip(
             config.t_reg_in_target_c,
             config.reg_temp_min_c,
             config.reg_temp_max_c,
         ))
-    return float(np.clip(
-        config.t_reg_in_target_c,
-        config.reg_temp_min_c,
-        config.reg_temp_max_c,
+    upper = float(np.clip(
+        config.t_reg_in_target_c, config.reg_temp_min_c, config.reg_temp_max_c
     ))
+    if absorber_target_unmet:
+        return upper
+    concentration_span = max(config.xi_target - config.xi_regen_on, 1e-9)
+    depletion = float(np.clip(
+        (config.xi_target - solution_xi) / concentration_span, 0.0, 1.0
+    ))
+    return float(config.reg_temp_min_c + depletion * (upper - config.reg_temp_min_c))
 
 
 def regenerator_block(
