@@ -589,14 +589,14 @@ function estimateInitialParkingArea(datasetKey, buildingArea) {
   if (!minimumAreaPerSpace) {
     return {
       area: 0,
-      note: "주거·농업시설은 연면적만으로 법정 주차대수를 확정할 수 없습니다. 실제 도면값 또는 해당 지역 조례에 따른 주차면적을 입력하세요. 기본 집열 활용률 35%는 법정값이 아닌 보수적 초기설계 가정입니다.",
+      note: "주차장 면적을 직접 입력하고, 실제 집열기 설치 가능 범위에 맞게 집열 활용률을 수정하세요.",
     };
   }
   const spaces = Math.ceil(buildingArea / minimumAreaPerSpace);
   const area = Math.round((spaces * 32.5) / 10) * 10;
   return {
     area,
-    note: `초기 추정: 시설면적 ${formatNumber(minimumAreaPerSpace)} m²당 1대 × ${formatNumber(spaces)}대 × 통로·회차 포함 32.5 m²/대 ≈ ${formatNumber(area)} m². 실제 도면과 지역 조례가 있으면 그 값을 우선하세요. 집열 활용률 35%는 법정값이 아닌 보수적 가정입니다.`,
+    note: "용도와 규모에 따른 주차장 예비값입니다. 실제 주차장 면적과 집열기 설치 가능 범위에 맞게 수정하세요.",
   };
 }
 
