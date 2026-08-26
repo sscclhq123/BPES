@@ -353,14 +353,14 @@ const defaults = {
   targetHumidityTolerance: 0.5,
   airflow: 7745,
   solutionConcentration: 38,
-  lgRatio: 1.1,
+  lgRatio: 1.0,
   absSolutionTemp: 25,
   absTempMode: "auto",
-  regenTemp: 55,
+  regenTemp: 59.4,
   collectorType: "evacuated",
   solutionMode: "fixed",
   lgMode: "auto",
-  regenMode: "auto",
+  regenMode: "fixed",
   targetSolarShare: 50,
   tesSupplyTemp: 75,
   tesReturnTemp: 42,
@@ -784,16 +784,16 @@ function empiricalWarnings(input) {
       text: `LiCl 농도 ${formatNumber(input.solutionConcentration, 1)} %는 실험식 권장 범위 36.4~39.0 %를 벗어납니다.`,
     },
     {
-      ok: input.absSolutionTemp >= 8.05 && input.absSolutionTemp <= 31.4,
-      text: `제습부 입구 용액 목표온도 ${formatNumber(input.absSolutionTemp, 1)} °C는 실험식 권장 범위 8.05~31.40 °C를 벗어납니다.`,
+      ok: input.absSolutionTemp >= 20 && input.absSolutionTemp <= 31.4,
+      text: `제습부 입구 용액 목표온도 ${formatNumber(input.absSolutionTemp, 1)} °C는 Lim 자동제어 범위 20.0~31.4 °C를 벗어납니다.`,
     },
     {
       ok: input.regenTemp >= 48.5 && input.regenTemp <= 59.4,
       text: `재생부 입구 용액 목표온도 ${formatNumber(input.regenTemp, 1)} °C는 실험식 권장 범위 48.5~59.4 °C를 벗어납니다.`,
     },
     {
-      ok: input.lgRatio >= 1.09 && input.lgRatio <= 2,
-      text: `L/G ${formatNumber(input.lgRatio, 2)}는 실험식 권장 범위 1.09~2.00을 벗어납니다.`,
+      ok: input.lgRatio >= 1 && input.lgRatio <= 3,
+      text: `L/G ${formatNumber(input.lgRatio, 2)}는 Lim 제어범위 1.0~3.0을 벗어납니다.`,
     },
   ];
 

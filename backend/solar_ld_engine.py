@@ -59,17 +59,17 @@ class SystemConfig:
     t_solution_tank_init_c: float = 42.0
     xi_tank_init: float = 0.38
     xi_target: float = 0.38
-    xi_regen_on: float = 0.379
-    xi_aux_on: float = 0.375
-    xi_abs_stop: float = 0.360
+    xi_regen_on: float = 0.364
+    xi_aux_on: float = 0.364
+    xi_abs_stop: float = 0.364
     ua_solution_tank_w_k: float = 2.0
 
     sa_abs_m3h: float = 1200.0
     rho_air_kg_m3: float = 1.2
     lg_ratio_abs: float = 1.0
     lg_auto_control: bool = True
-    lg_ratio_min: float = 1.09
-    lg_ratio_max: float = 2.00
+    lg_ratio_min: float = 1.00
+    lg_ratio_max: float = 3.00
     sa_reg_factor: float = 1.0
     lg_ratio_reg_design: float = 1.0
     reg_flow_control_by_tes: bool = True
@@ -77,9 +77,9 @@ class SystemConfig:
     d_outlet_m: float = 0.30
     fan_static_pressure_design_pa: float = 150.0
     t_abs_in_target_c: float = 25.0
-    t_reg_in_target_c: float = 55.0
+    t_reg_in_target_c: float = 59.4
     abs_temp_auto_control: bool = True
-    reg_temp_auto_control: bool = True
+    reg_temp_auto_control: bool = False
     reg_temp_min_c: float = 48.5
     reg_temp_max_c: float = 59.4
     target_supply_w_g_kg: float = 10.0
@@ -475,10 +475,15 @@ def controlled_parallel_absorber_block(
     solution_t_min_c=8.05,
     solution_t_max_c=31.4,
     auto_lg_control=False,
-    lg_ratio_min=1.09,
-    lg_ratio_max=2.00,
+    lg_ratio_min=1.00,
+    lg_ratio_max=3.00,
 ):
-    """Control L/G first, then optionally solution temperature, with bypass as safeguard."""
+    """Apply the Lim et al. cooling sequence, then use bypass as a safeguard.
+
+    Automatic mode starts the absorber at L/G=1.0 and raises it in 0.1
+    increments up to 3.0.  If the target is still missed, the absorber inlet
+    solution setpoint is lowered in 0.5 °C increments down to 20 °C.
+    """
 
     def evaluate(solution_t_c, solution_flow_kg_s=total_solution_kg_s):
         result = parallel_absorber_block(
@@ -507,25 +512,22 @@ def controlled_parallel_absorber_block(
         solution_t_max_c,
     ))
     if auto_lg_control:
-        low_lg = float(lg_ratio_min)
-        high_lg = float(lg_ratio_max)
-        low_result = evaluate(requested_solution_t_c, low_lg * total_air_kg_s)
-        high_result = evaluate(requested_solution_t_c, high_lg * total_air_kg_s)
-        if float(low_result["w_air_out"]) <= target_w_kgkg:
-            selected = low_result
-        elif float(high_result["w_air_out"]) > target_w_kgkg:
-            selected = high_result
-        else:
-            selected = high_result
-            for _ in range(18):
-                mid_lg = (low_lg + high_lg) / 2
-                mid_result = evaluate(requested_solution_t_c, mid_lg * total_air_kg_s)
-                if float(mid_result["w_air_out"]) <= target_w_kgkg:
-                    high_lg = mid_lg
-                    selected = mid_result
-                else:
-                    low_lg = mid_lg
-            selected = evaluate(requested_solution_t_c, high_lg * total_air_kg_s)
+        lg_candidates = np.round(
+            np.arange(float(lg_ratio_min), float(lg_ratio_max) + 0.050001, 0.1),
+            2,
+        )
+        selected = evaluate(
+            requested_solution_t_c,
+            float(lg_candidates[-1]) * total_air_kg_s,
+        )
+        for lg_ratio in lg_candidates:
+            candidate = evaluate(
+                requested_solution_t_c,
+                float(lg_ratio) * total_air_kg_s,
+            )
+            selected = candidate
+            if float(candidate["w_air_out"]) <= target_w_kgkg:
+                break
     elif not auto_temperature_control:
         selected = evaluate(requested_solution_t_c)
     else:
@@ -555,29 +557,23 @@ def controlled_parallel_absorber_block(
                 selected = mid_result
             selected = evaluate(high_t)
 
-    # L/G is the primary variable. When it reaches a permitted boundary without
-    # meeting the target, optionally use absorber solution temperature as the
-    # secondary control selected by the user.
+    # L/G is the primary variable. At L/G=3, lower the absorber solution
+    # setpoint in paper-specified 0.5 °C increments, no lower than 20 °C.
     if auto_lg_control and auto_temperature_control and float(selected["w_air_out"]) > target_w_kgkg + 1e-7:
         selected_solution_flow = float(selected["ABS_LG_CONTROLLED"] * total_air_kg_s)
-        low_t = float(solution_t_min_c)
-        high_t = float(solution_t_max_c)
-        low_result = evaluate(low_t, selected_solution_flow)
-        high_result = evaluate(high_t, selected_solution_flow)
-        if float(low_result["w_air_out"]) > target_w_kgkg:
-            selected = low_result
-        elif float(high_result["w_air_out"]) < target_w_kgkg:
-            selected = high_result
-        else:
-            for _ in range(18):
-                mid_t = (low_t + high_t) / 2
-                mid_result = evaluate(mid_t, selected_solution_flow)
-                if float(mid_result["w_air_out"]) < target_w_kgkg:
-                    low_t = mid_t
-                else:
-                    high_t = mid_t
-                selected = mid_result
-            selected = evaluate(high_t, selected_solution_flow)
+        temperature_floor = max(20.0, float(solution_t_min_c))
+        temperature_candidates = np.arange(
+            requested_solution_t_c,
+            temperature_floor - 0.250001,
+            -0.5,
+        )
+        if not len(temperature_candidates) or temperature_candidates[-1] > temperature_floor + 1e-9:
+            temperature_candidates = np.append(temperature_candidates, temperature_floor)
+        for solution_t_c in temperature_candidates:
+            candidate = evaluate(float(solution_t_c), selected_solution_flow)
+            selected = candidate
+            if float(candidate["w_air_out"]) <= target_w_kgkg:
+                break
 
     controlled_t = float(selected["ABS_SOL_IN_T_CONTROLLED_degC"])
     controlled_solution_flow = float(selected["ABS_LG_CONTROLLED"] * total_air_kg_s)
@@ -602,22 +598,18 @@ def controlled_parallel_absorber_block(
 
 
 def controlled_regenerator_solution_temperature(config, solution_xi, absorber_target_unmet):
-    """Use regeneration temperature only after absorber-side controls remain insufficient."""
+    """Return the fixed regeneration setpoint used by the current correlation."""
     if not config.reg_temp_auto_control:
         return float(np.clip(
             config.t_reg_in_target_c,
             config.reg_temp_min_c,
             config.reg_temp_max_c,
         ))
-    if absorber_target_unmet:
-        return float(config.reg_temp_max_c)
-    concentration_deficit = max(config.xi_target - solution_xi, 0.0)
-    control_band = max(config.xi_target - config.xi_regen_on, 1e-9)
-    control_fraction = float(np.clip(concentration_deficit / control_band, 0.0, 1.0))
-    return float(
-        config.reg_temp_min_c
-        + control_fraction * (config.reg_temp_max_c - config.reg_temp_min_c)
-    )
+    return float(np.clip(
+        config.t_reg_in_target_c,
+        config.reg_temp_min_c,
+        config.reg_temp_max_c,
+    ))
 
 
 def regenerator_block(
@@ -958,6 +950,7 @@ def run_simulation(
     state_tes_t = config.t_tes_init_c
 
     rows = []
+    regen_cycle_active = False
     for k, row in weather.iterrows():
         ta = float(row.Ta_degC)
         rh = float(row.RH_pct)
@@ -1036,14 +1029,18 @@ def run_simulation(
             qabsorbed_w = collector.area_m2 * s_abs_w_m2
             qloss_tes_w = config.ua_tes_w_k * (t_tes_0 - ta)
 
-            abs_on = ld_needed_hour and (xi_0 >= config.xi_abs_stop)
-            regen_by_solar = (xi_0 < config.xi_regen_on) and (
+            if xi_0 <= config.xi_regen_on + 1e-12:
+                regen_cycle_active = True
+            elif xi_0 >= config.xi_target - 1e-12:
+                regen_cycle_active = False
+
+            abs_on = ld_needed_hour and (xi_0 > config.xi_abs_stop + 1e-12)
+            regen_by_solar = regen_cycle_active and (
                 (qcollector_w > 50) or (t_tes_0 > config.t_tes_min_c + 1)
             )
-            # In the phase-1 ideal-TES model, request regeneration as soon as
-            # concentration leaves the normal band. Waiting for the deeper
-            # emergency threshold causes peak-season dehumidification loss.
-            regen_by_aux = xi_0 < config.xi_target
+            # Lim et al. binary regeneration: remain off until the lower
+            # concentration threshold, then stay on until the upper setpoint.
+            regen_by_aux = regen_cycle_active
             reg_on_request = regen_by_solar or regen_by_aux
 
             abs_ret_m, abs_ret_xi, abs_ret_h = 0.0, xi_0, h_sol_0
@@ -1094,14 +1091,6 @@ def run_simulation(
                 and float(last_abs["w_air_out"])
                 > config.target_supply_w_g_kg / 1000 + 1e-9
             )
-            # Staged priority: L/G -> absorber solution temperature ->
-            # regenerator solution temperature. Regeneration changes the tank
-            # concentration and therefore improves subsequent internal steps.
-            if config.reg_temp_auto_control and absorber_target_unmet:
-                regen_by_aux = True
-                reg_on_request = True
-                regen_reason = "humidity_target_concentration_recovery"
-
             if reg_on_request:
                 reg_solution_t_controlled = controlled_regenerator_solution_temperature(
                     config,

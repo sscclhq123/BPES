@@ -147,7 +147,7 @@ class ParallelModuleTests(unittest.TestCase):
         self.assertAlmostEqual(result["ABS_SOL_IN_T_CONTROLLED_degC"], 25.0)
         self.assertFalse(result["ABS_TEMP_CONTROL_ACTIVE"])
 
-    def test_auto_lg_control_stays_in_empirical_range(self):
+    def test_auto_lg_control_uses_lim_discrete_range(self):
         outdoor_temp = 31.0
         outdoor_rh = 75.0
         outdoor_w = humidity_ratio_from_trh(outdoor_temp, outdoor_rh)
@@ -168,8 +168,9 @@ class ParallelModuleTests(unittest.TestCase):
             auto_lg_control=True,
         )
         self.assertTrue(result["ABS_LG_CONTROL_ACTIVE"])
-        self.assertGreaterEqual(result["ABS_LG_CONTROLLED"], 1.09)
-        self.assertLessEqual(result["ABS_LG_CONTROLLED"], 2.00)
+        self.assertGreaterEqual(result["ABS_LG_CONTROLLED"], 1.00)
+        self.assertLessEqual(result["ABS_LG_CONTROLLED"], 3.00)
+        self.assertAlmostEqual(result["ABS_LG_CONTROLLED"] * 10, round(result["ABS_LG_CONTROLLED"] * 10), places=7)
         self.assertAlmostEqual(
             result["ABS_SOL_IN_mdot_kg_s"],
             result["ABS_LG_CONTROLLED"] * self.air_flow,
@@ -186,15 +187,15 @@ class ParallelModuleTests(unittest.TestCase):
         self.assertAlmostEqual(solution_flow, 0.44, places=12)
         self.assertAlmostEqual(air_flow, 0.40, places=12)
 
-    def test_regenerator_temperature_is_last_stage_control(self):
+    def test_regenerator_temperature_remains_fixed(self):
         auto_config = SystemConfig(reg_temp_auto_control=True)
         self.assertAlmostEqual(
             controlled_regenerator_solution_temperature(auto_config, auto_config.xi_target, False),
-            auto_config.reg_temp_min_c,
+            auto_config.t_reg_in_target_c,
         )
         self.assertAlmostEqual(
             controlled_regenerator_solution_temperature(auto_config, auto_config.xi_target, True),
-            auto_config.reg_temp_max_c,
+            auto_config.t_reg_in_target_c,
         )
 
         fixed_config = SystemConfig(reg_temp_auto_control=False, t_reg_in_target_c=55.0)

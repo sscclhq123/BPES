@@ -150,16 +150,21 @@ def build_configs(payload):
         raise ValueError("축열조 용량은 0보다 커야 합니다.")
     config.xi_tank_init = to_number(payload, "solutionConcentration", config.xi_tank_init * 100) / 100
     config.xi_target = config.xi_tank_init
-    config.xi_regen_on = max(config.xi_tank_init - 0.001, 0.20)
-    config.xi_aux_on = max(config.xi_tank_init - 0.005, 0.20)
-    config.xi_abs_stop = max(config.xi_tank_init - 0.020, 0.20)
+    # Lim et al. (2023) operates the LiCl loop within 36~38 wt%.  The current
+    # Park absorber correlation starts at 36.4%, so use that as the safe lower
+    # switching limit and restore concentration toward the user setpoint.
+    config.xi_regen_on = min(config.xi_tank_init, 0.364)
+    config.xi_aux_on = config.xi_regen_on
+    config.xi_abs_stop = config.xi_regen_on
     config.lg_ratio_abs = to_number(payload, "lgRatio", config.lg_ratio_abs)
-    config.lg_ratio_reg_design = to_number(payload, "lgRatio", config.lg_ratio_reg_design)
+    # Regenerator L/G=3 in Lim et al. belongs to a different numerical model;
+    # retain the present correlation's validated design flow instead.
+    config.lg_ratio_reg_design = 1.1
     config.lg_auto_control = payload.get("lgMode", "auto") == "auto"
     config.t_abs_in_target_c = to_number(payload, "absSolutionTemp", config.t_abs_in_target_c)
     config.abs_temp_auto_control = payload.get("absTempMode", "fixed") == "auto"
-    config.t_reg_in_target_c = to_number(payload, "regenTemp", config.t_reg_in_target_c)
-    config.reg_temp_auto_control = payload.get("regenMode", "fixed") == "auto"
+    config.t_reg_in_target_c = 59.4
+    config.reg_temp_auto_control = False
     config.t_tes_min_c = to_number(payload, "tesReturnTemp", config.t_tes_min_c)
     config.t_tes_max_c = to_number(payload, "tesSupplyTemp", config.t_tes_max_c)
     config.t_tes_init_c = to_number(payload, "tesInitialTemp", config.t_tes_init_c)
@@ -186,16 +191,16 @@ def empirical_warnings(payload):
             f"LiCl 농도 {to_number(payload, 'solutionConcentration', 38):.1f} %는 실험식 권장 범위 36.4~39.0 %를 벗어납니다.",
         ),
         (
-            8.05 <= to_number(payload, "absSolutionTemp", 25) <= 31.4,
-            f"제습부 입구 용액 목표온도 {to_number(payload, 'absSolutionTemp', 25):.1f} °C는 실험식 권장 범위 8.05~31.40 °C를 벗어납니다.",
+            20.0 <= to_number(payload, "absSolutionTemp", 25) <= 31.4,
+            f"제습부 입구 용액 목표온도 {to_number(payload, 'absSolutionTemp', 25):.1f} °C는 Lim 자동제어 범위 20.0~31.4 °C를 벗어납니다.",
         ),
         (
-            48.5 <= to_number(payload, "regenTemp", 55) <= 59.4,
-            f"재생부 입구 용액 목표온도 {to_number(payload, 'regenTemp', 55):.1f} °C는 실험식 권장 범위 48.5~59.4 °C를 벗어납니다.",
+            abs(to_number(payload, "regenTemp", 59.4) - 59.4) <= 1e-9,
+            f"재생부 입구 용액 목표온도 {to_number(payload, 'regenTemp', 59.4):.1f} °C는 현재 고정 계산값 59.4 °C와 다릅니다.",
         ),
         (
-            1.09 <= to_number(payload, "lgRatio", 1.1) <= 2.0,
-            f"L/G {to_number(payload, 'lgRatio', 1.1):.2f}는 실험식 권장 범위 1.09~2.00을 벗어납니다.",
+            1.0 <= to_number(payload, "lgRatio", 1.0) <= 3.0,
+            f"L/G {to_number(payload, 'lgRatio', 1.0):.2f}는 Lim 제어범위 1.0~3.0을 벗어납니다.",
         ),
     ]
     return [message + " 결과는 외삽값으로 해석하세요." for ok, message in checks if not ok]
@@ -1190,6 +1195,10 @@ def simulate(payload):
         "best": {
             **{key: value for key, value in best.items() if key != "searchHierarchy"},
             "lgRatio": clean_value(row["LG_ratio_abs"]),
+            "lgMode": "auto" if config.lg_auto_control else "fixed",
+            "lgRatioMean": clean_value(row["LG_control_mean"]),
+            "lgRatioMin": clean_value(row["LG_control_min"]),
+            "lgRatioMax": clean_value(row["LG_control_max"]),
             "solarShare": solar_share,
             "auxEnergy": aux,
             "unmetHours": target_unmet_hours,
