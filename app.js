@@ -1348,15 +1348,18 @@ function renderUnmetTrend(entries) {
     <tr data-event-id="${event.eventId}" tabindex="0"><td style="color:${event.color};font-weight:800">${event.label}</td><td>${formatEventTime(event.time)}</td><td>${formatNumber(event.durationHours, 2)} h</td><td>${formatNumber(event.outdoorTemp, 1)} °C</td><td>${formatNumber(event.outdoorHumidity, 2)} g/kgDA</td><td>${formatNumber(event.supplyHumidity, 2)} g/kgDA</td><td>${formatNumber(event.humidityExcess, 2)} g/kgDA</td></tr>
   `).join("") : `<tr><td colspan="7">미충족 구간이 없습니다.</td></tr>`;
   const activateEvent = (eventId, source) => {
-    chart.classList.toggle("has-active-event", Boolean(eventId));
+    const activePoint = chart.querySelector(".humidity-unmet-point.is-highlighted");
+    const nextEventId = activePoint?.dataset.eventId === eventId ? "" : eventId;
+    chart.classList.toggle("has-active-event", Boolean(nextEventId));
     chart.querySelectorAll(".humidity-unmet-point").forEach((point) => {
-      point.classList.toggle("is-highlighted", point.dataset.eventId === eventId);
+      point.classList.toggle("is-highlighted", point.dataset.eventId === nextEventId);
     });
     rows.querySelectorAll("tr[data-event-id]").forEach((row) => {
-      row.classList.toggle("is-highlighted", row.dataset.eventId === eventId);
+      row.classList.toggle("is-highlighted", row.dataset.eventId === nextEventId);
     });
-    const linkedPoint = chart.querySelector(`.humidity-unmet-point[data-event-id="${eventId}"]`);
-    const linkedRow = rows.querySelector(`tr[data-event-id="${eventId}"]`);
+    if (!nextEventId) return;
+    const linkedPoint = chart.querySelector(`.humidity-unmet-point[data-event-id="${nextEventId}"]`);
+    const linkedRow = rows.querySelector(`tr[data-event-id="${nextEventId}"]`);
     if (source === "point" && linkedRow) {
       linkedRow.scrollIntoView({ behavior: "smooth", block: "nearest" });
     } else if (source === "row" && linkedPoint) {
