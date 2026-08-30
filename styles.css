@@ -1002,8 +1002,11 @@ button:focus-visible {
 .humidity-grid { stroke: #e0e8f0; stroke-width: 1; }
 .humidity-upper-line { stroke: #d64545; stroke-width: 1.6; stroke-dasharray: 7 5; }
 .humidity-average-line { stroke-width: 1.5; stroke-dasharray: 3 5; opacity: 0.9; }
-.humidity-unmet-point { stroke: white; stroke-width: 0.9; opacity: 0.9; }
-.humidity-unmet-point:hover { r: 5; opacity: 1; }
+.humidity-unmet-point { stroke: white; stroke-width: 0.9; opacity: 0.9; cursor: pointer; transition: opacity 140ms ease, r 140ms ease, stroke-width 140ms ease; }
+.humidity-unmet-point:hover,
+.humidity-unmet-point:focus-visible { r: 5; opacity: 1; outline: none; }
+.unmet-trend-chart.has-active-event .humidity-unmet-point:not(.is-highlighted) { opacity: 0.22; }
+.humidity-unmet-point.is-highlighted { r: 7; opacity: 1; stroke: #fff; stroke-width: 3; filter: drop-shadow(0 0 4px rgba(15, 23, 42, 0.65)); }
 .humidity-line-legend .humidity-point-swatch { width: 9px; height: 9px; border-radius: 50%; }
 .upper-limit-swatch { background: repeating-linear-gradient(90deg, #d64545 0 5px, transparent 5px 8px); }
 .average-line-swatch { background: repeating-linear-gradient(90deg, var(--navy) 0 3px, transparent 3px 7px); }
@@ -1016,6 +1019,10 @@ button:focus-visible {
   background: repeating-linear-gradient(135deg, var(--region-color, #8a96a8) 0 3px, #eef2f6 3px 6px) !important;
 }
 .unmet-event-wrap { max-height: 330px; margin-top: 14px; }
+.unmet-event-wrap tbody tr[data-event-id] { cursor: pointer; transition: background-color 140ms ease, box-shadow 140ms ease; }
+.unmet-event-wrap tbody tr[data-event-id]:hover,
+.unmet-event-wrap tbody tr[data-event-id]:focus-visible { background: #eef8f7; outline: none; }
+.unmet-event-wrap tbody tr[data-event-id].is-highlighted { background: #d9f3ef; box-shadow: inset 4px 0 0 #008b8b; }
 
 .region-area-row {
   box-shadow: inset 4px 0 0 var(--region-color);

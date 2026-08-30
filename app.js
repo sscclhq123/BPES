@@ -1292,8 +1292,14 @@ function renderUnmetTrend(entries) {
       <small>미충족 평균 급기 ${formatNumber(Number(item.result.best.acceptedUpperHumidity) + Number(item.trend.averageHumidityExcess), 2)} g/kg · 최대 ${formatNumber(Number(item.result.best.acceptedUpperHumidity) + Number(item.trend.maxHumidityExcess), 2)} g/kg</small>
     </article>
   `).join("");
-  const events = series.flatMap((item) => item.trend.events.map((event) => ({ ...event, key: item.key, label: item.label, color: item.color })));
-  const plotEvents = series.flatMap((item) => item.trend.events.map((event) => ({ ...event, key: item.key, label: item.label, color: item.color })));
+  const events = series.flatMap((item, seriesIndex) => item.trend.events.map((event, eventIndex) => ({
+    ...event,
+    key: item.key,
+    label: item.label,
+    color: item.color,
+    eventId: `unmet-${seriesIndex}-${eventIndex}`,
+  })));
+  const plotEvents = events;
   if (plotEvents.length) {
     const parsedTimes = plotEvents.map((event) => new Date(event.time.replace(" ", "T")).getTime());
     const minTime = Math.min(...parsedTimes);
@@ -1313,7 +1319,7 @@ function renderUnmetTrend(entries) {
     const grid = yTicks.map((tick) => `<line x1="${margin.left}" y1="${y(tick)}" x2="${width - margin.right}" y2="${y(tick)}" class="humidity-grid"/><text x="${margin.left - 8}" y="${y(tick) + 4}" text-anchor="end">${formatNumber(tick, 1)}</text>`).join("");
     const xLabels = xTicks.map((tick) => `<text x="${x(tick)}" y="${height - 14}" text-anchor="middle">${new Date(tick).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" })}</text>`).join("");
     const pointSeries = series.map((item) => {
-      const itemEvents = item.trend.events;
+      const itemEvents = events.filter((event) => event.key === item.key);
       if (!itemEvents.length) return "";
       const upper = Number(item.result.best.acceptedUpperHumidity) || 10.5;
       const averageSupply = upper + Number(item.trend.averageHumidityExcess || 0);
@@ -1321,7 +1327,7 @@ function renderUnmetTrend(entries) {
         const time = new Date(event.time.replace(" ", "T")).getTime();
         const supply = Number(event.supplyHumidity);
         const tooltip = `${item.label} · ${event.time} · 급기 ${formatNumber(supply, 2)} g/kgDA · 상한 초과 ${formatNumber(event.humidityExcess, 2)} g/kgDA`;
-        return `<circle cx="${x(time).toFixed(1)}" cy="${y(supply).toFixed(1)}" r="3.2" fill="${item.color}" class="humidity-unmet-point"><title>${tooltip}</title></circle>`;
+        return `<circle cx="${x(time).toFixed(1)}" cy="${y(supply).toFixed(1)}" r="3.2" fill="${item.color}" class="humidity-unmet-point" data-event-id="${event.eventId}" tabindex="0" role="button" aria-label="${tooltip}"><title>${tooltip}</title></circle>`;
       }).join("");
       return `${points}<line x1="${margin.left}" y1="${y(averageSupply)}" x2="${width - margin.right}" y2="${y(averageSupply)}" stroke="${item.color}" class="humidity-average-line"/><text x="${width - margin.right - 4}" y="${y(averageSupply) - 5}" text-anchor="end" fill="${item.color}">${item.label} 평균 ${formatNumber(averageSupply, 2)}</text>`;
     }).join("");
@@ -1339,8 +1345,36 @@ function renderUnmetTrend(entries) {
     return `${date.getMonth() + 1}월 ${date.getDate()}일 ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
   };
   rows.innerHTML = events.length ? events.map((event) => `
-    <tr><td style="color:${event.color};font-weight:800">${event.label}</td><td>${formatEventTime(event.time)}</td><td>${formatNumber(event.durationHours, 2)} h</td><td>${formatNumber(event.outdoorTemp, 1)} °C</td><td>${formatNumber(event.outdoorHumidity, 2)} g/kgDA</td><td>${formatNumber(event.supplyHumidity, 2)} g/kgDA</td><td>${formatNumber(event.humidityExcess, 2)} g/kgDA</td></tr>
+    <tr data-event-id="${event.eventId}" tabindex="0"><td style="color:${event.color};font-weight:800">${event.label}</td><td>${formatEventTime(event.time)}</td><td>${formatNumber(event.durationHours, 2)} h</td><td>${formatNumber(event.outdoorTemp, 1)} °C</td><td>${formatNumber(event.outdoorHumidity, 2)} g/kgDA</td><td>${formatNumber(event.supplyHumidity, 2)} g/kgDA</td><td>${formatNumber(event.humidityExcess, 2)} g/kgDA</td></tr>
   `).join("") : `<tr><td colspan="7">미충족 구간이 없습니다.</td></tr>`;
+  const activateEvent = (eventId, source) => {
+    chart.classList.toggle("has-active-event", Boolean(eventId));
+    chart.querySelectorAll(".humidity-unmet-point").forEach((point) => {
+      point.classList.toggle("is-highlighted", point.dataset.eventId === eventId);
+    });
+    rows.querySelectorAll("tr[data-event-id]").forEach((row) => {
+      row.classList.toggle("is-highlighted", row.dataset.eventId === eventId);
+    });
+    const linkedPoint = chart.querySelector(`.humidity-unmet-point[data-event-id="${eventId}"]`);
+    const linkedRow = rows.querySelector(`tr[data-event-id="${eventId}"]`);
+    if (source === "point" && linkedRow) {
+      linkedRow.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    } else if (source === "row" && linkedPoint) {
+      linkedPoint.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+  };
+  const bindLinkedSelection = (elements, source) => elements.forEach((element) => {
+    const select = () => activateEvent(element.dataset.eventId, source);
+    element.addEventListener("click", select);
+    element.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        select();
+      }
+    });
+  });
+  bindLinkedSelection(chart.querySelectorAll(".humidity-unmet-point[data-event-id]"), "point");
+  bindLinkedSelection(rows.querySelectorAll("tr[data-event-id]"), "row");
   $("unmetTrendSummary").textContent = `미충족 시점별 급기 절대습도와 허용상한·미충족 평균 비교 · ${events.length}개 미충족 구간`;
 }
 
