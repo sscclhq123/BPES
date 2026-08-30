@@ -127,6 +127,20 @@ def is_operation_hour(timestamp, config: SystemConfig) -> bool:
     return config.operation_start_hour <= hour < end_hour
 
 
+def should_start_post_schedule_recovery(
+    previous_schedule_on: bool,
+    schedule_on: bool,
+    solution_xi: float,
+    target_xi: float,
+) -> bool:
+    """Request a final regeneration cycle when the daily LD schedule ends."""
+    return bool(
+        previous_schedule_on
+        and not schedule_on
+        and solution_xi < target_xi - 1e-12
+    )
+
+
 def required_parallel_modules(
     total_air_kg_s: float,
     total_solution_kg_s: float,
@@ -961,6 +975,7 @@ def run_simulation(
 
     rows = []
     regen_cycle_active = False
+    previous_schedule_on = False
     for k, row in weather.iterrows():
         ta = float(row.Ta_degC)
         rh = float(row.RH_pct)
@@ -978,6 +993,14 @@ def run_simulation(
         t_tes_start = state_tes_t
         tes_avail_start = state_tes_m * config.cp_w_j_kgk * max(state_tes_t - config.t_tes_min_c, 0) / 3600 / 1000
         schedule_on = is_operation_hour(row.time, config)
+        post_schedule_recovery = should_start_post_schedule_recovery(
+            previous_schedule_on,
+            schedule_on,
+            xi_start,
+            config.xi_target,
+        )
+        if post_schedule_recovery:
+            regen_cycle_active = True
         accepted_upper_w_kgkg = (
             config.target_supply_w_g_kg + config.target_humidity_tolerance_g_kg
         ) / 1000
@@ -1216,7 +1239,9 @@ def run_simulation(
                 hour_reg_on = True
                 hour_aux_on = hour_aux_on or (qaux_w > 1e-6)
                 regen_reason = regen_reason or (
-                    "LD_need_low_xi_aux" if regen_by_aux else "solar_TES_concentration_recovery"
+                    "post_schedule_recovery"
+                    if post_schedule_recovery
+                    else ("LD_need_low_xi_aux" if regen_by_aux else "solar_TES_concentration_recovery")
                 )
 
             m_salt_in = abs_ret_m * abs_ret_xi + reg_ret_m * reg_ret_xi
@@ -1358,6 +1383,7 @@ def run_simulation(
                 "RES_SOLTANK_kJ": acc["res_sol_kJ"],
             }
         )
+        previous_schedule_on = schedule_on
 
     result = pd.DataFrame(rows)
     summary = build_summary(

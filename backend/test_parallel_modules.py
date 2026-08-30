@@ -13,6 +13,7 @@ from backend.solar_ld_engine import (
     controlled_parallel_absorber_block,
     controlled_regenerator_solution_temperature,
     required_parallel_modules,
+    should_start_post_schedule_recovery,
     staged_regenerator_flow,
 )
 
@@ -230,6 +231,20 @@ class ParallelModuleTests(unittest.TestCase):
         self.assertTrue(is_operation_hour(pd.Timestamp("2025-07-01 17:00"), nine_hour_config))
         self.assertFalse(is_operation_hour(pd.Timestamp("2025-07-01 18:00"), nine_hour_config))
         self.assertTrue(is_operation_hour(pd.Timestamp("2025-07-01 02:00"), all_day_config))
+
+    def test_schedule_end_starts_final_concentration_recovery(self):
+        self.assertTrue(
+            should_start_post_schedule_recovery(True, False, 0.379, 0.38)
+        )
+        self.assertFalse(
+            should_start_post_schedule_recovery(True, False, 0.38, 0.38)
+        )
+        self.assertFalse(
+            should_start_post_schedule_recovery(False, False, 0.379, 0.38)
+        )
+        self.assertFalse(
+            should_start_post_schedule_recovery(True, True, 0.379, 0.38)
+        )
 
 
 if __name__ == "__main__":
