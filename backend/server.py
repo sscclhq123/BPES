@@ -277,6 +277,19 @@ def dehumidification_metrics(result):
     }
 
 
+def ld_usage_heatmap(result):
+    usage = result[["time", "ABS_ON"]].copy()
+    usage["time"] = pd.to_datetime(usage["time"])
+    usage["month"] = usage["time"].dt.month
+    usage["hour"] = usage["time"].dt.hour
+    grouped = usage.groupby(["month", "hour"], as_index=False)["ABS_ON"].mean()
+    lookup = {(int(row.month), int(row.hour)): clean_value(float(row.ABS_ON) * 100) for row in grouped.itertuples(index=False)}
+    return [
+        {"month": month, "hours": [lookup.get((month, hour), 0.0) for hour in range(24)]}
+        for month in range(1, 13)
+    ]
+
+
 def unmet_dehumidification_trend(result, accepted_upper_humidity):
     trend = result.copy()
     trend["time"] = pd.to_datetime(trend["time"])
@@ -1200,6 +1213,7 @@ def simulate(payload):
         "warnings": warnings,
         "summary": {key: clean_value(value) for key, value in row.items()},
         "monthly": monthly_rows(result),
+        "ldUsageHeatmap": ld_usage_heatmap(result),
         "unmetTrend": unmet_dehumidification_trend(
             result,
             config.target_supply_w_g_kg + config.target_humidity_tolerance_g_kg,
