@@ -1879,13 +1879,20 @@ async function runCalculation() {
 
 function bindEvents() {
   window.addEventListener("message", (event) => {
-    if (
-      event.origin !== "https://saldop-design-studio.moonhanbat.chatgpt.site" ||
-      event.data?.type !== "saldop:weather-file" ||
-      !(event.data.file instanceof File)
-    ) {
+    if (event.origin !== "https://saldop-design-studio.moonhanbat.chatgpt.site" || !(event.data?.file instanceof File)) {
       return;
     }
+
+    if (event.data.type === "saldop:building-file") {
+      const transfer = new DataTransfer();
+      transfer.items.add(event.data.file);
+      $("loadUpload").files = transfer.files;
+      $("buildingInputMode").value = "load_upload";
+      updateBuildingModeFields();
+      void stageLoadFile();
+      return;
+    }
+    if (event.data.type !== "saldop:weather-file") return;
 
     const transfer = new DataTransfer();
     transfer.items.add(event.data.file);
@@ -2002,12 +2009,17 @@ if (requestedWeatherDataset) {
 }
 const requestedBuildingUse = deepLinkParams.get("buildingUse");
 const requestedBuildingSize = deepLinkParams.get("buildingSize");
+const requestedBuildingInputMode = deepLinkParams.get("buildingInputMode");
+const requestedMallParking = deepLinkParams.get("mallParking");
+if (["template", "custom", "load_upload"].includes(requestedBuildingInputMode)) $("buildingInputMode").value = requestedBuildingInputMode;
 if (requestedBuildingUse) $("buildingUse").value = requestedBuildingUse;
 if (requestedBuildingSize) $("buildingSize").value = requestedBuildingSize;
-if (requestedBuildingUse || requestedBuildingSize) applyBuildingSelection();
+if (["no", "yes"].includes(requestedMallParking)) $("mallParking").value = requestedMallParking;
+if (requestedBuildingUse || requestedBuildingSize || requestedBuildingInputMode) applyBuildingSelection();
 [
   "targetAbsHumidity", "targetHumidityTolerance", "solutionConcentration",
   "lgRatio", "regenTemp", "targetSolarShare", "tesSupplyTemp", "tesReturnTemp",
+  "buildingArea", "parkingArea", "parkingCollectorCoverage", "operationHours", "airflow",
 ].forEach((field) => {
   const value = deepLinkParams.get(field);
   if (value !== null && Number.isFinite(Number(value))) $(field).value = value;
