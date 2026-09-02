@@ -282,10 +282,29 @@ def ld_usage_heatmap(result):
     usage["time"] = pd.to_datetime(usage["time"])
     usage["month"] = usage["time"].dt.month
     usage["hour"] = usage["time"].dt.hour
+    # Four design-review periods per month: days 1-7, 8-14, 15-21, 22-end.
+    # Keeping the last period open-ended covers the entire month without a
+    # misleading partial fifth row.
+    usage["week"] = ((usage["time"].dt.day - 1) // 7 + 1).clip(upper=4)
     grouped = usage.groupby(["month", "hour"], as_index=False)["ABS_ON"].mean()
     lookup = {(int(row.month), int(row.hour)): clean_value(float(row.ABS_ON) * 100) for row in grouped.itertuples(index=False)}
+    weekly_grouped = usage.groupby(["month", "week", "hour"], as_index=False)["ABS_ON"].mean()
+    weekly_lookup = {
+        (int(row.month), int(row.week), int(row.hour)): clean_value(float(row.ABS_ON) * 100)
+        for row in weekly_grouped.itertuples(index=False)
+    }
     return [
-        {"month": month, "hours": [lookup.get((month, hour), 0.0) for hour in range(24)]}
+        {
+            "month": month,
+            "hours": [lookup.get((month, hour), 0.0) for hour in range(24)],
+            "weeks": [
+                {
+                    "week": week,
+                    "hours": [weekly_lookup.get((month, week, hour), 0.0) for hour in range(24)],
+                }
+                for week in range(1, 5)
+            ],
+        }
         for month in range(1, 13)
     ]
 
