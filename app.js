@@ -2019,6 +2019,12 @@ if (requestedWeatherDataset) {
   setSelectedWeatherDatasets(requestedWeatherDatasets);
   applyWeatherDataset(requestedWeatherDataset);
 }
+const requestedSimulationMonths = deepLinkParams.getAll("simulationMonth").map(Number).filter((month) => month >= 1 && month <= 12);
+if (requestedSimulationMonths.length) {
+  $("analysisPeriodMode").value = requestedSimulationMonths.length === 12 ? "annual" : "custom";
+  setSelectedSimulationMonths(requestedSimulationMonths);
+  updateAnalysisPeriodMode();
+}
 const requestedBuildingUse = deepLinkParams.get("buildingUse");
 const requestedBuildingSize = deepLinkParams.get("buildingSize");
 const requestedBuildingInputMode = deepLinkParams.get("buildingInputMode");
