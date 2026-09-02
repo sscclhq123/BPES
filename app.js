@@ -1878,6 +1878,22 @@ async function runCalculation() {
 }
 
 function bindEvents() {
+  window.addEventListener("message", (event) => {
+    if (
+      event.origin !== "https://saldop-design-studio.moonhanbat.chatgpt.site" ||
+      event.data?.type !== "saldop:weather-file" ||
+      !(event.data.file instanceof File)
+    ) {
+      return;
+    }
+
+    const transfer = new DataTransfer();
+    transfer.items.add(event.data.file);
+    $("weatherUpload").files = transfer.files;
+    $("weatherInputMode").value = "upload";
+    applyCurrentWeatherSelection();
+    void uploadWeatherFile();
+  });
   $("weatherInputMode").addEventListener("change", () => {
     applyCurrentWeatherSelection();
     loadWeatherTrend();
