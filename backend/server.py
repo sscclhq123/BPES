@@ -254,6 +254,27 @@ def monthly_rows(result):
     ]
 
 
+def monthly_weather_rows(result):
+    """Monthly weather inputs actually used by the simulation."""
+    weather = result[["time", "Ta_degC", "OA_w_kgkg", "GT_COLLECTOR_W_m2", "dt_h"]].copy()
+    weather["month"] = pd.to_datetime(weather["time"]).dt.month
+    weather["solar_kWh_m2"] = weather["GT_COLLECTOR_W_m2"].fillna(0).clip(lower=0) * weather["dt_h"].fillna(0) / 1000
+    grouped = weather.groupby("month", as_index=False).agg(
+        outdoor_temp_c=("Ta_degC", "mean"),
+        outdoor_humidity_g_kg=("OA_w_kgkg", lambda values: float(values.mean()) * 1000),
+        irradiation_kWh_m2=("solar_kWh_m2", "sum"),
+    )
+    return [
+        {
+            "month": int(row.month),
+            "outdoorTemp": clean_value(row.outdoor_temp_c),
+            "outdoorHumidity": clean_value(row.outdoor_humidity_g_kg),
+            "irradiation": clean_value(row.irradiation_kWh_m2),
+        }
+        for row in grouped.itertuples(index=False)
+    ]
+
+
 def dehumidification_metrics(result):
     target = float((result["TARGET_MOISTURE_REMOVAL_kg_h"] * result["dt_h"]).sum(skipna=True))
     acceptable_min = float((result["ACCEPTABLE_MIN_MOISTURE_REMOVAL_kg_h"] * result["dt_h"]).sum(skipna=True))
@@ -1232,6 +1253,7 @@ def simulate(payload):
         "warnings": warnings,
         "summary": {key: clean_value(value) for key, value in row.items()},
         "monthly": monthly_rows(result),
+        "weatherMonthly": monthly_weather_rows(result),
         "ldUsageHeatmap": ld_usage_heatmap(result),
         "unmetTrend": unmet_dehumidification_trend(
             result,
