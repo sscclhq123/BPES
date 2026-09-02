@@ -1971,11 +1971,32 @@ function bindEvents() {
 
 const calculationBootstrap = window.__CALCULATION_BOOTSTRAP__;
 setDefaults();
-const requestedWeatherMode = new URLSearchParams(window.location.search).get("weatherMode");
+const deepLinkParams = new URLSearchParams(window.location.search);
+const requestedWeatherMode = deepLinkParams.get("weatherMode");
 if (["standard", "upload"].includes(requestedWeatherMode)) {
   $("weatherInputMode").value = requestedWeatherMode;
   applyCurrentWeatherSelection();
 }
+const requestedWeatherDataset = deepLinkParams.get("weatherDataset");
+if (requestedWeatherDataset && weatherDatasets[requestedWeatherDataset]) {
+  $("weatherDataset").value = requestedWeatherDataset;
+  setSelectedWeatherDatasets([requestedWeatherDataset]);
+  applyWeatherDataset(requestedWeatherDataset);
+}
+const requestedBuildingUse = deepLinkParams.get("buildingUse");
+const requestedBuildingSize = deepLinkParams.get("buildingSize");
+if (requestedBuildingUse) $("buildingUse").value = requestedBuildingUse;
+if (requestedBuildingSize) $("buildingSize").value = requestedBuildingSize;
+if (requestedBuildingUse || requestedBuildingSize) applyBuildingSelection();
+[
+  "targetAbsHumidity", "targetHumidityTolerance", "solutionConcentration",
+  "lgRatio", "regenTemp", "targetSolarShare", "tesSupplyTemp", "tesReturnTemp",
+].forEach((field) => {
+  const value = deepLinkParams.get(field);
+  if (value !== null && Number.isFinite(Number(value))) $(field).value = value;
+});
+const requestedCollectorType = deepLinkParams.get("collectorType");
+if (["evacuated", "flat"].includes(requestedCollectorType)) $("collectorType").value = requestedCollectorType;
 updateRegeneratorMode();
 if (calculationBootstrap?.input) {
   restoreCalculationInputs(calculationBootstrap.input);
@@ -1983,6 +2004,9 @@ if (calculationBootstrap?.input) {
 }
 bindEvents();
 loadWeatherTrend();
+if (deepLinkParams.get("autorun") === "1" && requestedWeatherMode !== "upload") {
+  window.setTimeout(runCalculation, 900);
+}
 if (calculationBootstrap) {
   window.history.replaceState({}, "", "/");
   const input = readInputs();
