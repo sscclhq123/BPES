@@ -2038,7 +2038,7 @@ if (["no", "yes"].includes(requestedMallParking)) $("mallParking").value = reque
 if (requestedBuildingUse || requestedBuildingSize || requestedBuildingInputMode) applyBuildingSelection();
 [
   "targetAbsHumidity", "targetHumidityTolerance", "solutionConcentration",
-  "lgRatio", "regenTemp", "targetSolarShare", "tesSupplyTemp", "tesReturnTemp",
+  "lgRatio", "absSolutionTemp", "regenTemp", "targetSolarShare", "tesSupplyTemp", "tesReturnTemp",
   "buildingArea", "parkingArea", "parkingCollectorCoverage", "operationHours", "airflow",
 ].forEach((field) => {
   const value = deepLinkParams.get(field);
@@ -2046,6 +2046,12 @@ if (requestedBuildingUse || requestedBuildingSize || requestedBuildingInputMode)
 });
 const requestedCollectorType = deepLinkParams.get("collectorType");
 if (["evacuated", "flat"].includes(requestedCollectorType)) $("collectorType").value = requestedCollectorType;
+const requestedLgMode = deepLinkParams.get("lgMode");
+const requestedAbsTempMode = deepLinkParams.get("absTempMode");
+const requestedRegenMode = deepLinkParams.get("regenMode");
+if (["auto", "fixed"].includes(requestedLgMode)) $("lgMode").value = requestedLgMode;
+if (["auto", "fixed"].includes(requestedAbsTempMode)) $("absTempMode").value = requestedAbsTempMode;
+if (["auto", "fixed"].includes(requestedRegenMode)) $("regenMode").value = requestedRegenMode;
 updateRegeneratorMode();
 if (calculationBootstrap?.input) {
   restoreCalculationInputs(calculationBootstrap.input);
