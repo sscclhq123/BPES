@@ -9,6 +9,11 @@
   },
   "rewrites": [
     { "source": "/calculate", "destination": "/api/index.py?route=calculate" },
-    { "source": "/api/:path*", "destination": "/api/index.py?route=:path*" }
+    { "source": "/api/:path*", "destination": "/api/index.py?route=:path*" },
+    { "source": "/engine", "destination": "/engine/" },
+    { "source": "/engine/", "destination": "/index.html" },
+    { "source": "/engine/styles.css", "destination": "/styles.css" },
+    { "source": "/engine/app.js", "destination": "/app.js" },
+    { "source": "/:path*", "destination": "https://saldop-design-studio.moonhanbat.chatgpt.site/:path*" }
   ]
 }
