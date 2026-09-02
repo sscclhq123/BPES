@@ -12,6 +12,7 @@
     { "src": "/api/(.*)", "dest": "/api/index.py?route=$1" },
     { "src": "/engine/styles.css", "dest": "/styles.css" },
     { "src": "/engine/app.js", "dest": "/app.js" },
+    { "src": "/engine/vendor/(.*)", "dest": "/vendor/$1" },
     { "src": "/engine/?", "dest": "/index.html" },
     { "src": "/(.*)", "dest": "https://saldop-design-studio.moonhanbat.chatgpt.site/$1" }
   ]
