@@ -2025,7 +2025,7 @@ const requestedSimulationMonths = deepLinkParams.getAll("simulationMonth").map(N
 if (requestedSimulationMonths.length) {
   $("analysisPeriodMode").value = requestedSimulationMonths.length === 12 ? "annual" : "custom";
   setSelectedSimulationMonths(requestedSimulationMonths);
-  updateAnalysisPeriodMode();
+  updateAnalysisPeriodFields();
 }
 const requestedBuildingUse = deepLinkParams.get("buildingUse");
 const requestedBuildingSize = deepLinkParams.get("buildingSize");
