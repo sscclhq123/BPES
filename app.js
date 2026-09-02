@@ -1883,15 +1883,6 @@ function bindEvents() {
       return;
     }
 
-    if (event.data.type === "saldop:building-file") {
-      const transfer = new DataTransfer();
-      transfer.items.add(event.data.file);
-      $("loadUpload").files = transfer.files;
-      $("buildingInputMode").value = "load_upload";
-      updateBuildingModeFields();
-      void stageLoadFile();
-      return;
-    }
     if (event.data.type !== "saldop:weather-file") return;
 
     const transfer = new DataTransfer();
