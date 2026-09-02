@@ -1867,10 +1867,28 @@ async function runCalculation() {
     const failedCount = results.filter((item) => item?.error).length;
     $("statusPill").textContent = failedCount ? "일부 완료" : "계산 완료";
     $("calculationTiming").textContent = `${successful.length}/${datasetKeys.length}개 지역 완료 · 지역당 ${formatNumber(estimate.candidateCount)}개 조합`;
+    if (window.parent !== window) {
+      window.parent.postMessage({
+        type: "saldop:calculation-complete",
+        summary: {
+          primaryKey: detailed.key,
+          regions: successful.map(({ key, result }) => ({
+            key,
+            label: weatherDatasets[key]?.label?.replace(" · TMYx 2011–2025", "") || key,
+            best: result.best,
+            monthly: result.monthly,
+          })),
+          failedCount,
+        },
+      }, "https://saldop-design-studio.moonhanbat.chatgpt.site");
+    }
   } catch (error) {
     clearResultOutputs(`계산 실패 · ${error.message}`);
     $("statusPill").textContent = "계산 실패";
     $("calculationTiming").textContent = error.message;
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: "saldop:calculation-failed", message: error.message }, "https://saldop-design-studio.moonhanbat.chatgpt.site");
+    }
   } finally {
     $("runButton").disabled = false;
     $("runButton").textContent = "계산 실행";
@@ -1890,7 +1908,7 @@ function bindEvents() {
     $("weatherUpload").files = transfer.files;
     $("weatherInputMode").value = "upload";
     applyCurrentWeatherSelection();
-    void uploadWeatherFile();
+    void uploadWeatherFile().then(() => runCalculation());
   });
   $("weatherInputMode").addEventListener("change", () => {
     applyCurrentWeatherSelection();
