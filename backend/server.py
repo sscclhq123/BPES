@@ -298,8 +298,8 @@ def dehumidification_metrics(result):
     }
 
 
-def ld_usage_heatmap(result):
-    usage = result[["time", "ABS_ON"]].copy()
+def ld_usage_heatmap(result, operation_column="ABS_ON"):
+    usage = result[["time", operation_column]].copy()
     usage["time"] = pd.to_datetime(usage["time"])
     usage["month"] = usage["time"].dt.month
     usage["hour"] = usage["time"].dt.hour
@@ -307,11 +307,11 @@ def ld_usage_heatmap(result):
     # Keeping the last period open-ended covers the entire month without a
     # misleading partial fifth row.
     usage["week"] = ((usage["time"].dt.day - 1) // 7 + 1).clip(upper=4)
-    grouped = usage.groupby(["month", "hour"], as_index=False)["ABS_ON"].mean()
-    lookup = {(int(row.month), int(row.hour)): clean_value(float(row.ABS_ON) * 100) for row in grouped.itertuples(index=False)}
-    weekly_grouped = usage.groupby(["month", "week", "hour"], as_index=False)["ABS_ON"].mean()
+    grouped = usage.groupby(["month", "hour"], as_index=False)[operation_column].mean()
+    lookup = {(int(row.month), int(row.hour)): clean_value(float(getattr(row, operation_column)) * 100) for row in grouped.itertuples(index=False)}
+    weekly_grouped = usage.groupby(["month", "week", "hour"], as_index=False)[operation_column].mean()
     weekly_lookup = {
-        (int(row.month), int(row.week), int(row.hour)): clean_value(float(row.ABS_ON) * 100)
+        (int(row.month), int(row.week), int(row.hour)): clean_value(float(getattr(row, operation_column)) * 100)
         for row in weekly_grouped.itertuples(index=False)
     }
     return [
@@ -1254,7 +1254,8 @@ def simulate(payload):
         "summary": {key: clean_value(value) for key, value in row.items()},
         "monthly": monthly_rows(result),
         "weatherMonthly": monthly_weather_rows(result),
-        "ldUsageHeatmap": ld_usage_heatmap(result),
+        "ldUsageHeatmap": ld_usage_heatmap(result, "ABS_ON"),
+        "regUsageHeatmap": ld_usage_heatmap(result, "REG_ON"),
         "unmetTrend": unmet_dehumidification_trend(
             result,
             config.target_supply_w_g_kg + config.target_humidity_tolerance_g_kg,

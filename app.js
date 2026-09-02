@@ -1881,6 +1881,7 @@ async function runCalculation() {
             weatherMonthly: result.weatherMonthly,
             unmetTrend: result.unmetTrend,
             ldUsageHeatmap: result.ldUsageHeatmap,
+            regUsageHeatmap: result.regUsageHeatmap,
             areaResults: result.areaResults || result.candidates || [],
           })),
           failedCount,
