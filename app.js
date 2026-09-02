@@ -1971,6 +1971,11 @@ function bindEvents() {
 
 const calculationBootstrap = window.__CALCULATION_BOOTSTRAP__;
 setDefaults();
+const requestedWeatherMode = new URLSearchParams(window.location.search).get("weatherMode");
+if (["standard", "upload"].includes(requestedWeatherMode)) {
+  $("weatherInputMode").value = requestedWeatherMode;
+  applyCurrentWeatherSelection();
+}
 updateRegeneratorMode();
 if (calculationBootstrap?.input) {
   restoreCalculationInputs(calculationBootstrap.input);
