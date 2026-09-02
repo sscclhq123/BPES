@@ -1,3 +1,5 @@
+import { animate, stagger } from "./vendor/anime.esm.min.js";
+
 const weatherDatasets = {
   custom_coordinate: {
     label: "사용자 입력 좌표",
@@ -133,6 +135,48 @@ const weatherDatasets = {
     latitude: 51.9606, longitude: 4.4469, suitability: 43,
   },
 };
+
+const motionAllowed = () => !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const animeAnimate = (targets, parameters) => {
+  if (!motionAllowed()) return null;
+  return animate(targets, parameters);
+};
+const animeStagger = (value, parameters) => stagger(value, parameters);
+
+function animateCalculationStart() {
+  animeAnimate("#runButton", {
+    scale: [{ to: 0.96, duration: 110 }, { to: 1, duration: 260 }],
+    ease: "out(3)",
+  });
+  animeAnimate("#statusPill", {
+    opacity: [{ to: 0.45, duration: 130 }, { to: 1, duration: 260 }],
+    scale: [{ to: 0.94, duration: 130 }, { to: 1, duration: 260 }],
+    ease: "out(3)",
+  });
+}
+
+function animateResultReveal() {
+  animeAnimate([".hero-result", ".metric-card"], {
+    opacity: { from: 0.25, to: 1 },
+    translateY: { from: 12, to: 0 },
+    delay: animeStagger(55),
+    duration: 480,
+    ease: "out(3)",
+  });
+  animeAnimate([".analysis-grid > section", ".comparison-panel"], {
+    opacity: { from: 0.35, to: 1 },
+    translateY: { from: 10, to: 0 },
+    delay: animeStagger(45),
+    duration: 520,
+    ease: "out(3)",
+  });
+  animeAnimate(".bar-chart .bar", {
+    scaleY: { from: 0, to: 1 },
+    delay: animeStagger(18, { from: "center" }),
+    duration: 520,
+    ease: "out(4)",
+  });
+}
 
 const comparisonRegions = {
   seoul_epw: { label: "서울 · 대한민국", humidity: 65.7, irradiance: 4.91, latitude: 37.5714, suitability: 64 },
@@ -1115,6 +1159,7 @@ function toggleRegionComparison(key) {
   }
   renderRegionResults(latestRegionResults);
 }
+window.toggleRegionComparison = toggleRegionComparison;
 
 function targetAreaNeighborhood(candidates, radius = 2) {
   if (!Array.isArray(candidates) || candidates.length <= radius * 2 + 1) return candidates || [];
@@ -1360,6 +1405,12 @@ function renderUnmetTrend(entries) {
     if (!nextEventId) return;
     const linkedPoint = chart.querySelector(`.humidity-unmet-point[data-event-id="${nextEventId}"]`);
     const linkedRow = rows.querySelector(`tr[data-event-id="${nextEventId}"]`);
+    if (linkedPoint) {
+      animeAnimate(linkedPoint, {
+        scale: [{ to: 1.45, duration: 170 }, { to: 1, duration: 280 }],
+        ease: "out(4)",
+      });
+    }
     if (source === "point" && linkedRow) {
       linkedRow.scrollIntoView({ behavior: "smooth", block: "nearest" });
     } else if (source === "row" && linkedPoint) {
@@ -1669,13 +1720,28 @@ function renderPythonResult(result, input) {
   $("seasonSummary").textContent =
     `Python 엔진 · 요구 재생열 ${formatNumber(best.regenNeed)} kWh · TES 실사용 ${formatNumber(best.usefulSolar)} kWh · 실사용 커버율 ${formatNumber(best.solarUseCoverage * 100, 1)} %`;
   renderCandidateRows(result.areaResults || result.candidates || [best]);
+  animateResultReveal();
 }
 
 function animateFlow() {
   const cards = [...document.querySelectorAll(".flow-card")];
   cards.forEach((card) => card.classList.remove("active"));
+  if (!motionAllowed()) {
+    cards.forEach((card, index) => {
+      window.setTimeout(() => card.classList.add("active"), index * 90);
+    });
+    return;
+  }
   cards.forEach((card, index) => {
-    window.setTimeout(() => card.classList.add("active"), index * 90);
+    animeAnimate(card, {
+      opacity: { from: 0.45, to: 1 },
+      translateY: { from: 8, to: 0 },
+      scale: { from: 0.985, to: 1 },
+      delay: index * 120,
+      duration: 430,
+      ease: "out(3)",
+      onBegin: () => card.classList.add("active"),
+    });
   });
 }
 
@@ -1754,6 +1820,7 @@ async function runCalculation() {
   $("runButton").textContent = "계산 중";
   $("calculationTiming").textContent =
     `지역별 계산 준비 · ${input.weatherDatasets.length}개 지역`;
+  animateCalculationStart();
   animateFlow();
 
   const datasetKeys = input.weatherDatasets;
