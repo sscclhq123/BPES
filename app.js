@@ -1993,10 +1993,11 @@ if (["standard", "upload"].includes(requestedWeatherMode)) {
   $("weatherInputMode").value = requestedWeatherMode;
   applyCurrentWeatherSelection();
 }
-const requestedWeatherDataset = deepLinkParams.get("weatherDataset");
-if (requestedWeatherDataset && weatherDatasets[requestedWeatherDataset]) {
+const requestedWeatherDatasets = deepLinkParams.getAll("weatherDataset").filter((key) => weatherDatasets[key]);
+const requestedWeatherDataset = requestedWeatherDatasets[0];
+if (requestedWeatherDataset) {
   $("weatherDataset").value = requestedWeatherDataset;
-  setSelectedWeatherDatasets([requestedWeatherDataset]);
+  setSelectedWeatherDatasets(requestedWeatherDatasets);
   applyWeatherDataset(requestedWeatherDataset);
 }
 const requestedBuildingUse = deepLinkParams.get("buildingUse");
