@@ -7,13 +7,12 @@
       "excludeFiles": "{backend/test_*.py,backend/outputs/**,backend/outputs_check/**,figures/**,GPT_WORK_HANDOFF.md}"
     }
   },
-  "rewrites": [
-    { "source": "/calculate", "destination": "/api/index.py?route=calculate" },
-    { "source": "/api/:path*", "destination": "/api/index.py?route=:path*" },
-    { "source": "/engine", "destination": "/engine/" },
-    { "source": "/engine/", "destination": "/index.html" },
-    { "source": "/engine/styles.css", "destination": "/styles.css" },
-    { "source": "/engine/app.js", "destination": "/app.js" },
-    { "source": "/:path*", "destination": "https://saldop-design-studio.moonhanbat.chatgpt.site/:path*" }
+  "routes": [
+    { "src": "/calculate", "dest": "/api/index.py?route=calculate" },
+    { "src": "/api/(.*)", "dest": "/api/index.py?route=$1" },
+    { "src": "/engine/styles.css", "dest": "/styles.css" },
+    { "src": "/engine/app.js", "dest": "/app.js" },
+    { "src": "/engine/?", "dest": "/index.html" },
+    { "src": "/(.*)", "dest": "https://saldop-design-studio.moonhanbat.chatgpt.site/$1" }
   ]
 }
