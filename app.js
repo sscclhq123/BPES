@@ -1878,6 +1878,7 @@ async function runCalculation() {
             label: weatherDatasets[key]?.label?.replace(" · TMYx 2011–2025", "") || key,
             best: result.best,
             monthly: result.monthly,
+            solutionConcentrationDrilldown: result.solutionConcentrationDrilldown,
             weatherMonthly: result.weatherMonthly,
             unmetTrend: result.unmetTrend,
             ldUsageHeatmap: result.ldUsageHeatmap,

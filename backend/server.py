@@ -283,6 +283,44 @@ def monthly_weather_rows(result):
     ]
 
 
+def solution_concentration_drilldown(result):
+    """Compact month/day/hour hierarchy for interactive LiCl trend charts."""
+    if "TANK_xi_NEXT" not in result:
+        return []
+    concentration = result[["time", "TANK_xi_NEXT"]].copy()
+    concentration["time"] = pd.to_datetime(concentration["time"])
+    concentration["value"] = pd.to_numeric(
+        concentration["TANK_xi_NEXT"], errors="coerce"
+    ) * 100
+    concentration = concentration.dropna(subset=["time", "value"])
+    concentration["month"] = concentration["time"].dt.month
+    concentration["day"] = concentration["time"].dt.day
+    concentration["hour"] = concentration["time"].dt.hour
+    hourly = (
+        concentration.groupby(["month", "day", "hour"], as_index=False)["value"]
+        .mean()
+        .sort_values(["month", "day", "hour"])
+    )
+    months = []
+    for month, month_rows in hourly.groupby("month", sort=True):
+        days = []
+        for day, day_rows in month_rows.groupby("day", sort=True):
+            days.append(
+                {
+                    "day": int(day),
+                    "hours": [
+                        {
+                            "hour": int(row.hour),
+                            "value": clean_value(row.value),
+                        }
+                        for row in day_rows.itertuples(index=False)
+                    ],
+                }
+            )
+        months.append({"month": int(month), "days": days})
+    return months
+
+
 def dehumidification_metrics(result):
     target = float((result["TARGET_MOISTURE_REMOVAL_kg_h"] * result["dt_h"]).sum(skipna=True))
     acceptable_min = float((result["ACCEPTABLE_MIN_MOISTURE_REMOVAL_kg_h"] * result["dt_h"]).sum(skipna=True))
@@ -1274,6 +1312,7 @@ def simulate(payload):
         "warnings": warnings,
         "summary": {key: clean_value(value) for key, value in row.items()},
         "monthly": monthly_rows(result),
+        "solutionConcentrationDrilldown": solution_concentration_drilldown(result),
         "weatherMonthly": monthly_weather_rows(result),
         "ldUsageHeatmap": ld_usage_heatmap(result, "ABS_ON"),
         "regUsageHeatmap": ld_usage_heatmap(result, "REG_ON"),
