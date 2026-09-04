@@ -210,6 +210,8 @@ def monthly_rows(result):
     monthly = result.copy()
     if "TES_DUMP_SIZED_kWh" not in monthly:
         monthly["TES_DUMP_SIZED_kWh"] = 0.0
+    if "TANK_xi_NEXT" not in monthly:
+        monthly["TANK_xi_NEXT"] = np.nan
     monthly["month"] = pd.to_datetime(monthly["time"]).dt.month
     monthly["unmet_shortfall_kg"] = (
         monthly["ACCEPTABLE_MIN_MOISTURE_REMOVAL_kg_h"]
@@ -227,6 +229,9 @@ def monthly_rows(result):
         actual_dehumid_kg=("ABS_WATER_ABSORB_kg_h", lambda values: float((values * monthly.loc[values.index, "dt_h"]).sum())),
         unmet_shortfall_kg=("unmet_shortfall_kg", "sum"),
         unmet_hours=("unmet_hours", "sum"),
+        solution_concentration_mean=("TANK_xi_NEXT", "mean"),
+        solution_concentration_min=("TANK_xi_NEXT", "min"),
+        solution_concentration_max=("TANK_xi_NEXT", "max"),
     )
     return [
         {
@@ -241,6 +246,9 @@ def monthly_rows(result):
             "actualDehumidification": clean_value(row.actual_dehumid_kg),
             "unmetShortfall": clean_value(row.unmet_shortfall_kg),
             "unmetHours": clean_value(row.unmet_hours),
+            "solutionConcentrationMean": clean_value(row.solution_concentration_mean * 100),
+            "solutionConcentrationMin": clean_value(row.solution_concentration_min * 100),
+            "solutionConcentrationMax": clean_value(row.solution_concentration_max * 100),
             "dehumidificationAccepted": (
                 bool(row.unmet_hours <= 1e-9)
                 if row.target_dehumid_kg > 0 else None
