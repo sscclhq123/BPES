@@ -1868,7 +1868,7 @@ async function runCalculation() {
     $("statusPill").textContent = failedCount ? "일부 완료" : "계산 완료";
     $("calculationTiming").textContent = `${successful.length}/${datasetKeys.length}개 지역 완료 · 지역당 ${formatNumber(estimate.candidateCount)}개 조합`;
     if (window.parent !== window) {
-      const parentOrigin = (() => { try { return new URL(document.referrer).origin; } catch { return "https://saldop-design-studio.moonhanbat.chatgpt.site"; } })();
+      const parentOrigin = (() => { try { return new URL(document.referrer).origin; } catch { return "https://saldop.vercel.app"; } })();
       window.parent.postMessage({
         type: "saldop:calculation-complete",
         summary: {
@@ -1894,7 +1894,7 @@ async function runCalculation() {
     $("statusPill").textContent = "계산 실패";
     $("calculationTiming").textContent = error.message;
     if (window.parent !== window) {
-      const parentOrigin = (() => { try { return new URL(document.referrer).origin; } catch { return "https://saldop-design-studio.moonhanbat.chatgpt.site"; } })();
+      const parentOrigin = (() => { try { return new URL(document.referrer).origin; } catch { return "https://saldop.vercel.app"; } })();
       window.parent.postMessage({ type: "saldop:calculation-failed", message: error.message }, parentOrigin);
     }
   } finally {
@@ -1905,7 +1905,7 @@ async function runCalculation() {
 
 function bindEvents() {
   window.addEventListener("message", (event) => {
-    if (event.origin !== "https://saldop-design-studio.moonhanbat.chatgpt.site" || !(event.data?.file instanceof File)) {
+    if (event.origin !== "https://saldop.vercel.app" || !(event.data?.file instanceof File)) {
       return;
     }
 

@@ -14,6 +14,9 @@
     { "src": "/engine/app.js", "dest": "/app.js" },
     { "src": "/engine/vendor/(.*)", "dest": "/vendor/$1" },
     { "src": "/engine/?", "dest": "/index.html" },
-    { "src": "/(.*)", "dest": "https://saldop-design-studio.moonhanbat.chatgpt.site/$1" }
+    { "src": "/_next/(.*)", "dest": "/studio/_next/$1" },
+    { "src": "/favicon.svg", "dest": "/studio/favicon.svg" },
+    { "src": "/?", "dest": "/studio/index.html" },
+    { "src": "/(.*)", "dest": "/studio/index.html" }
   ]
 }
