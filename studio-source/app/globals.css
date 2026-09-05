@@ -250,6 +250,8 @@ button,a { font:inherit; } button { cursor:pointer; }
 .result-screen{background:#eef1ed}
 .result-dashboard{gap:14px;margin-top:14px}
 .chart-card,.inline-detail{padding:24px;border:1px solid #d7ddd7;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(31,48,40,.055)}
+.chart-card.decision-card{border-color:#303934;background:linear-gradient(145deg,#202723 0%,#151a17 100%);color:#f4f7f3;box-shadow:0 14px 34px rgba(18,28,23,.2)}
+.chart-card.decision-card>span{color:#79e69a}.chart-card.decision-card h2{color:#fff}.chart-card.decision-card p{color:#c1cac3}.chart-card.decision-card button{border-color:#58645d;background:rgba(255,255,255,.035);color:#f2f5f2}.chart-card.decision-card button:hover,.chart-card.decision-card button:focus-visible{border-color:#79e69a;background:rgba(121,230,154,.08);outline:none}
 .chart-card header{align-items:flex-start;gap:24px;padding-bottom:4px}
 .chart-card header span,.chart-card>span,.inline-detail-heading span{font-size:11px;font-weight:700;color:#79837c;letter-spacing:.12em}
 .chart-card h2{margin-top:8px;font-size:22px;line-height:1.2}
