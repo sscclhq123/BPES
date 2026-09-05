@@ -279,3 +279,65 @@ button,a { font:inherit; } button { cursor:pointer; }
 .event-table-detailed>div,.event-table-detailed>button{grid-template-columns:1.05fr 1.25fr .9fr 1.15fr .8fr;min-width:760px;align-items:center}.event-table-detailed .outdoor-condition{display:flex;align-items:baseline;gap:8px}.event-table-detailed .outdoor-condition b{font-size:11px}.event-table-detailed .outdoor-condition small{color:#66736a;font-size:10px}.event-table-detailed>button span:nth-child(3){color:#168fa2;font-weight:700;font-variant-numeric:tabular-nums}
 
 @media(max-width:700px){.chart-card,.inline-detail{padding:18px;border-radius:12px}.chart-card h2{font-size:20px}.bar-axis-layout{min-width:720px}.monthly-card{overflow-x:auto}.weather-combo-plot{margin-left:58px}.weather-combo-legend{min-width:720px}.concentration-layout{grid-template-columns:82px minmax(0,1fr)}.heatmap-hours,.heatmap-row{grid-template-columns:52px repeat(24,1fr)}.detail-axis-layout{min-width:720px}.inline-detail{overflow-x:auto}}
+
+/* 2026-09 chart rebuild: explicit axis tracks and a single, high-density heatmap. */
+.weather-card,.concentration-card,.heatmap-v2{border:1px solid #dce4df;border-radius:20px;background:#fff;box-shadow:0 14px 38px rgba(35,55,46,.07)}
+.weather-card:before,.concentration-card:before{left:28px;right:28px;height:4px}
+.weather-combo-legend{margin-top:22px;gap:14px}
+.weather-combo-legend>span{min-height:68px;padding:14px 16px;border:1px solid #e4eae5;border-radius:14px;background:#fbfcfa;box-shadow:none}
+.weather-combo-legend i{width:12px;height:12px;box-shadow:0 0 0 5px rgba(36,124,145,.07)}
+.weather-combo-legend i.temp{box-shadow:0 0 0 5px rgba(228,173,41,.09)}
+.weather-combo-legend i.solar{box-shadow:0 0 0 5px rgba(239,119,114,.08)}
+.weather-combo-legend>span>span{font-size:14px}.weather-combo-legend small{font-size:11px}.weather-combo-legend b{font-size:12px}
+.weather-axis-layout{display:grid;grid-template-columns:34px 58px minmax(760px,1fr);grid-template-rows:350px;margin-top:22px;padding:22px 24px 18px 12px;border:1px solid #e2e9e4;border-radius:16px;background:linear-gradient(180deg,#fcfdfb,#f7faf7);overflow-x:auto}
+.weather-y-title{display:flex;align-items:center;justify-content:center;color:#42584d;font-size:13px;font-weight:800;letter-spacing:.01em;writing-mode:vertical-rl;transform:rotate(180deg)}
+.weather-y-ticks{position:static;display:flex;height:314px;padding:0 14px 0 0;flex-direction:column;justify-content:space-between;border-right:1px solid #9eaba2;color:#59675e;font:700 12px/1 ui-monospace,monospace;text-align:right}
+.weather-combo-plot{position:relative;display:grid;grid-template-rows:314px 32px 20px;min-width:760px;margin:0;padding:0 8px 0 18px;border:0;border-radius:0;background:transparent;box-shadow:none}
+.weather-combo-plot:before,.weather-combo-plot:after{content:none}
+.weather-combo-plot svg{width:100%;height:314px;overflow:visible}
+.weather-gridline{stroke:#dfe6e1;stroke-width:.55;stroke-dasharray:1.5 2.5}
+.weather-solar-bar{fill:#ff7f76;opacity:.18;rx:1.2}
+.weather-temp-line{stroke:#e2a61b}.weather-humidity-line{stroke:#179cb4}.weather-temp-line,.weather-humidity-line{stroke-width:3;filter:drop-shadow(0 2px 2px rgba(30,55,45,.08))}
+.weather-temp-dot,.weather-humidity-dot{r:1.75;stroke:#fff;stroke-width:.85}
+.weather-month-axis{padding-top:10px;border-top:1px solid #9eaba2;color:#4d5b52;font:800 12px/1 ui-monospace,monospace}
+.weather-x-title{display:flex;align-items:end;justify-content:center;color:#42584d;font-size:13px;font-weight:800}
+
+.concentration-layout{display:grid;grid-template-columns:34px 58px minmax(760px,1fr);grid-template-rows:350px;margin-top:22px;padding:22px 24px 18px 12px;border:1px solid #e2e9e4;border-radius:16px;background:linear-gradient(180deg,#fcfdfb,#f4faf9);box-shadow:none;overflow-x:auto}
+.concentration-y-title{position:static;display:flex;width:auto;align-items:center;justify-content:center;color:#315e68;font-size:13px;font-weight:800;writing-mode:vertical-rl;transform:rotate(180deg)}
+.concentration-y-axis{height:314px;padding-right:14px;border-right:1px solid #9eaba2}
+.concentration-y-axis span{right:14px;color:#50645b;font:700 12px/1 ui-monospace,monospace}
+.concentration-plot{grid-template-rows:314px 32px 20px;min-width:760px;padding-left:18px;overflow:visible}
+.concentration-plot svg{height:314px}.concentration-grid{stroke:#dce7e3;stroke-width:.55;stroke-dasharray:1.5 2.5}
+.concentration-band{fill:rgba(78,231,240,.16);stroke:none}
+.concentration-range{display:none}.concentration-line{stroke:#168fa2;stroke-width:3.2;filter:drop-shadow(0 2px 2px rgba(22,143,162,.14))}
+.concentration-dot{r:1.9;fill:#4ee7f0;stroke:#126e7d;stroke-width:.7}
+.concentration-x-axis{padding-top:10px;border-top:1px solid #9eaba2}.concentration-x-axis button{padding:7px 3px;color:#4d5b52;font:800 12px/1 ui-monospace,monospace}
+.concentration-x-title{padding-top:4px;color:#315e68;font-size:13px;font-weight:800}
+.concentration-legend{border-color:#dce6e2;background:#f8fbfa;font-size:12px}.concentration-legend span{border:0;border-radius:3px;background:rgba(78,231,240,.2)}
+
+.heatmap-v2{padding:28px;background:linear-gradient(145deg,#fff 0%,#f7fbfa 100%);overflow:hidden}
+.heatmap-v2:before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:#4ee7f0}.heatmap-v2.regeneration:before{background:#ff746d}
+.heatmap-v2 header{display:flex;align-items:flex-start;justify-content:space-between;gap:28px}
+.heatmap-v2 h2{font-size:24px}.heatmap-v2 header small{max-width:700px;font-size:12px}
+.heatmap-tools{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}
+.heatmap-mode{display:flex;padding:4px;border:1px solid #dbe5e0;border-radius:12px;background:#f2f6f3}
+.heatmap-mode button{min-height:34px;padding:7px 16px;border:0;border-radius:9px;background:transparent;color:#68766d;font-size:12px;font-weight:800}
+.heatmap-v2.dehumidification .heatmap-mode button.selected{background:#dff9fb;color:#087d91;box-shadow:0 3px 10px rgba(22,143,162,.12)}
+.heatmap-v2.regeneration .heatmap-mode button.selected{background:#fff0ed;color:#c84f48;box-shadow:0 3px 10px rgba(239,119,114,.12)}
+.heatmap-summary{display:grid;grid-template-columns:repeat(3,minmax(130px,1fr)) minmax(270px,1.35fr);gap:10px;margin-top:22px;padding:12px;border:1px solid #e0e7e2;border-radius:14px;background:#fff}
+.heatmap-summary>div{display:grid;gap:5px;padding:10px 12px;border-right:1px solid #e5ebe7}.heatmap-summary>div:last-child{border-right:0}
+.heatmap-summary small{color:#7b877f;font-size:10px;font-weight:700;letter-spacing:.06em}.heatmap-summary b{color:#25382e;font-size:15px}
+.heatmap-scale{display:grid!important;grid-template-columns:auto 32px minmax(90px,1fr) 36px;align-items:center;gap:8px;color:#65726a;font-size:11px!important}
+.heatmap-scale small{grid-column:1/-1}.heatmap-scale i{width:100%;height:9px;border-radius:999px;background:linear-gradient(90deg,#edf9fa,#8de6ec,#1f93bb,#174a84)}
+.heatmap-v2.regeneration .heatmap-scale i{background:linear-gradient(90deg,#fff3f0,#ffc1b8,#ff786e,#a92e34)}
+.heatmap-scroll{margin-top:16px;padding:18px 18px 20px;border:1px solid #e1e9e4;border-radius:16px;background:#fff;overflow-x:auto}
+.heatmap-axis-caption{display:grid;grid-template-columns:68px minmax(520px,1fr);min-width:680px;margin-bottom:10px;color:#44564c;font-size:12px;font-weight:800}
+.heatmap-axis-caption span{text-align:center}.usage-heatmap{display:grid;min-width:680px;gap:7px;margin:0}
+.heatmap-hours,.heatmap-row{gap:5px}.heatmap-hours{align-items:end;padding-bottom:7px;border-bottom:1px solid #dfe7e2}.heatmap-hours span{color:#5b6960;font-size:11px;font-weight:800;text-align:center}
+.heatmap-row{padding:3px 0;border:0;border-radius:8px;background:transparent;transition:background .15s,transform .15s}.heatmap-row:hover{background:#f1f8f5;transform:translateX(2px)}
+.heatmap-row b{display:flex;align-items:center;padding-left:10px;color:#3f5147;font-size:12px}
+.heatmap-row i{min-height:22px;border:1px solid rgba(30,72,84,.06);border-radius:5px;background:color-mix(in srgb,#13508a calc(var(--heat)*100%),#eff9fa);opacity:1;box-shadow:inset 0 1px rgba(255,255,255,.25)}
+.heatmap-v2.regeneration .heatmap-row i{background:color-mix(in srgb,#aa3037 calc(var(--heat)*100%),#fff1ee)}
+
+@media(max-width:900px){.weather-combo-legend{grid-template-columns:1fr}.weather-axis-layout,.concentration-layout{grid-template-columns:32px 54px minmax(720px,1fr)}.heatmap-v2 header{display:grid}.heatmap-tools{justify-content:flex-start}.heatmap-summary{grid-template-columns:1fr 1fr}.heatmap-summary>div{border-right:0;border-bottom:1px solid #e5ebe7}.heatmap-summary>div:nth-last-child(-n+2){border-bottom:0}}
+@media(max-width:700px){.weather-card,.concentration-card,.heatmap-v2{padding:20px}.weather-combo-legend{min-width:0}.weather-axis-layout,.concentration-layout{margin-top:18px;padding:18px 16px 14px 8px}.weather-combo-plot{margin:0}.heatmap-summary{grid-template-columns:1fr}.heatmap-summary>div{border-bottom:1px solid #e5ebe7!important}.heatmap-summary>div:last-child{border-bottom:0!important}.heatmap-v2 h2{font-size:21px}}
