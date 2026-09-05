@@ -291,7 +291,7 @@ button,a { font:inherit; } button { cursor:pointer; }
 .weather-combo-legend i.solar{box-shadow:0 0 0 5px rgba(239,119,114,.08)}
 .weather-combo-legend>span>span{font-size:14px}.weather-combo-legend small{font-size:11px}.weather-combo-legend b{font-size:12px}
 .weather-axis-layout{display:grid;grid-template-columns:34px 58px minmax(760px,1fr);grid-template-rows:350px;margin-top:22px;padding:22px 24px 18px 12px;border:1px solid #e2e9e4;border-radius:16px;background:linear-gradient(180deg,#fcfdfb,#f7faf7);overflow-x:auto}
-.weather-y-title{display:flex;align-items:center;justify-content:center;color:#42584d;font-size:13px;font-weight:800;letter-spacing:.01em;writing-mode:vertical-rl;transform:rotate(180deg)}
+.weather-y-title{display:flex;align-items:center;justify-content:center;color:#42584d;font-size:13px;font-weight:800;letter-spacing:.01em;white-space:nowrap;transform:rotate(-90deg)}
 .weather-y-ticks{position:static;display:flex;height:314px;padding:0 14px 0 0;flex-direction:column;justify-content:space-between;border-right:1px solid #9eaba2;color:#59675e;font:700 12px/1 ui-monospace,monospace;text-align:right}
 .weather-combo-plot{position:relative;display:grid;grid-template-rows:314px 32px 20px;min-width:760px;margin:0;padding:0 8px 0 18px;border:0;border-radius:0;background:transparent;box-shadow:none}
 .weather-combo-plot:before,.weather-combo-plot:after{content:none}
@@ -303,8 +303,8 @@ button,a { font:inherit; } button { cursor:pointer; }
 .weather-month-axis{padding-top:10px;border-top:1px solid #9eaba2;color:#4d5b52;font:800 12px/1 ui-monospace,monospace}
 .weather-x-title{display:flex;align-items:end;justify-content:center;color:#42584d;font-size:13px;font-weight:800}
 
-.concentration-layout{display:grid;grid-template-columns:34px 58px minmax(760px,1fr);grid-template-rows:350px;margin-top:22px;padding:22px 24px 18px 12px;border:1px solid #e2e9e4;border-radius:16px;background:linear-gradient(180deg,#fcfdfb,#f4faf9);box-shadow:none;overflow-x:auto}
-.concentration-y-title{position:static;display:flex;width:auto;align-items:center;justify-content:center;color:#315e68;font-size:13px;font-weight:800;writing-mode:vertical-rl;transform:rotate(180deg)}
+.concentration-layout{display:grid;grid-template-columns:34px 58px minmax(760px,1fr);grid-template-rows:374px;margin-top:22px;padding:22px 24px 18px 12px;border:1px solid #e2e9e4;border-radius:16px;background:linear-gradient(180deg,#fcfdfb,#f4faf9);box-shadow:none;overflow-x:auto}
+.concentration-y-title{position:static;display:flex;width:auto;align-items:center;justify-content:center;color:#315e68;font-size:13px;font-weight:800;white-space:nowrap;transform:rotate(-90deg)}
 .concentration-y-axis{height:314px;padding-right:14px;border-right:1px solid #9eaba2}
 .concentration-y-axis span{right:14px;color:#50645b;font:700 12px/1 ui-monospace,monospace}
 .concentration-plot{grid-template-rows:314px 32px 20px;min-width:760px;padding-left:18px;overflow:visible}
@@ -312,7 +312,7 @@ button,a { font:inherit; } button { cursor:pointer; }
 .concentration-band{fill:rgba(78,231,240,.16);stroke:none}
 .concentration-range{display:none}.concentration-line{stroke:#168fa2;stroke-width:3.2;filter:drop-shadow(0 2px 2px rgba(22,143,162,.14))}
 .concentration-dot{r:1.9;fill:#4ee7f0;stroke:#126e7d;stroke-width:.7}
-.concentration-x-axis{padding-top:10px;border-top:1px solid #9eaba2}.concentration-x-axis button{padding:7px 3px;color:#4d5b52;font:800 12px/1 ui-monospace,monospace}
+.concentration-x-axis{padding-top:0;border-top:1px solid #9eaba2;overflow:visible}.concentration-x-axis button{position:relative;display:grid;justify-items:center;gap:5px;padding:0 3px 5px;color:#4d5b52;font:800 12px/1 ui-monospace,monospace}.concentration-x-axis button i{display:block;width:1px;height:7px;background:#9eaba2}
 .concentration-x-title{padding-top:4px;color:#315e68;font-size:13px;font-weight:800}
 .concentration-legend{border-color:#dce6e2;background:#f8fbfa;font-size:12px}.concentration-legend span{border:0;border-radius:3px;background:rgba(78,231,240,.2)}
 
