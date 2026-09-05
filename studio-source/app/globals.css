@@ -334,9 +334,10 @@ button,a { font:inherit; } button { cursor:pointer; }
 .heatmap-axis-caption{display:grid;grid-template-columns:68px minmax(520px,1fr);min-width:680px;margin-bottom:10px;color:#44564c;font-size:12px;font-weight:800}
 .heatmap-axis-caption span{text-align:center}.usage-heatmap{display:grid;min-width:680px;gap:7px;margin:0}
 .heatmap-hours,.heatmap-row{gap:5px}.heatmap-hours{align-items:end;padding-bottom:7px;border-bottom:1px solid #dfe7e2}.heatmap-hours span{color:#5b6960;font-size:11px;font-weight:800;text-align:center}
+.heatmap-v2 .heatmap-hours span:first-child{grid-column:auto}
 .heatmap-row{padding:3px 0;border:0;border-radius:8px;background:transparent;transition:background .15s,transform .15s}.heatmap-row:hover{background:#f1f8f5;transform:translateX(2px)}
 .heatmap-row b{display:flex;align-items:center;padding-left:10px;color:#3f5147;font-size:12px}
-.heatmap-row i{min-height:22px;border:1px solid rgba(30,72,84,.06);border-radius:5px;background:color-mix(in srgb,#13508a calc(var(--heat)*100%),#eff9fa);opacity:1;box-shadow:inset 0 1px rgba(255,255,255,.25)}
+.heatmap-row i{width:100%;height:26px;min-height:0;aspect-ratio:auto;border:1px solid rgba(30,72,84,.06);border-radius:5px;background:color-mix(in srgb,#13508a calc(var(--heat)*100%),#eff9fa);opacity:1;box-shadow:inset 0 1px rgba(255,255,255,.25)}
 .heatmap-v2.regeneration .heatmap-row i{background:color-mix(in srgb,#aa3037 calc(var(--heat)*100%),#fff1ee)}
 
 @media(max-width:900px){.weather-combo-legend{grid-template-columns:1fr}.weather-axis-layout,.concentration-layout{grid-template-columns:32px 54px minmax(720px,1fr)}.heatmap-v2 header{display:grid}.heatmap-tools{justify-content:flex-start}.heatmap-summary{grid-template-columns:1fr 1fr}.heatmap-summary>div{border-right:0;border-bottom:1px solid #e5ebe7}.heatmap-summary>div:nth-last-child(-n+2){border-bottom:0}}
