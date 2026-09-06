@@ -397,3 +397,35 @@ button,a { font:inherit; } button { cursor:pointer; }
 
 @media(max-width:900px){.geo-card>header{display:grid}.geo-controls{justify-content:flex-start}.geo-insight{grid-template-columns:repeat(3,1fr)}.geo-insight p{grid-column:1/-1}.geo-layout{grid-template-columns:1fr}.geo-ranking>div{max-height:260px}}
 @media(max-width:700px){.geo-card{padding:20px}.geo-card>header h2{font-size:23px}.geo-controls{display:grid;grid-template-columns:1fr}.geo-map-tabs{width:100%}.geo-map-tabs button{flex:1}.geo-controls label{display:grid}.geo-controls select{width:100%}.geo-insight{grid-template-columns:1fr 1fr}.geo-insight>div{border-right:0}.geo-insight>div:first-child{grid-column:1/-1}.geo-map{min-height:330px;padding:7px}.geo-map svg{min-height:310px}.geo-point text{font-size:17px}.geo-ranking button{min-height:58px}}
+
+/* LiCl concentration analysis — clear hierarchy, restrained color, readable drill-down. */
+.concentration-card{padding:30px;background:#fff;overflow:hidden}
+.concentration-card:before{background:linear-gradient(90deg,#4ee7f0 0 34%,#168fa2 34% 100%)}
+.concentration-card>header{display:flex;align-items:flex-start;justify-content:space-between;gap:24px}
+.concentration-card>header h2{margin-top:7px;font-size:28px;letter-spacing:-.04em;text-wrap:balance}
+.concentration-card>header small{display:block;max-width:650px;margin-top:8px;font-size:13px;line-height:1.55}
+.concentration-breadcrumb{display:flex;min-height:44px;align-items:center;gap:5px;padding:4px;border:1px solid #dbe6e2;border-radius:12px;background:#f4f8f6}
+.concentration-breadcrumb button{min-width:58px;min-height:34px;padding:7px 12px;border:0;border-radius:8px;background:transparent;color:#64736b;font-size:12px;font-weight:800;cursor:pointer}
+.concentration-breadcrumb button:hover{background:#e8f4f2;color:#126f7d}.concentration-breadcrumb button.selected{background:#183d43;color:#fff;box-shadow:0 4px 12px rgba(24,61,67,.16)}
+.concentration-breadcrumb i{color:#8d9992;font-style:normal;font-size:15px}
+.concentration-kpis{display:grid;grid-template-columns:.8fr 1fr 1.2fr 1.25fr;gap:0;margin-top:24px;border-block:1px solid #e2e9e5;background:#fbfcfb}
+.concentration-kpis>div{display:grid;gap:7px;padding:18px 20px;border-right:1px solid #e2e9e5}.concentration-kpis>div:last-child{border-right:0}
+.concentration-kpis small{color:#77847c;font-size:11px;font-weight:800;letter-spacing:.04em}.concentration-kpis b{color:#253a31;font-size:19px;font-variant-numeric:tabular-nums;white-space:nowrap}.concentration-kpis b i{color:#6d7b73;font-size:11px;font-style:normal}
+.concentration-kpis .primary b{color:#0c8294;font-size:28px;line-height:.9}
+.concentration-chart-shell{margin-top:20px;padding:20px 22px 18px;border:1px solid #e0e8e4;border-radius:16px;background:#f8fbfa}
+.concentration-chart-meta{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-bottom:14px;border-bottom:1px solid #e2e9e5}
+.concentration-chart-meta>small{color:#77847d;font-size:11px;font-weight:700}
+.concentration-legend{display:flex;align-items:center;gap:7px;padding:0;border:0;background:transparent;color:#53645b;font-size:12px;font-weight:800}
+.concentration-legend span{display:inline-block;margin-left:10px}.concentration-legend span:first-child{margin-left:0}
+.concentration-legend .mean{width:22px;height:3px;border-radius:3px;background:#168fa2}.concentration-legend .range{width:22px;height:10px;border-radius:3px;background:rgba(78,231,240,.25)}.concentration-legend .valid{width:22px;height:10px;border:1px solid rgba(75,156,115,.25);border-radius:3px;background:rgba(120,203,154,.12)}
+.concentration-axis-unit{margin:18px 0 8px 70px;color:#476159;font-size:12px;font-weight:800}
+.concentration-layout{grid-template-columns:64px minmax(760px,1fr);grid-template-rows:360px;margin:0;padding:0 8px 0 0;border:0;border-radius:0;background:transparent;overflow-x:auto}
+.concentration-y-axis{height:300px;padding-right:14px;border-right:1px solid #9daba3}.concentration-y-axis span{right:14px;color:#52645c;font:800 12px/1 ui-monospace,monospace}
+.concentration-plot{grid-template-rows:300px 36px 22px;min-width:760px;padding-left:18px}.concentration-plot svg{height:300px;overflow:visible}
+.concentration-grid{stroke:#dce5e0;stroke-width:.5;stroke-dasharray:0}.concentration-valid-zone{fill:rgba(104,188,139,.08)}
+.concentration-area{fill:url(#concentrationArea);stroke:none}.concentration-band{fill:rgba(78,231,240,.2);stroke:none}
+.concentration-line{fill:none;stroke:#168fa2;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 3px 3px rgba(22,143,162,.13));vector-effect:non-scaling-stroke}
+.concentration-dot{fill:#fff;stroke:#168fa2;stroke-width:1.1;transform:scaleX(.27);transform-box:fill-box;transform-origin:center;vector-effect:non-scaling-stroke;transition:fill .16s,stroke .16s}.concentration-dot.clickable{cursor:pointer}.concentration-dot.clickable:hover,.concentration-dot.clickable:focus{fill:#4ee7f0;stroke:#0c6573;outline:none}
+.concentration-x-axis{border-top:1px solid #9daba3}.concentration-x-axis button{min-height:36px;color:#53635b;font-size:12px;transition:color .15s,background .15s}.concentration-x-axis button:not(:disabled){cursor:pointer}.concentration-x-axis button:not(:disabled):hover{background:#eaf7f5;color:#087d91}.concentration-x-axis button i{height:6px;background:#9daba3}.concentration-x-title{font-size:12px}
+@media(max-width:900px){.concentration-card>header{display:grid}.concentration-breadcrumb{width:max-content}.concentration-kpis{grid-template-columns:1fr 1fr}.concentration-kpis>div:nth-child(2){border-right:0}.concentration-kpis>div:nth-child(-n+2){border-bottom:1px solid #e2e9e5}}
+@media(max-width:700px){.concentration-card{padding:20px}.concentration-card>header h2{font-size:23px}.concentration-breadcrumb{width:100%;justify-content:flex-start;overflow-x:auto}.concentration-kpis{grid-template-columns:1fr}.concentration-kpis>div{border-right:0;border-bottom:1px solid #e2e9e5}.concentration-kpis>div:last-child{border-bottom:0}.concentration-chart-shell{min-width:0;max-width:100%;padding:16px 12px}.concentration-chart-meta{min-width:0;align-items:flex-start;flex-direction:column}.concentration-chart-meta>small{font-size:12px}.concentration-legend{width:100%;overflow-x:auto;white-space:nowrap}.concentration-axis-unit{margin-left:58px}.concentration-layout{width:100%;min-width:0;grid-template-columns:54px minmax(720px,1fr)}}
