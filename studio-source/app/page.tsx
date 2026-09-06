@@ -202,7 +202,7 @@ function SystemOverview({onBack,onNext,reset}:{onBack:()=>void;onNext:()=>void;r
         <g className="ld-unit regenerator"><rect x="302" y="55" width="126" height="126" rx="12"/><text className="unit-title" x="365" y="80">REGENERATOR</text><text className="unit-sub" x="365" y="100">재생부</text><path className="packing" d="M322 116H408M322 131H408M322 146H408"/></g>
         <path className="ld-mini-flow humid-air" d="M8 136H92" markerEnd="url(#ldArrowYellow)"/><text className="flow-copy humid" x="50" y="116">습한 외기</text><text className="flow-meta" x="50" y="153">수분 함유</text>
         <path className="ld-mini-flow dry-air" d="M218 136H286" markerEnd="url(#ldArrowCyan)"/><text className="flow-copy dry" x="252" y="116">건조 급기</text><text className="flow-meta" x="252" y="153">건물로 공급</text>
-        <path className="ld-mini-flow regen-in" d="M512 105H428" markerEnd="url(#ldArrowYellow)"/><text className="flow-copy regen-in" x="470" y="89">재생공기 유입</text>
+        <path className="ld-mini-flow regen-in" d="M512 105H428" markerEnd="url(#ldArrowYellow)"/><text className="flow-copy regen-in" x="470" y="89">외기 유입</text>
         <path className="ld-mini-flow regen-air" d="M428 145H512" markerEnd="url(#ldArrowBlue)"/><text className="flow-copy moisture-out" x="470" y="132">습윤 배기</text><text className="flow-meta" x="470" y="162">용액 수분을 외부로 배출</text>
         <path className="ld-moisture absorb" d="M155 109V158" markerEnd="url(#ldArrowBlue)"/><text className="transfer-copy" x="155" y="172">공기 → 용액</text>
         <path className="ld-moisture release" d="M365 158V109" markerEnd="url(#ldArrowBlue)"/><text className="transfer-copy" x="365" y="172">용액 → 공기</text>
