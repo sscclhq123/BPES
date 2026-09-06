@@ -160,7 +160,7 @@ button,a { font:inherit; } button { cursor:pointer; }
 .ld-output-strip header span,.ld-output-strip small,.ld-output-strip>p,
 .concentration-card header small,.concentration-legend,.concentration-y-title,
 .concentration-x-title { font-size:10px; }
-.overview-grid p,.scope-note,.path-copy,.decision-card p { font-size:12px; }
+.overview-grid p,.storyboard p,.scope-note,.path-copy,.decision-card p { font-size:12px; }
 .ld-output-strip>p,.ld-auto-scope small,.ld-guidance { line-height:1.65; }
 .bar-y-title,.bar-y-ticks,.bar-x-title,.weather-combo-plot:before,.weather-combo-plot:after,
 .weather-combo-legend b,.weather-month-axis,.unmet-x-axis span,
