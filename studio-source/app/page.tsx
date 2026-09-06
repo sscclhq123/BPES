@@ -163,9 +163,9 @@ function Logo({ reset, progress=0 }:{ reset:()=>void; progress?:number }) { retu
 function SystemOverview({onBack,onNext,reset}:{onBack:()=>void;onNext:()=>void;reset:()=>void}) {
   const schematicDetails = [
     {no:"01",label:"외기·기상",title:"외기·기상 데이터",body:"TMYx 또는 사용자 EPW의 시간별 건구온도, 상대·절대습도와 일사량을 읽습니다. 이 데이터로 LD 유입공기의 수분부하와 집열기 입사에너지를 같은 시간축에서 계산합니다."},
-    {no:"02",label:"건물",title:"건물·최소 외기도입량",body:"건물 용도, 연면적, 재실밀도와 운전 스케줄을 적용합니다. 면적 기준 외기량과 인원 기준 외기량을 합산해 DOAS가 실제 처리해야 할 최소 외기도입량을 산정합니다."},
+    {no:"02",label:"건물",title:"건물 용도·최소 외기도입량",body:"오피스·판매시설·주거·병원·공장·농업시설의 표준 용도와 규모를 지원합니다. DOE Prototype의 연면적·재실밀도·스케줄을 건물 기준으로 사용하고, ASHRAE 62.1의 기본 구조 Vbz = Rp×Pz + Ra×Az에 따라 인원 기준 외기량과 면적 기준 외기량을 합산해 LD 외조기가 처리할 최소 외기도입량을 산정합니다."},
     {no:"03",label:"LD 외조기",title:"LD 제습·용액 재생",body:"제습부는 외기를 목표 급기 절대습도와 허용상한 이내로 처리합니다. 전체 외기량은 권장 장치 유량에 맞춰 병렬 분배하며, 제습 성능은 L/G와 제습부 입구 용액온도로 제어합니다. 재생부 입구 용액온도는 흡습으로 희석된 LiCl 용액을 목표 농도까지 회복하도록 제어합니다."},
-    {no:"04",label:"집열기",title:"태양열 집열기",body:"경사면 일사량, 집열기 면적과 효율곡선을 이용해 시간별 유효 집열량을 산정합니다. 목표 재생열 커버율을 만족하는 최소 집열기 면적을 반복 탐색합니다."},
+    {no:"04",label:"집열기",title:"태양열 집열기 종류",body:"진공관형과 평판형 중 하나를 선택합니다. 각 형식의 효율곡선에 경사면 일사량·외기온도·작동온도를 적용해 시간별 유효 집열량을 계산하고, 목표 재생열 커버율을 만족하는 최소 면적을 탐색합니다."},
     {no:"05",label:"TES",title:"TES·보조열원",body:"집열된 열을 TES에 충전하고 LD 재생 요구가 발생하면 방전합니다. 동일 시간대의 공급·수요를 우선 대응하며, 부족분은 보조열원, 저장 한계를 넘는 생산량은 미활용·잉여열로 구분합니다."}
   ];
   const [activeDetail,setActiveDetail] = useState(0);
@@ -173,7 +173,7 @@ function SystemOverview({onBack,onNext,reset}:{onBack:()=>void;onNext:()=>void;r
   return <main className="entry overview-screen"><Logo reset={reset}/><section className="system-overview screen-reveal"><header><div><span>SYSTEM DEFINITION</span><h2>SYSTEM SCHEMATIC</h2></div><small>INTRODUCTION · 00 / 04</small></header>
     <div className="system-scene" aria-label="SALDDP 시스템 구성도">
       <div className="scene-visual">
-      <div className={`scene-canvas${activeDetail===2?" ld-detail-open":""}`}>
+      <div className={`scene-canvas${activeDetail===2?" ld-detail-open":""}${activeDetail===3?" collector-detail-open":""}`}>
       <svg className="scene-art" viewBox="-120 0 1360 560" role="img" aria-label="외기, 건물, LD 외조기, 태양열 집열기와 축열조의 연결 구성">
         <defs>
           <linearGradient id="buildingFace" x1="0" x2="1"><stop stopColor="#343833"/><stop offset="1" stopColor="#20231f"/></linearGradient>
@@ -221,6 +221,7 @@ function SystemOverview({onBack,onNext,reset}:{onBack:()=>void;onNext:()=>void;r
         <path className="ld-mini-flow solution weak" d="M155 181V211H365V181" markerEnd="url(#ldArrowGreen)"/><text className="solution-copy" x="260" y="226">희석 LiCl 용액 · 재생부로 이동</text>
         <path className="ld-mini-flow heat-in" d="M365 265V190" markerEnd="url(#ldArrowRed)"/><text className="heat-copy" x="442" y="246">태양열 · TES</text><text className="heat-copy" x="442" y="262">재생열 공급</text>
       </svg><div className="ld-mini-legend"><span className="humid">습한 외기</span><span className="dry">건조 급기</span><span className="solution">LiCl 용액</span><span className="moisture">수분 이동</span><span className="heat">열 공급</span></div></aside>}
+      {activeDetail===3&&<aside className="collector-mini-schematic" aria-label="태양열 집열기 종류 비교"><button type="button" className="collector-mini-close" aria-label="집열기 종류 비교 닫기" onClick={(event)=>{event.stopPropagation();setActiveDetail(0);}}>×</button><header><span>SOLAR THERMAL COLLECTOR TYPES</span><b>집열기 형식 비교</b><small>선택한 형식의 효율곡선이 시간별 집열량과 필요 면적 계산에 적용됩니다.</small></header><div className="collector-type-grid"><article className="evacuated"><div className="collector-illustration" aria-hidden="true"><i/><i/><i/><i/><span/></div><div><em>EVACUATED TUBE</em><h4>진공관형 집열기</h4><p>이중 유리관 사이의 진공층이 대류·전도 열손실을 줄입니다. 외기와 작동유체의 온도차가 큰 조건에서도 상대적으로 유리합니다.</p><dl><div><dt>구조</dt><dd>독립 진공관 배열</dd></div><div><dt>설계 반영</dt><dd>진공관형 효율곡선</dd></div></dl></div></article><article className="flat"><div className="collector-illustration" aria-hidden="true"><span/><b>{Array.from({length:6}).map((_,i)=><i key={i}/>)}</b></div><div><em>FLAT PLATE</em><h4>평판형 집열기</h4><p>투명 덮개 아래 흡수판과 유로가 하나의 평판 모듈로 구성됩니다. 단순한 구조와 넓은 유효 흡수면이 특징입니다.</p><dl><div><dt>구조</dt><dd>흡수판·유로 일체형</dd></div><div><dt>설계 반영</dt><dd>평판형 효율곡선</dd></div></dl></div></article></div><p className="collector-note">두 형식은 같은 면적이라도 입사 일사량과 작동온도에 따른 유효 열생산량이 달라지므로, SALDDP는 선택 형식별 계산 결과로 최소 집열기 면적을 제시합니다.</p></aside>}
       <div className="scene-hint">설비 번호를 선택해 세부 계산 범위를 확인하세요</div>
       </div>
       </div>
