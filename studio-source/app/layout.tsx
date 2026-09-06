@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SALDOP — Solar-Assisted Liquid Desiccant Design Studio",
+  title: "SALDDP — Solar Assisted Liquid Desiccant Design Program",
   description: "기상조건과 건물 외기부하를 바탕으로 LD 운전과 태양열 집열 면적을 탐색하는 초기 설계 가이드",
   icons: {
     icon: "/favicon.svg",

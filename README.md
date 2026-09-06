@@ -1,4 +1,4 @@
-# Solar-Assisted Liquid Desiccant Optimization Program Prototype
+# Solar Assisted Liquid Desiccant Design Program
 
 태양열 재생 Liquid Desiccant 시스템의 초기 설계 변수를 입력하고, 목표 급기 절대습도와 처리풍량에 대해 필요한 재생열량, 집열기 면적, 축열조 용량을 산정하는 웹앱 프로토타입입니다.
 

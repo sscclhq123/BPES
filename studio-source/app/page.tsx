@@ -81,7 +81,7 @@ export default function Home() {
 
   useEffect(() => {
     const receiveResult = (event:MessageEvent) => {
-      if (event.origin !== "https://saldop.vercel.app") return;
+      if (!["https://salddp.vercel.app","https://saldop.vercel.app"].includes(event.origin)) return;
       if (event.data?.type === "saldop:calculation-complete") {
         setResultSummary(event.data.summary as CalculationSummary);
         setCalculationError("");
@@ -103,7 +103,7 @@ export default function Home() {
     const params = new URLSearchParams({ ...Object.fromEntries(Object.entries(design).filter(([k,v])=>!["weatherDatasets","simulationMonths"].includes(k)&&v!=="").map(([k,v]) => [k,String(v)])), autorun:design.weatherMode === "standard" ? "1" : "0" });
     design.weatherDatasets.forEach((dataset)=>params.append("weatherDataset",dataset));
     design.simulationMonths.forEach((month)=>params.append("simulationMonth",String(month)));
-    return `https://saldop.vercel.app/engine/?${params.toString()}`;
+    return `${window.location.origin}/engine/?${params.toString()}`;
   }, [design]);
 
   if (view === "result" && resultSummary) return <ResultOverview summary={resultSummary} design={design} onReset={reset} />;
@@ -113,11 +113,11 @@ export default function Home() {
       <Logo reset={reset} />
       <section className="anime-hero screen-reveal">
         <div className="intro-copy">
-          <p className="kicker">SOLAR LIQUID DESICCANT SYSTEM DESIGN PROGRAM</p>
+          <p className="kicker">SOLAR ASSISTED LIQUID DESICCANT DESIGN PROGRAM</p>
           <h1 className="acronym-title">
             <span><em>S</em>olar-<em>A</em>ssisted</span>
             <span><em>L</em>iquid <em>D</em>esiccant</span>
-            <span><em>O</em>perational Design <em>P</em>rogram.</span>
+            <span><em>D</em>esign <em>P</em>rogram.</span>
           </h1>
           <p className="lede">표준 기상데이터와 건물 용도별 최소 외기도입량을 바탕으로 LD 제습·재생 운전조건을 계산하고, 목표 재생열 커버율에 필요한 태양열 집열기 면적을 제시하는 초기 설계 가이드입니다.</p>
         </div>
@@ -151,13 +151,13 @@ export default function Home() {
         )}
         <ProgressDial progress={progress} mode={view === "calculating" ? "calculating" : step === 3 ? "ready" : "wizard"} onCalculate={startCalculation} calculateEnabled={design.targetSolarShare!==""&&design.targetSolarShare>0&&design.targetSolarShare<=100} onNext={view === "wizard" && step < 3 && (step!==1 || design.buildingInputMode!=="template" || Boolean(design.buildingUse&&design.buildingSize)) && !(step===2&&ldRangeError) ? ()=>setStep(step+1) : undefined} onPrev={view === "wizard" && step > 0 ? ()=>setStep(step-1) : undefined} buildingUse={design.buildingUse} buildingSize={design.buildingSize} ldError={step===2&&ldRangeError} />
       </section>
-      {view==="calculating"&&<><iframe className="calculation-frame" title="SALDOP 계산 엔진" src={appUrl} onLoad={(event)=>{if(design.weatherMode==="upload"&&weatherFile)event.currentTarget.contentWindow?.postMessage({type:"saldop:weather-file",file:weatherFile},"https://saldop.vercel.app");}}/><div className={`calculation-error${calculationError?" visible":""}`}>{calculationError}</div></>}
+      {view==="calculating"&&<><iframe className="calculation-frame" title="SALDDP 계산 엔진" src={appUrl} onLoad={(event)=>{if(design.weatherMode==="upload"&&weatherFile)event.currentTarget.contentWindow?.postMessage({type:"saldop:weather-file",file:weatherFile},window.location.origin);}}/><div className={`calculation-error${calculationError?" visible":""}`}>{calculationError}</div></>}
       <nav className="step-rail">{steps.map((item,index)=><button key={item.no} className={index===step&&view==="wizard"?"active":index<progress?"done":""} onClick={()=>{if(view==="wizard")setStep(index)}}><span>{item.no}</span>{item.label}</button>)}</nav>
     </main>
   );
 }
 
-function Logo({ reset, progress=0 }:{ reset:()=>void; progress?:number }) { return <header className="intro-nav screen-reveal"><button className="logo-button" onClick={(event)=>{event.stopPropagation();reset();}}>SALDOP<span>°</span></button><p>Solar + LD<br />Design engine</p><div><span>{String(progress).padStart(2,"0")}</span><i style={{"--progress":`${progress*25}%`} as React.CSSProperties}/><span>04</span></div></header>; }
+function Logo({ reset, progress=0 }:{ reset:()=>void; progress?:number }) { return <header className="intro-nav screen-reveal"><button className="logo-button" onClick={(event)=>{event.stopPropagation();reset();}}>SALDDP<span>°</span></button><p>Solar + LD<br />Design program</p><div><span>{String(progress).padStart(2,"0")}</span><i style={{"--progress":`${progress*25}%`} as React.CSSProperties}/><span>04</span></div></header>; }
 
 function SystemOverview({onBack,onNext,reset}:{onBack:()=>void;onNext:()=>void;reset:()=>void}) {
   const schematicDetails = [
@@ -170,7 +170,7 @@ function SystemOverview({onBack,onNext,reset}:{onBack:()=>void;onNext:()=>void;r
   const [activeDetail,setActiveDetail] = useState(0);
   const detail = schematicDetails[activeDetail];
   return <main className="entry overview-screen"><Logo reset={reset}/><section className="system-overview screen-reveal"><header><div><span>SYSTEM DEFINITION</span><h2>SYSTEM SCHEMATIC</h2></div><small>INTRODUCTION · 00 / 04</small></header>
-    <div className="system-scene" aria-label="SALDOP 시스템 구성도">
+    <div className="system-scene" aria-label="SALDDP 시스템 구성도">
       <div className="scene-visual">
       <div className={`scene-canvas${activeDetail===2?" ld-detail-open":""}`}>
       <svg className="scene-art" viewBox="-120 0 1360 560" role="img" aria-label="외기, 건물, LD 외조기, 태양열 집열기와 축열조의 연결 구성">
@@ -229,7 +229,7 @@ function SystemOverview({onBack,onNext,reset}:{onBack:()=>void;onNext:()=>void;r
 }
 
 function ProgressDial({progress,mode,onCalculate,calculateEnabled=true,onNext,onPrev,buildingUse,buildingSize,ldError=false}:{progress:number;mode:string;onCalculate?:()=>void;calculateEnabled?:boolean;onNext?:()=>void;onPrev?:()=>void;buildingUse?:string;buildingSize?:string;ldError?:boolean}) {
-  const stageIcons = ["SALDOP", "☼", "▦", "◉", "☀"];
+  const stageIcons = ["SALDDP", "☼", "▦", "◉", "☀"];
   const buildingIcons:Record<string,string> = {office:"🏢",mall:"🏬",residential:"🏠",hospital:"🏥",factory:"🏭",agriculture:"🌿"};
   const buildingLabels:Record<string,string> = {office:"OFFICE",mall:"RETAIL",residential:"RESIDENTIAL",hospital:"HOSPITAL",factory:"INDUSTRIAL",agriculture:"AGRICULTURE"};
   return <div className={`energy-dial dial-${mode} screen-reveal`} style={{"--filled":progress} as React.CSSProperties}>
@@ -291,7 +291,7 @@ function ResultOverview({summary,design,onReset}:{summary:CalculationSummary;des
   const heatmapHours=heatmapMode==="reg"||design.operationHours===24?Array.from({length:24},(_,hour)=>hour):Array.from({length:Math.min(design.operationHours,15)},(_,index)=>9+index);
   const heatmapColumns=`42px repeat(${heatmapHours.length},minmax(15px,1fr))`;
   return <main className="result-screen">
-    <header className="result-nav"><button onClick={onReset}>SALDOP<span>°</span></button><div><strong>CALCULATION COMPLETE</strong><small>{summary.regions.length}개 지역 분석 완료{summary.failedCount?` · ${summary.failedCount}개 실패`:""}</small></div></header>
+    <header className="result-nav"><button onClick={onReset}>SALDDP<span>°</span></button><div><strong>CALCULATION COMPLETE</strong><small>{summary.regions.length}개 지역 분석 완료{summary.failedCount?` · ${summary.failedCount}개 실패`:""}</small></div></header>
     <section className="result-heading"><div><p>DESIGN OUTPUT · {primary.label}</p><div className="result-title-row"><h1>설계 결과 <em>요약</em></h1>{summary.regions.length>1&&<label className="summary-region-select"><span>요약 지역</span><select value={summaryRegionKey} onChange={e=>{const key=e.target.value;setSummaryRegionKey(key);setWeatherRegionKey(key);setHeatmapRegionKey(key);setSelectedHeatmapMonth(null)}}>{summary.regions.map(region=><option key={region.key} value={region.key}>{region.label}</option>)}</select></label>}</div></div><p>핵심 성능과 월별 에너지 흐름을 요약했습니다. 아래 결과 항목을 선택하면 이 화면 안에서 상세 그래프와 시간별 데이터를 이어서 확인할 수 있습니다.</p></section>
     <section className="metric-grid">
       <article><span>REQUIRED AREA</span><b>{n(best.collectorArea).toLocaleString(undefined,{maximumFractionDigits:1})}</b><small>m² · 최소 집열기 면적</small></article>
