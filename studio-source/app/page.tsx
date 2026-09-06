@@ -162,6 +162,7 @@ function SystemOverview({onBack,onNext,reset}:{onBack:()=>void;onNext:()=>void;r
   return <main className="entry overview-screen"><Logo reset={reset}/><section className="system-overview screen-reveal"><header><div><span>SYSTEM DEFINITION</span><h2>SYSTEM SCHEMATIC</h2></div><small>INTRODUCTION · 00 / 04</small></header>
     <div className="system-scene" aria-label="SALDOP 시스템 구성도">
       <div className="scene-visual">
+      <div className="scene-canvas">
       <svg className="scene-art" viewBox="-120 0 1360 560" role="img" aria-label="외기, 건물, LD 외조기, 태양열 집열기와 축열조의 연결 구성">
         <defs>
           <linearGradient id="buildingFace" x1="0" x2="1"><stop stopColor="#343833"/><stop offset="1" stopColor="#20231f"/></linearGradient>
@@ -196,7 +197,9 @@ function SystemOverview({onBack,onNext,reset}:{onBack:()=>void;onNext:()=>void;r
         </g>
       </svg>
       {schematicDetails.map((item,index)=><button key={item.no} className={`scene-hotspot hotspot-${["weather","building","ld","solar","tes"][index]}${activeDetail===index?" selected":""}`} aria-label={`${item.no} ${item.label}`} onMouseEnter={()=>setActiveDetail(index)} onFocus={()=>setActiveDetail(index)} onClick={()=>setActiveDetail(index)}><b>{item.no}</b><em>{item.label}</em></button>)}
-      <div className="scene-hint">설비 위에 커서를 올려 세부 계산 범위를 확인하세요</div>
+      {activeDetail===2&&<aside className="ld-mini-schematic" aria-label="LD 제습 및 재생 내부 구성"><header><span>LIQUID DESICCANT LOOP</span><b>LD 제습·재생 흐름</b></header><svg viewBox="0 0 330 145" role="img"><defs><marker id="ldMiniArrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7Z"/></marker></defs><rect x="8" y="38" width="82" height="68" rx="8"/><rect x="240" y="38" width="82" height="68" rx="8"/><path className="ld-mini-flow solution" d="M90 58C135 18 195 18 240 58" markerEnd="url(#ldMiniArrow)"/><path className="ld-mini-flow return" d="M240 87C195 126 135 126 90 87" markerEnd="url(#ldMiniArrow)"/><path className="ld-mini-flow air" d="M0 72H44M54 72H105" markerEnd="url(#ldMiniArrow)"/><path className="ld-mini-flow heat" d="M225 72H274M284 72H330" markerEnd="url(#ldMiniArrow)"/><circle cx="165" cy="72" r="27"/><text x="49" y="64">ABS</text><text x="49" y="82">제습</text><text x="281" y="64">REG</text><text x="281" y="82">재생</text><text x="165" y="68">LiCl</text><text x="165" y="84">TANK</text><text className="mini-caption" x="165" y="15">농축용액</text><text className="mini-caption" x="165" y="140">희석용액</text></svg></aside>}
+      <div className="scene-hint">설비 번호를 선택해 세부 계산 범위를 확인하세요</div>
+      </div>
       </div>
       <aside className="scene-detail-panel" aria-live="polite"><b>{detail.no}</b><div><span>{detail.label}</span><h3>{detail.title}</h3><p>{detail.body}</p></div></aside>
     </div>
