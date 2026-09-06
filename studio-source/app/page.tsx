@@ -208,7 +208,7 @@ function SystemOverview({onBack,onNext,reset}:{onBack:()=>void;onNext:()=>void;r
         <text className="transfer-copy" x="365" y="172">용액 → 공기</text>
         <path className="ld-mini-flow solution rich" d="M365 55V29H155V55" markerEnd="url(#ldArrowGreen)"/><text className="solution-copy" x="260" y="20">농축 LiCl 용액 · 제습부로 공급</text>
         <path className="ld-mini-flow solution weak" d="M155 181V211H365V181" markerEnd="url(#ldArrowGreen)"/><text className="solution-copy" x="260" y="226">희석 LiCl 용액 · 재생부로 이동</text>
-        <path className="ld-mini-flow heat-in" d="M365 265V190" markerEnd="url(#ldArrowRed)"/><text className="heat-copy" x="365" y="253">태양열 / TES 재생열</text>
+        <path className="ld-mini-flow heat-in" d="M365 265V190" markerEnd="url(#ldArrowRed)"/><text className="heat-copy" x="442" y="246">태양열 · TES</text><text className="heat-copy" x="442" y="262">재생열 공급</text>
       </svg><div className="ld-mini-legend"><span className="humid">습한 외기</span><span className="dry">건조 급기</span><span className="solution">LiCl 용액</span><span className="moisture">수분 이동</span><span className="heat">열 공급</span></div></aside>}
       <div className="scene-hint">설비 번호를 선택해 세부 계산 범위를 확인하세요</div>
       </div>
