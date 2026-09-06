@@ -70,23 +70,22 @@ const weatherDatasets = {
     outdoorTemp: 13, humidity: 70, irradiance: 4.2,
     latitude: 37.4778, longitude: 126.625, suitability: 66,
   },
+  ulsan_tmyx: {
+    label: "울산 · TMYx 2011–2025", source: "KOR_UL_Ulsan.471520_TMYx.2011-2025.epw",
+    method: "Climate.OneBuilding TMYx EPW · ASHRAE 169-2021 CZ 4A",
+    outdoorTemp: 15, humidity: 66, irradiance: 4.6, latitude: 35.593, longitude: 129.352, suitability: 68,
+  },
+  sejong_tmyx: {
+    label: "세종 · 대전 TMY 대체", source: "KOR_TJ_Daejeon.WS.471330_TMYx.2011-2025.epw",
+    method: "세종 전용 TMYx 부재 · 인접 대전 관측자료 대체 · ASHRAE 169-2021 CZ 4A",
+    outdoorTemp: 13, humidity: 65, irradiance: 4.2, latitude: 36.48, longitude: 127.289, suitability: 62,
+  },
   jeju_tmyx: {
     label: "제주 · TMYx 2011–2025",
     source: "KOR_CJ_Jeju.WS.471840_TMYx.2011-2025.epw",
     method: "Climate.OneBuilding TMYx EPW",
     outdoorTemp: 17, humidity: 73, irradiance: 4.4,
     latitude: 33.5142, longitude: 126.5297, suitability: 73,
-  },
-  bangkok_tmy: {
-    label: "방콕 · TMYx 2011–2025",
-    source: "THA_CRG_Bangkok.Metropolis.484550_TMYx.2011-2025.epw",
-    method: "Climate.OneBuilding TMYx EPW",
-    outdoorTemp: 34,
-    humidity: 78,
-    irradiance: 5.1,
-    latitude: 13.75,
-    longitude: 100.5,
-    suitability: 87,
   },
   manila_tmy: {
     label: "마닐라 · TMYx 2011–2025",
@@ -99,40 +98,25 @@ const weatherDatasets = {
     longitude: 120.98,
     suitability: 83,
   },
-  cebu_tmyx: {
-    label: "세부 · TMYx 2011–2025",
-    source: "PHL_CNV_Mactan-Cebu.Intl.AP.986460_TMYx.2011-2025.epw",
-    method: "Climate.OneBuilding TMYx EPW",
-    outdoorTemp: 28, humidity: 81, irradiance: 4.9,
-    latitude: 10.3224, longitude: 123.98, suitability: 86,
+  hanoi_tmyx: {
+    label: "하노이 · TMYx 2011–2025", source: "VNM_NVN_Hanoi-Noi.Bai.Intl.AP.488200_TMYx.2011-2025.epw",
+    method: "Climate.OneBuilding TMYx EPW · ASHRAE 169-2021 CZ 1A",
+    outdoorTemp: 24, humidity: 79, irradiance: 4.2, latitude: 21.221, longitude: 105.807, suitability: 82,
   },
-  chiang_mai_tmyx: {
-    label: "치앙마이 · TMYx 2011–2025",
-    source: "THA_NRG_Chiang.Mai.Intl.AP.483270_TMYx.2011-2025.epw",
-    method: "Climate.OneBuilding TMYx EPW",
-    outdoorTemp: 26, humidity: 69, irradiance: 5.2,
-    latitude: 18.7714, longitude: 98.9692, suitability: 79,
+  houston_tmyx: {
+    label: "휴스턴 · TMYx 2011–2025", source: "USA_TX_Houston-Bush.Intercontinental.AP.722430_TMYx.2011-2025.epw",
+    method: "Climate.OneBuilding TMYx EPW · ASHRAE 169-2021 CZ 2A",
+    outdoorTemp: 22, humidity: 75, irradiance: 4.8, latitude: 29.98, longitude: -95.36, suitability: 76,
   },
-  singapore_tmyx: {
-    label: "싱가포르 · TMYx 2011–2025",
-    source: "SGP_SG_Singapore-Changi.Intl.AP.486980_TMYx.2011-2025.epw",
-    method: "Climate.OneBuilding TMYx EPW",
-    outdoorTemp: 28, humidity: 82, irradiance: 4.6,
-    latitude: 1.3678, longitude: 103.9826, suitability: 90,
+  shanghai_tmyx: {
+    label: "상하이 · TMYx 2011–2025", source: "CHN_SH_Shanghai-Pudong.Intl.AP.583211_TMYx.2011-2025.epw",
+    method: "Climate.OneBuilding TMYx EPW · ASHRAE 169-2021 CZ 3A",
+    outdoorTemp: 17, humidity: 74, irradiance: 4.0, latitude: 31.143, longitude: 121.805, suitability: 70,
   },
-  amsterdam_tmyx: {
-    label: "암스테르담 · TMYx 2011–2025",
-    source: "NLD_NH_Amsterdam-Schipol.AP.062400_TMYx.2011-2025.epw",
-    method: "Climate.OneBuilding TMYx EPW",
-    outdoorTemp: 11, humidity: 78, irradiance: 2.8,
-    latitude: 52.3172, longitude: 4.7897, suitability: 42,
-  },
-  rotterdam_tmyx: {
-    label: "로테르담 · TMYx 2011–2025",
-    source: "NLD_ZH_Rotterdam.The.Hague.AP.063440_TMYx.2011-2025.epw",
-    method: "Climate.OneBuilding TMYx EPW",
-    outdoorTemp: 11, humidity: 79, irradiance: 2.9,
-    latitude: 51.9606, longitude: 4.4469, suitability: 43,
+  berlin_tmyx: {
+    label: "베를린 · TMYx 2011–2025", source: "DEU_BE_Berlin-Dahlem.103810_TMYx.2011-2025.epw",
+    method: "Climate.OneBuilding TMYx EPW · ASHRAE 169-2021 CZ 5A",
+    outdoorTemp: 10, humidity: 76, irradiance: 3.0, latitude: 52.458, longitude: 13.317, suitability: 40,
   },
 };
 
@@ -185,14 +169,14 @@ const comparisonRegions = {
   gwangju_tmyx: { label: "광주 · 대한민국", humidity: 70.1, irradiance: 5.02, latitude: 35.1731, suitability: 69 },
   daegu_tmyx: { label: "대구 · 대한민국", humidity: 63.5, irradiance: 4.87, latitude: 35.8283, suitability: 64 },
   incheon_tmyx: { label: "인천 · 대한민국", humidity: 71.6, irradiance: 4.94, latitude: 37.4778, suitability: 68 },
+  ulsan_tmyx: { label: "울산 · 대한민국", humidity: 66.0, irradiance: 4.60, latitude: 35.593, suitability: 68 },
+  sejong_tmyx: { label: "세종 · 대한민국(대전 TMY 대체)", humidity: 69.1, irradiance: 4.93, latitude: 36.48, suitability: 66 },
   jeju_tmyx: { label: "제주 · 대한민국", humidity: 70.8, irradiance: 4.76, latitude: 33.5142, suitability: 73 },
   manila_tmy: { label: "마닐라 · 필리핀", humidity: 77.6, irradiance: 6.15, latitude: 14.509, suitability: 85 },
-  cebu_tmyx: { label: "세부 · 필리핀", humidity: 79.8, irradiance: 6.66, latitude: 10.3224, suitability: 88 },
-  bangkok_tmy: { label: "방콕 · 태국", humidity: 72.4, irradiance: 6.71, latitude: 13.7264, suitability: 87 },
-  chiang_mai_tmyx: { label: "치앙마이 · 태국", humidity: 68.4, irradiance: 6.42, latitude: 18.7714, suitability: 81 },
-  singapore_tmyx: { label: "싱가포르 · 싱가포르", humidity: 80.0, irradiance: 6.39, latitude: 1.3678, suitability: 90 },
-  amsterdam_tmyx: { label: "암스테르담 · 네덜란드", humidity: 79.9, irradiance: 3.03, latitude: 52.3172, suitability: 42 },
-  rotterdam_tmyx: { label: "로테르담 · 네덜란드", humidity: 79.6, irradiance: 3.05, latitude: 51.9606, suitability: 43 },
+  hanoi_tmyx: { label: "하노이 · 베트남", humidity: 79.0, irradiance: 4.20, latitude: 21.221, suitability: 82 },
+  houston_tmyx: { label: "휴스턴 · 미국", humidity: 75.0, irradiance: 4.80, latitude: 29.98, suitability: 76 },
+  shanghai_tmyx: { label: "상하이 · 중국", humidity: 74.0, irradiance: 4.00, latitude: 31.143, suitability: 70 },
+  berlin_tmyx: { label: "베를린 · 독일", humidity: 76.0, irradiance: 3.00, latitude: 52.458, suitability: 40 },
 };
 
 const loadDatasets = {

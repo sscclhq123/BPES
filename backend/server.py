@@ -37,14 +37,14 @@ WEATHER_DATASETS = {
     "gwangju_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_KJ_Gwangju.471560_TMYx.2011-2025.epw.gz",
     "daegu_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_TG_Daegu.471430_TMYx.2011-2025.epw.gz",
     "incheon_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_IN_Incheon.WS.471120_TMYx.2011-2025.epw.gz",
+    "ulsan_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_UL_Ulsan.471520_TMYx.2011-2025.epw.gz",
+    "sejong_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_TJ_Daejeon.WS.471330_TMYx.2011-2025.epw.gz",
     "jeju_tmyx": WEATHER_DATA_ROOT / "Korea" / "KOR_CJ_Jeju.WS.471840_TMYx.2011-2025.epw.gz",
     "manila_tmy": WEATHER_DATA_ROOT / "Philippines" / "PHL_NCR_Manila-Aquino.Intl.AP.984290_TMYx.2011-2025.epw.gz",
-    "cebu_tmyx": WEATHER_DATA_ROOT / "Philippines" / "PHL_CNV_Mactan-Cebu.Intl.AP.986460_TMYx.2011-2025.epw.gz",
-    "bangkok_tmy": WEATHER_DATA_ROOT / "Thailand" / "THA_CRG_Bangkok.Metropolis.484550_TMYx.2011-2025.epw.gz",
-    "chiang_mai_tmyx": WEATHER_DATA_ROOT / "Thailand" / "THA_NRG_Chiang.Mai.Intl.AP.483270_TMYx.2011-2025.epw.gz",
-    "singapore_tmyx": WEATHER_DATA_ROOT / "Singapore" / "SGP_SG_Singapore-Changi.Intl.AP.486980_TMYx.2011-2025.epw.gz",
-    "amsterdam_tmyx": WEATHER_DATA_ROOT / "Netherlands" / "NLD_NH_Amsterdam-Schipol.AP.062400_TMYx.2011-2025.epw.gz",
-    "rotterdam_tmyx": WEATHER_DATA_ROOT / "Netherlands" / "NLD_ZH_Rotterdam.The.Hague.AP.063440_TMYx.2011-2025.epw.gz",
+    "hanoi_tmyx": WEATHER_DATA_ROOT / "Vietnam" / "VNM_NVN_Hanoi-Noi.Bai.Intl.AP.488200_TMYx.2011-2025.epw.gz",
+    "houston_tmyx": WEATHER_DATA_ROOT / "USA" / "USA_TX_Houston-Bush.Intercontinental.AP.722430_TMYx.2011-2025.epw.gz",
+    "shanghai_tmyx": WEATHER_DATA_ROOT / "China" / "CHN_SH_Shanghai-Pudong.Intl.AP.583211_TMYx.2011-2025.epw.gz",
+    "berlin_tmyx": WEATHER_DATA_ROOT / "Germany" / "DEU_BE_Berlin-Dahlem.103810_TMYx.2011-2025.epw.gz",
 }
 DEFAULT_WEATHER = WEATHER_DATASETS["seoul_epw"]
 
@@ -1155,14 +1155,14 @@ def weather_preview(payload):
         "gwangju_tmyx": "광주 TMYx EPW · 2011-2025",
         "daegu_tmyx": "대구 TMYx EPW · 2011-2025",
         "incheon_tmyx": "인천 TMYx EPW · 2011-2025",
+        "ulsan_tmyx": "울산 TMYx EPW · 2011-2025",
+        "sejong_tmyx": "세종(대전 관측자료 대체) TMYx EPW · 2011-2025",
         "jeju_tmyx": "제주 TMYx EPW · 2011-2025",
         "manila_tmy": "마닐라 TMYx EPW · 2011-2025",
-        "cebu_tmyx": "세부 TMYx EPW · 2011-2025",
-        "bangkok_tmy": "방콕 TMYx EPW · 2011-2025",
-        "chiang_mai_tmyx": "치앙마이 TMYx EPW · 2011-2025",
-        "singapore_tmyx": "싱가포르 TMYx EPW · 2011-2025",
-        "amsterdam_tmyx": "암스테르담 TMYx EPW · 2011-2025",
-        "rotterdam_tmyx": "로테르담 TMYx EPW · 2011-2025",
+        "hanoi_tmyx": "하노이 TMYx EPW · 2011-2025",
+        "houston_tmyx": "휴스턴 TMYx EPW · 2011-2025",
+        "shanghai_tmyx": "상하이 TMYx EPW · 2011-2025",
+        "berlin_tmyx": "베를린 TMYx EPW · 2011-2025",
     }
     dataset_label = "사용자 업로드" if dataset.startswith("uploaded:") else dataset_labels.get(dataset, "표준 기상 데이터")
     return build_weather_preview_from_file(weather_file, f"{dataset_label} · {period_label(months)}", months)
