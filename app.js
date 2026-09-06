@@ -75,11 +75,6 @@ const weatherDatasets = {
     method: "Climate.OneBuilding TMYx EPW · ASHRAE 169-2021 CZ 4A",
     outdoorTemp: 15, humidity: 66, irradiance: 4.6, latitude: 35.593, longitude: 129.352, suitability: 68,
   },
-  sejong_tmyx: {
-    label: "세종 · 대전 TMY 대체", source: "KOR_TJ_Daejeon.WS.471330_TMYx.2011-2025.epw",
-    method: "세종 전용 TMYx 부재 · 인접 대전 관측자료 대체 · ASHRAE 169-2021 CZ 4A",
-    outdoorTemp: 13, humidity: 65, irradiance: 4.2, latitude: 36.48, longitude: 127.289, suitability: 62,
-  },
   jeju_tmyx: {
     label: "제주 · TMYx 2011–2025",
     source: "KOR_CJ_Jeju.WS.471840_TMYx.2011-2025.epw",
@@ -170,7 +165,6 @@ const comparisonRegions = {
   daegu_tmyx: { label: "대구 · 대한민국", humidity: 63.5, irradiance: 4.87, latitude: 35.8283, suitability: 64 },
   incheon_tmyx: { label: "인천 · 대한민국", humidity: 71.6, irradiance: 4.94, latitude: 37.4778, suitability: 68 },
   ulsan_tmyx: { label: "울산 · 대한민국", humidity: 66.0, irradiance: 4.60, latitude: 35.593, suitability: 68 },
-  sejong_tmyx: { label: "세종 · 대한민국(대전 TMY 대체)", humidity: 69.1, irradiance: 4.93, latitude: 36.48, suitability: 66 },
   jeju_tmyx: { label: "제주 · 대한민국", humidity: 70.8, irradiance: 4.76, latitude: 33.5142, suitability: 73 },
   manila_tmy: { label: "마닐라 · 필리핀", humidity: 77.6, irradiance: 6.15, latitude: 14.509, suitability: 85 },
   hanoi_tmyx: { label: "하노이 · 베트남", humidity: 79.0, irradiance: 4.20, latitude: 21.221, suitability: 82 },

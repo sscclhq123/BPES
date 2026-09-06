@@ -42,7 +42,7 @@ const regionGeo:Record<string,{name:string;country:string;coordinates:[number,nu
   seoul_epw:{name:"서울",country:"대한민국",coordinates:[126.978,37.5665],korea:true}, daejeon_tmyx:{name:"대전",country:"대한민국",coordinates:[127.3845,36.3504],korea:true},
   busan_tmyx:{name:"부산",country:"대한민국",coordinates:[129.0756,35.1796],korea:true}, gwangju_tmyx:{name:"광주",country:"대한민국",coordinates:[126.8526,35.1595],korea:true},
   daegu_tmyx:{name:"대구",country:"대한민국",coordinates:[128.6014,35.8714],korea:true}, incheon_tmyx:{name:"인천",country:"대한민국",coordinates:[126.7052,37.4563],korea:true},
-  ulsan_tmyx:{name:"울산",country:"대한민국",coordinates:[129.3114,35.5384],korea:true}, sejong_tmyx:{name:"세종",country:"대한민국",coordinates:[127.289,36.4801],korea:true},
+  ulsan_tmyx:{name:"울산",country:"대한민국",coordinates:[129.3114,35.5384],korea:true},
   jeju_tmyx:{name:"제주",country:"대한민국",coordinates:[126.5312,33.4996],korea:true}, manila_tmy:{name:"마닐라",country:"필리핀",coordinates:[120.9842,14.5995]},
   hanoi_tmyx:{name:"하노이",country:"베트남",coordinates:[105.807,21.221]}, houston_tmyx:{name:"휴스턴",country:"미국",coordinates:[-95.36,29.98]},
   shanghai_tmyx:{name:"상하이",country:"중국",coordinates:[121.805,31.143]}, berlin_tmyx:{name:"베를린",country:"독일",coordinates:[13.317,52.458]},
@@ -249,7 +249,7 @@ function ProgressDial({progress,mode,onCalculate,calculateEnabled=true,onNext,on
 
 function StepFields({step,design,update,weatherFile,onWeatherFile}:{step:number;design:Design;update:<K extends keyof Design>(key:K,value:Design[K])=>void;weatherFile:File|null;onWeatherFile:(file:File|null)=>void}) {
   if(step===0) {
-    const regions = [["seoul_epw","서울","4A"],["busan_tmyx","부산","3A"],["daegu_tmyx","대구","4A"],["incheon_tmyx","인천","4A"],["gwangju_tmyx","광주","4A"],["daejeon_tmyx","대전","4A"],["ulsan_tmyx","울산","4A"],["sejong_tmyx","세종","4A · 대전 TMY 대체"],["jeju_tmyx","제주","3A"],["manila_tmy","마닐라","0A"],["hanoi_tmyx","하노이","1A"],["houston_tmyx","휴스턴","2A"],["shanghai_tmyx","상하이","3A"],["berlin_tmyx","베를린","5A"]];
+    const regions = [["seoul_epw","서울","4A"],["busan_tmyx","부산","3A"],["daegu_tmyx","대구","4A"],["incheon_tmyx","인천","4A"],["gwangju_tmyx","광주","4A"],["daejeon_tmyx","대전","4A"],["ulsan_tmyx","울산","4A"],["jeju_tmyx","제주","3A"],["manila_tmy","마닐라","0A"],["hanoi_tmyx","하노이","1A"],["houston_tmyx","휴스턴","2A"],["shanghai_tmyx","상하이","3A"],["berlin_tmyx","베를린","5A"]];
     const toggleRegion = (key:string) => {
       const selected = design.weatherDatasets.includes(key) ? design.weatherDatasets.filter(item=>item!==key) : [...design.weatherDatasets,key];
       if (!selected.length) return;
