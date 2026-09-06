@@ -204,8 +204,8 @@ function SystemOverview({onBack,onNext,reset}:{onBack:()=>void;onNext:()=>void;r
         <path className="ld-mini-flow dry-air" d="M218 136H286" markerEnd="url(#ldArrowCyan)"/><text className="flow-copy dry" x="252" y="116">건조 급기</text><text className="flow-meta" x="252" y="153">건물로 공급</text>
         <path className="ld-mini-flow regen-in" d="M512 105H428" markerEnd="url(#ldArrowYellow)"/><text className="flow-copy regen-in" x="470" y="89">외기 유입</text>
         <path className="ld-mini-flow regen-air" d="M428 145H512" markerEnd="url(#ldArrowBlue)"/><text className="flow-copy moisture-out" x="470" y="132">습윤 배기</text><text className="flow-meta" x="470" y="162">용액 수분을 외부로 배출</text>
-        <path className="ld-moisture absorb" d="M155 109V158" markerEnd="url(#ldArrowBlue)"/><text className="transfer-copy" x="155" y="172">공기 → 용액</text>
-        <path className="ld-moisture release" d="M365 158V109" markerEnd="url(#ldArrowBlue)"/><text className="transfer-copy" x="365" y="172">용액 → 공기</text>
+        <text className="transfer-copy" x="155" y="172">공기 → 용액</text>
+        <text className="transfer-copy" x="365" y="172">용액 → 공기</text>
         <path className="ld-mini-flow solution rich" d="M365 55V29H155V55" markerEnd="url(#ldArrowGreen)"/><text className="solution-copy" x="260" y="20">농축 LiCl 용액 · 제습부로 공급</text>
         <path className="ld-mini-flow solution weak" d="M155 181V211H365V181" markerEnd="url(#ldArrowGreen)"/><text className="solution-copy" x="260" y="226">희석 LiCl 용액 · 재생부로 이동</text>
         <path className="ld-mini-flow heat-in" d="M365 265V190" markerEnd="url(#ldArrowRed)"/><text className="heat-copy" x="365" y="253">태양열 / TES 재생열</text>
