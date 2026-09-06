@@ -454,9 +454,8 @@ button,a { font:inherit; } button { cursor:pointer; }
 .monthly-card .monthly-bars{padding-top:22px;background:repeating-linear-gradient(to bottom,#e2e9e5 0 1px,transparent 1px 68px)}
 .monthly-card .month-group>div{position:relative;gap:9px}
 .monthly-card .month-group i{width:min(20px,40%);min-height:0;border-radius:7px 7px 2px 2px}
-.monthly-card .month-group i[data-value]:before{top:-18px;left:50%;font-size:11px;line-height:1;transform:none}
-.monthly-card .month-group i:first-child[data-value]:before{top:-18px;transform:translateX(calc(-100% - 4px));text-align:right}
-.monthly-card .month-group i:nth-child(2)[data-value]:before{transform:translateX(4px);text-align:left}
+.monthly-card .month-group i[data-value]:before{top:-17px;left:50%;font-size:10px;line-height:1;transform:translateX(-50%);text-align:center}
+.monthly-card .month-group i:first-child[data-value]:before,.monthly-card .month-group i:nth-child(2)[data-value]:before{top:-17px;left:50%;transform:translateX(-50%);text-align:center}
 .monthly-card .month-group span{font-size:12px}
 .monthly-card .bar-y-ticks,.monthly-card .bar-y-title,.monthly-card .bar-x-title{font-size:12px}
 .weather-card{padding:30px;overflow:hidden}
