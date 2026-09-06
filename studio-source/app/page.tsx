@@ -38,6 +38,16 @@ const steps = [
   { no: "04", label: "SOLAR / TES", title: "태양열 목표를 설정하세요", copy: "목표 재생열 커버율과 TES 온도조건을 입력합니다." },
 ];
 
+const regionGeo:Record<string,{name:string;country:string;world:[number,number];korea?:[number,number]}>= {
+  seoul_epw:{name:"서울",country:"대한민국",world:[824,196],korea:[246,100]}, daejeon_tmyx:{name:"대전",country:"대한민국",world:[823,204],korea:[250,240]},
+  busan_tmyx:{name:"부산",country:"대한민국",world:[830,211],korea:[345,342]}, gwangju_tmyx:{name:"광주",country:"대한민국",world:[818,211],korea:[205,330]},
+  daegu_tmyx:{name:"대구",country:"대한민국",world:[827,207],korea:[330,270]}, incheon_tmyx:{name:"인천",country:"대한민국",world:[821,196],korea:[205,115]},
+  jeju_tmyx:{name:"제주",country:"대한민국",world:[820,220],korea:[225,432]}, manila_tmy:{name:"마닐라",country:"필리핀",world:[790,302]},
+  cebu_tmyx:{name:"세부",country:"필리핀",world:[798,321]}, bangkok_tmy:{name:"방콕",country:"태국",world:[735,291]},
+  chiang_mai_tmyx:{name:"치앙마이",country:"태국",world:[727,266]}, singapore_tmyx:{name:"싱가포르",country:"싱가포르",world:[756,363]},
+  amsterdam_tmyx:{name:"암스테르담",country:"네덜란드",world:[486,160]}, rotterdam_tmyx:{name:"로테르담",country:"네덜란드",world:[482,166]},
+};
+
 export default function Home() {
   const [view, setView] = useState<View>("intro");
   const [step, setStep] = useState(0);
@@ -275,7 +285,6 @@ function ResultOverview({summary,design,onReset}:{summary:CalculationSummary;des
   const coverage=n(best.monthlyMinimumCoverage)*100; const dehum=n(best.dehumidificationAchievement)*100;
   const monthly=primary.monthly||[]; const monthlyMax=Math.max(1,...monthly.flatMap(item=>[n(item.load),n(item.solar)]));
   const monthlyTicks=Array.from({length:5},(_,index)=>monthlyMax*(4-index)/4);
-  const regionMax=Math.max(1,...summary.regions.map(item=>n(item.best.collectorArea)));
   const unmet=primary.unmetTrend||{}; const averageExcess=n(unmet.averageHumidityExcess); const heatmap=(heatmapMode==="abs"?heatmapRegion.ldUsageHeatmap:heatmapRegion.regUsageHeatmap)||[];
   const [selectedHeatmapMonth,setSelectedHeatmapMonth]=useState<number|null>(null);
   const heatmapRows=selectedHeatmapMonth===null?heatmap.map(row=>({label:`${row.month}월`,hours:row.hours,month:row.month})):((heatmap.find(row=>row.month===selectedHeatmapMonth)?.weeks)||[]).map(row=>({label:`${row.week}주차`,hours:row.hours,month:selectedHeatmapMonth}));
@@ -299,12 +308,41 @@ function ResultOverview({summary,design,onReset}:{summary:CalculationSummary;des
       <HeatmapDrilldown key={primary.key} regions={summary.regions} primaryKey={primary.key} operationHours={design.operationHours}/>
       <WeatherChart region={weatherRegion} regions={summary.regions} selectedKey={weatherRegionKey} onSelect={setWeatherRegionKey}/>
       <ConcentrationChart monthly={monthly} drilldown={primary.solutionConcentrationDrilldown||[]} region={primary.label}/>
-      <article className="chart-card region-card"><header><div><span>REGIONAL COMPARISON</span><h2>지역별 최소 집열기 면적</h2></div></header><div className="region-bars">{summary.regions.map((item,index)=><div key={item.key}><span>{item.label.split(" · ")[0]}</span><i><b style={{width:`${n(item.best.collectorArea)/regionMax*100}%`,"--region":index} as React.CSSProperties}/></i><strong>{n(item.best.collectorArea).toLocaleString(undefined,{maximumFractionDigits:0})} m²</strong></div>)}</div></article>
+      <GeographicAnalysis regions={summary.regions} selectedKey={primary.key} onSelect={key=>{setSummaryRegionKey(key);setWeatherRegionKey(key);setHeatmapRegionKey(key);setSelectedHeatmapMonth(null)}}/>
       <article className="chart-card decision-card"><span>DESIGN DECISION</span><h2>목표 커버율 {design.targetSolarShare}% 기준</h2><p>{Boolean(best.targetAchieved)?"입력한 목표를 만족하는 최소 집열기 면적을 찾았습니다.":"설정 조건에서 목표를 완전히 만족하지 못했습니다. 상세 결과에서 지배월과 보조열원을 확인하세요."}</p><button onClick={()=>setShowOptions(value=>!value)}>확인할 상세 결과 선택 <i>{showOptions?"−":"＋"}</i></button></article>
     </section>
     {showOptions&&<section className="result-options"><header><div><span>DETAIL OPTIONS</span><h2>추가로 확인할 결과를 선택하세요.</h2></div><button onClick={()=>setShowOptions(false)}>닫기 ×</button></header><div><button onClick={()=>{setSelectedDetail("dehum");setShowOptions(false)}}><b>01</b><strong>월별 목표·실제 제습량</strong><small>목표, 허용 최소, 실제 제습량과 달성률 비교</small><i>↓</i></button><button onClick={()=>{setSelectedDetail("unmet");setShowOptions(false)}}><b>02</b><strong>목표 제습 미충족 추이</strong><small>급기 절대습도, 평균·최대 초과량과 발생시각</small><i>↓</i></button><button onClick={()=>{setSelectedDetail("area");setShowOptions(false)}}><b>03</b><strong>집열기 면적별 재생열 커버율</strong><small>면적 후보별 실사용 커버율과 보조열원 비교</small><i>↓</i></button><button disabled><b>04</b><strong>TES 용량 및 시간별 상태</strong><small>성층화·손실·용량 산정 모델 추후 업데이트</small><i>SOON</i></button></div></section>}
     {selectedDetail&&<InlineDetail type={selectedDetail} region={primary} onClose={()=>setSelectedDetail("")} />}
   </main>;
+}
+
+function GeographicAnalysis({regions,selectedKey,onSelect}:{regions:CalculationRegion[];selectedKey:string;onSelect:(key:string)=>void}) {
+  type MetricKey="collectorArea"|"coverage"|"dehum"|"unmet";
+  const [mapMode,setMapMode]=useState<"world"|"korea">("world");
+  const [metric,setMetric]=useState<MetricKey>("collectorArea");
+  const metrics:Record<MetricKey,{label:string;unit:string;value:(region:CalculationRegion)=>number;digits:number}>={
+    collectorArea:{label:"최소 집열기 면적",unit:"m²",value:region=>Number(region.best.collectorArea)||0,digits:0},
+    coverage:{label:"월별 최저 커버율",unit:"%",value:region=>(Number(region.best.monthlyMinimumCoverage)||0)*100,digits:1},
+    dehum:{label:"제습 달성률",unit:"%",value:region=>(Number(region.best.dehumidificationAchievement)||0)*100,digits:1},
+    unmet:{label:"미충족 시간",unit:"h",value:region=>Number(region.best.unmetHours)||0,digits:0},
+  };
+  const meta=metrics[metric];
+  const mapped=regions.map(region=>({region,geo:regionGeo[region.key],value:meta.value(region)})).filter(item=>item.geo&&(mapMode==="world"||item.geo.korea));
+  const max=Math.max(1,...mapped.map(item=>item.value)),min=mapped.length?Math.min(...mapped.map(item=>item.value)):0;
+  const radius=(value:number)=>(mapMode==="world"?6:8)+Math.sqrt(Math.max(0,value)/max)*(mapMode==="world"?10:15);
+  const ranked=[...mapped].sort((a,b)=>b.value-a.value);
+  const format=(value:number)=>value.toLocaleString(undefined,{minimumFractionDigits:meta.digits,maximumFractionDigits:meta.digits});
+  return <article className="chart-card geo-card">
+    <header><div><span>GEOGRAPHIC PERFORMANCE</span><h2>지역별 설계 성능 지도</h2><small>지도 표식과 순위표를 선택하면 해당 지역의 전체 결과 요약으로 전환됩니다.</small></div><div className="geo-controls"><div className="geo-map-tabs"><button className={mapMode==="world"?"selected":""} onClick={()=>setMapMode("world")}>WORLD</button><button className={mapMode==="korea"?"selected":""} onClick={()=>setMapMode("korea")}>KOREA</button></div><label>분석 지표<select value={metric} onChange={event=>setMetric(event.target.value as MetricKey)}>{Object.entries(metrics).map(([key,item])=><option value={key} key={key}>{item.label}</option>)}</select></label></div></header>
+    <div className="geo-insight"><div><small>표시 지역</small><b>{mapped.length}개</b></div><div><small>최댓값</small><b>{format(max)} <i>{meta.unit}</i></b></div><div><small>최솟값</small><b>{format(min)} <i>{meta.unit}</i></b></div><p><i/><span>원의 크기는 선택 지표의 상대값이며, 정확한 값은 표식 또는 순위표에서 확인합니다.</span></p></div>
+    <div className="geo-layout"><div className={`geo-map geo-map-${mapMode}`}>
+      <svg viewBox={mapMode==="world"?"0 0 1000 500":"0 0 500 500"} role="img" aria-label={`${mapMode==="world"?"세계":"대한민국"} 지역별 ${meta.label} 지도`}>
+        {mapMode==="world"?<g className="map-land"><path d="M55 126L116 75 205 66 280 107 257 151 208 164 185 211 129 205 92 170Z"/><path d="M218 221L282 239 300 294 278 371 236 444 206 385 211 314 187 265Z"/><path d="M425 92L500 70 575 88 612 118 688 101 778 124 866 170 912 220 862 250 797 235 750 274 682 253 625 208 557 190 511 207 464 171Z"/><path d="M489 211L552 211 598 267 579 359 534 427 493 379 470 310Z"/><path d="M817 342L875 326 929 355 910 397 846 404 802 376Z"/></g>:<g className="map-land korea-land"><path d="M255 34L310 66 329 112 305 150 326 192 310 232 350 277 343 326 306 354 278 406 244 416 218 382 184 354 188 308 157 268 177 221 164 178 194 139 199 87Z"/><path d="M209 431L247 421 276 440 258 460 215 462 190 448Z"/></g>}
+        {mapped.map(item=>{const point=mapMode==="world"?item.geo.world:item.geo.korea!;const selected=item.region.key===selectedKey;return <g key={item.region.key} className={`geo-point${selected?" selected":""}`} transform={`translate(${point[0]} ${point[1]})`} onClick={()=>onSelect(item.region.key)} role="button" tabIndex={0} onKeyDown={event=>{if(event.key==="Enter"||event.key===" ")onSelect(item.region.key)}} aria-label={`${item.geo.name} ${meta.label} ${format(item.value)} ${meta.unit}`}><circle className="geo-pulse" r={radius(item.value)+7}/><circle r={radius(item.value)}/><text y={-(radius(item.value)+9)}>{item.geo.name}</text><title>{item.geo.name} · {meta.label} {format(item.value)} {meta.unit}</title></g>})}
+      </svg>{!mapped.length&&<p className="geo-empty">선택한 결과에 대한민국 지역이 없습니다.</p>}<div className="geo-scale"><span>낮음</span><i/><span>높음</span></div></div>
+      <aside className="geo-ranking"><header><span>REGION RANKING</span><b>{meta.label}</b></header><div>{ranked.map((item,index)=><button key={item.region.key} className={item.region.key===selectedKey?"selected":""} onClick={()=>onSelect(item.region.key)}><i>{String(index+1).padStart(2,"0")}</i><span><b>{item.geo.name}</b><small>{item.geo.country}</small></span><strong>{format(item.value)} <em>{meta.unit}</em></strong></button>)}</div></aside>
+    </div>
+  </article>;
 }
 
 function HeatmapDrilldown({regions,primaryKey,operationHours}:{regions:CalculationRegion[];primaryKey:string;operationHours:number}) {
