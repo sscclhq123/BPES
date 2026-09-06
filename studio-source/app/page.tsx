@@ -38,14 +38,14 @@ const steps = [
   { no: "04", label: "SOLAR / TES", title: "태양열 목표를 설정하세요", copy: "목표 재생열 커버율과 TES 온도조건을 입력합니다." },
 ];
 
-const regionGeo:Record<string,{name:string;country:string;world:[number,number];korea?:[number,number]}>= {
-  seoul_epw:{name:"서울",country:"대한민국",world:[824,196],korea:[246,100]}, daejeon_tmyx:{name:"대전",country:"대한민국",world:[823,204],korea:[250,240]},
-  busan_tmyx:{name:"부산",country:"대한민국",world:[830,211],korea:[345,342]}, gwangju_tmyx:{name:"광주",country:"대한민국",world:[818,211],korea:[205,330]},
-  daegu_tmyx:{name:"대구",country:"대한민국",world:[827,207],korea:[330,270]}, incheon_tmyx:{name:"인천",country:"대한민국",world:[821,196],korea:[205,115]},
-  jeju_tmyx:{name:"제주",country:"대한민국",world:[820,220],korea:[225,432]}, manila_tmy:{name:"마닐라",country:"필리핀",world:[790,302]},
-  cebu_tmyx:{name:"세부",country:"필리핀",world:[798,321]}, bangkok_tmy:{name:"방콕",country:"태국",world:[735,291]},
-  chiang_mai_tmyx:{name:"치앙마이",country:"태국",world:[727,266]}, singapore_tmyx:{name:"싱가포르",country:"싱가포르",world:[756,363]},
-  amsterdam_tmyx:{name:"암스테르담",country:"네덜란드",world:[486,160]}, rotterdam_tmyx:{name:"로테르담",country:"네덜란드",world:[482,166]},
+const regionGeo:Record<string,{name:string;country:string;coordinates:[number,number];korea?:boolean}>= {
+  seoul_epw:{name:"서울",country:"대한민국",coordinates:[126.978,37.5665],korea:true}, daejeon_tmyx:{name:"대전",country:"대한민국",coordinates:[127.3845,36.3504],korea:true},
+  busan_tmyx:{name:"부산",country:"대한민국",coordinates:[129.0756,35.1796],korea:true}, gwangju_tmyx:{name:"광주",country:"대한민국",coordinates:[126.8526,35.1595],korea:true},
+  daegu_tmyx:{name:"대구",country:"대한민국",coordinates:[128.6014,35.8714],korea:true}, incheon_tmyx:{name:"인천",country:"대한민국",coordinates:[126.7052,37.4563],korea:true},
+  jeju_tmyx:{name:"제주",country:"대한민국",coordinates:[126.5312,33.4996],korea:true}, manila_tmy:{name:"마닐라",country:"필리핀",coordinates:[120.9842,14.5995]},
+  cebu_tmyx:{name:"세부",country:"필리핀",coordinates:[123.8854,10.3157]}, bangkok_tmy:{name:"방콕",country:"태국",coordinates:[100.5018,13.7563]},
+  chiang_mai_tmyx:{name:"치앙마이",country:"태국",coordinates:[98.9853,18.7883]}, singapore_tmyx:{name:"싱가포르",country:"싱가포르",coordinates:[103.8198,1.3521]},
+  amsterdam_tmyx:{name:"암스테르담",country:"네덜란드",coordinates:[4.9041,52.3676]}, rotterdam_tmyx:{name:"로테르담",country:"네덜란드",coordinates:[4.4777,51.9244]},
 };
 
 export default function Home() {
@@ -103,7 +103,8 @@ export default function Home() {
     const params = new URLSearchParams({ ...Object.fromEntries(Object.entries(design).filter(([k,v])=>!["weatherDatasets","simulationMonths"].includes(k)&&v!=="").map(([k,v]) => [k,String(v)])), autorun:design.weatherMode === "standard" ? "1" : "0" });
     design.weatherDatasets.forEach((dataset)=>params.append("weatherDataset",dataset));
     design.simulationMonths.forEach((month)=>params.append("simulationMonth",String(month)));
-    return `${window.location.origin}/engine/?${params.toString()}`;
+    const origin=typeof window!=="undefined"?window.location.origin:"https://salddp.vercel.app";
+    return `${origin}/engine/?${params.toString()}`;
   }, [design]);
 
   if (view === "result" && resultSummary) return <ResultOverview summary={resultSummary} design={design} onReset={reset} />;
@@ -332,13 +333,15 @@ function GeographicAnalysis({regions,selectedKey,onSelect}:{regions:CalculationR
   const radius=(value:number)=>(mapMode==="world"?6:8)+Math.sqrt(Math.max(0,value)/max)*(mapMode==="world"?10:15);
   const ranked=[...mapped].sort((a,b)=>b.value-a.value);
   const format=(value:number)=>value.toLocaleString(undefined,{minimumFractionDigits:meta.digits,maximumFractionDigits:meta.digits});
+  const project=([lon,lat]:[number,number]):[number,number]=>mapMode==="world"?[(lon+180)/360*1000,(90-lat)/180*500]:[48+(lon-125.5)/(129.8-125.5)*404,28+(38.7-lat)/(38.7-33)*444];
+  const labelOffsets:Record<string,[number,number]>={seoul_epw:[18,-16],incheon_tmyx:[-24,16],amsterdam_tmyx:[-20,-15],rotterdam_tmyx:[22,18],manila_tmy:[-19,-15],cebu_tmyx:[21,18]};
   return <article className="chart-card geo-card">
     <header><div><span>GEOGRAPHIC PERFORMANCE</span><h2>지역별 설계 성능 지도</h2><small>지도 표식과 순위표를 선택하면 해당 지역의 전체 결과 요약으로 전환됩니다.</small></div><div className="geo-controls"><div className="geo-map-tabs"><button className={mapMode==="world"?"selected":""} onClick={()=>setMapMode("world")}>WORLD</button><button className={mapMode==="korea"?"selected":""} onClick={()=>setMapMode("korea")}>KOREA</button></div><label>분석 지표<select value={metric} onChange={event=>setMetric(event.target.value as MetricKey)}>{Object.entries(metrics).map(([key,item])=><option value={key} key={key}>{item.label}</option>)}</select></label></div></header>
     <div className="geo-insight"><div><small>표시 지역</small><b>{mapped.length}개</b></div><div><small>최댓값</small><b>{format(max)} <i>{meta.unit}</i></b></div><div><small>최솟값</small><b>{format(min)} <i>{meta.unit}</i></b></div><p><i/><span>원의 크기는 선택 지표의 상대값이며, 정확한 값은 표식 또는 순위표에서 확인합니다.</span></p></div>
     <div className="geo-layout"><div className={`geo-map geo-map-${mapMode}`}>
       <svg viewBox={mapMode==="world"?"0 0 1000 500":"0 0 500 500"} role="img" aria-label={`${mapMode==="world"?"세계":"대한민국"} 지역별 ${meta.label} 지도`}>
-        {mapMode==="world"?<g className="map-land"><path d="M55 126L116 75 205 66 280 107 257 151 208 164 185 211 129 205 92 170Z"/><path d="M218 221L282 239 300 294 278 371 236 444 206 385 211 314 187 265Z"/><path d="M425 92L500 70 575 88 612 118 688 101 778 124 866 170 912 220 862 250 797 235 750 274 682 253 625 208 557 190 511 207 464 171Z"/><path d="M489 211L552 211 598 267 579 359 534 427 493 379 470 310Z"/><path d="M817 342L875 326 929 355 910 397 846 404 802 376Z"/></g>:<g className="map-land korea-land"><path d="M255 34L310 66 329 112 305 150 326 192 310 232 350 277 343 326 306 354 278 406 244 416 218 382 184 354 188 308 157 268 177 221 164 178 194 139 199 87Z"/><path d="M209 431L247 421 276 440 258 460 215 462 190 448Z"/></g>}
-        {mapped.map(item=>{const point=mapMode==="world"?item.geo.world:item.geo.korea!;const selected=item.region.key===selectedKey;return <g key={item.region.key} className={`geo-point${selected?" selected":""}`} transform={`translate(${point[0]} ${point[1]})`} onClick={()=>onSelect(item.region.key)} role="button" tabIndex={0} onKeyDown={event=>{if(event.key==="Enter"||event.key===" ")onSelect(item.region.key)}} aria-label={`${item.geo.name} ${meta.label} ${format(item.value)} ${meta.unit}`}><circle className="geo-pulse" r={radius(item.value)+7}/><circle r={radius(item.value)}/><text y={-(radius(item.value)+9)}>{item.geo.name}</text><title>{item.geo.name} · {meta.label} {format(item.value)} {meta.unit}</title></g>})}
+        <image className="natural-earth-map" href={mapMode==="world"?"/maps/natural-earth-world.svg":"/maps/natural-earth-korea.svg"} x="0" y="0" width={mapMode==="world"?1000:500} height="500"/>
+        {mapped.map(item=>{const point=project(item.geo.coordinates),offset=labelOffsets[item.region.key]||[0,-(radius(item.value)+9)],selected=item.region.key===selectedKey;return <g key={item.region.key} className={`geo-point${selected?" selected":""}`} transform={`translate(${point[0]} ${point[1]})`} onClick={()=>onSelect(item.region.key)} role="button" tabIndex={0} onKeyDown={event=>{if(event.key==="Enter"||event.key===" ")onSelect(item.region.key)}} aria-label={`${item.geo.name} ${meta.label} ${format(item.value)} ${meta.unit}`}><circle className="geo-pulse" r={radius(item.value)+7}/><circle r={radius(item.value)}/><text x={offset[0]} y={offset[1]}>{item.geo.name}</text><title>{item.geo.name} · {meta.label} {format(item.value)} {meta.unit}</title></g>})}
       </svg>{!mapped.length&&<p className="geo-empty">선택한 결과에 대한민국 지역이 없습니다.</p>}<div className="geo-scale"><span>낮음</span><i/><span>높음</span></div></div>
       <aside className="geo-ranking"><header><span>REGION RANKING</span><b>{meta.label}</b></header><div>{ranked.map((item,index)=><button key={item.region.key} className={item.region.key===selectedKey?"selected":""} onClick={()=>onSelect(item.region.key)}><i>{String(index+1).padStart(2,"0")}</i><span><b>{item.geo.name}</b><small>{item.geo.country}</small></span><strong>{format(item.value)} <em>{meta.unit}</em></strong></button>)}</div></aside>
     </div>
