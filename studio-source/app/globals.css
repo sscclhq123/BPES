@@ -475,9 +475,10 @@ button,a { font:inherit; } button { cursor:pointer; }
 .weather-card>header{padding-bottom:4px}.weather-combo-legend{gap:10px;margin-top:18px}
 .weather-combo-legend>span{min-height:58px;padding:11px 14px;border-radius:11px;background:#fafcfa}
 .weather-combo-legend i{width:8px;height:8px;box-shadow:none}.weather-combo-legend>span>span{font-size:13px}.weather-combo-legend small{font-size:10px}.weather-combo-legend b{font-size:11px}
-.weather-axis-layout{grid-template-rows:302px;margin-top:16px;padding:20px 24px 14px 10px;border-radius:14px;background:#fff}
+.weather-axis-layout{grid-template-columns:42px 58px minmax(700px,1fr) 58px 42px;grid-template-rows:302px;margin-top:16px;padding:20px 10px 14px;border-radius:14px;background:#fff}
 .weather-y-ticks{height:266px}.weather-combo-plot{grid-template-rows:266px 30px 18px;min-width:760px;padding-left:18px}.weather-combo-plot svg{height:266px}
 .weather-temp-line,.weather-humidity-line{stroke-width:2.4;filter:none}
 .weather-temp-dot,.weather-humidity-dot{transform:scaleX(.22);transform-box:fill-box;transform-origin:center;stroke-width:.55;vector-effect:non-scaling-stroke}
 .weather-solar-bar{filter:none}.weather-month-axis{font-size:11px}.weather-x-title,.weather-y-title{font-size:12px}
+.weather-y-ticks-right{padding:0 0 0 14px;border-right:0;border-left:1px solid #9eaba2;text-align:left}.weather-y-title-right{color:#b95753;transform:rotate(90deg)}
 @media(max-width:700px){.weather-axis-layout{grid-template-rows:290px}.weather-y-ticks{height:254px}.weather-combo-plot{grid-template-rows:254px 30px 18px}.weather-combo-plot svg{height:254px}}
