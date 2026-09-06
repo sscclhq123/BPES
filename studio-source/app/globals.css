@@ -222,7 +222,7 @@ button,a { font:inherit; } button { cursor:pointer; }
 @media(max-width:700px){.hotspot-weather{left:20%;top:32%}.hotspot-ld{left:32%;top:78%}.hotspot-solar{left:64%;top:16%}.hotspot-building{left:59%;top:76%}.hotspot-tes{left:83%;top:74%}.hotspot-weather>em{left:calc(100% + 6px);right:auto}.hotspot-ld>em{left:auto;right:calc(100% + 6px)}.hotspot-solar>em{left:auto;right:calc(100% + 6px)}.hotspot-building>em,.hotspot-tes>em{left:50%;right:auto;top:calc(100% + 7px);bottom:auto;transform:translateX(-50%)}}
 
 /* The illustration stays unobstructed; hover/focus details render in a dedicated panel. */
-.scene-hotspot.selected{background:#242923;box-shadow:0 0 0 7px color-mix(in srgb,currentColor 18%,transparent),0 0 24px color-mix(in srgb,currentColor 24%,transparent)}
+.scene-hotspot.selected{background:#242923;box-shadow:0 0 0 7px color-mix(in srgb,currentColor 18%,transparent),0 0 24px color-mix(in srgb,currentColor 24%,transparent)}.scene-canvas.ld-detail-open .scene-hotspot{z-index:3;opacity:0;visibility:hidden;pointer-events:none}.scene-canvas.ld-detail-open .scene-hint{opacity:0;visibility:hidden}
 .hotspot-weather{left:19%}.hotspot-ld{left:31%}.hotspot-solar{left:63%}.hotspot-building{left:56%}.hotspot-tes{left:80%}
 @media(max-width:700px){.hotspot-weather{left:17%}.hotspot-ld{left:29%}.hotspot-solar{left:61%}.hotspot-building{left:56%}.hotspot-tes{left:80%}}
 .scene-detail-panel{display:grid;grid-template-columns:54px minmax(0,1fr);gap:18px;align-items:start;min-height:150px;padding:22px 28px 24px;border-top:1px solid #3d3f3a;background:rgba(12,14,12,.94)}

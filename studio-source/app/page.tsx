@@ -162,7 +162,7 @@ function SystemOverview({onBack,onNext,reset}:{onBack:()=>void;onNext:()=>void;r
   return <main className="entry overview-screen"><Logo reset={reset}/><section className="system-overview screen-reveal"><header><div><span>SYSTEM DEFINITION</span><h2>SYSTEM SCHEMATIC</h2></div><small>INTRODUCTION · 00 / 04</small></header>
     <div className="system-scene" aria-label="SALDOP 시스템 구성도">
       <div className="scene-visual">
-      <div className="scene-canvas">
+      <div className={`scene-canvas${activeDetail===2?" ld-detail-open":""}`}>
       <svg className="scene-art" viewBox="-120 0 1360 560" role="img" aria-label="외기, 건물, LD 외조기, 태양열 집열기와 축열조의 연결 구성">
         <defs>
           <linearGradient id="buildingFace" x1="0" x2="1"><stop stopColor="#343833"/><stop offset="1" stopColor="#20231f"/></linearGradient>
