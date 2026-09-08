@@ -149,12 +149,13 @@ def build_configs(payload):
         raise ValueError("축열조 용량은 0보다 커야 합니다.")
     config.xi_tank_init = to_number(payload, "solutionConcentration", config.xi_tank_init * 100) / 100
     config.xi_target = config.xi_tank_init
-    # Lim et al. (2023) operates the LiCl loop within 36~38 wt%.  The current
-    # Park absorber correlation starts at 36.4%, so use that as the safe lower
-    # switching limit and restore concentration toward the user setpoint.
-    config.xi_regen_on = min(config.xi_tank_init, 0.364)
+    if not 0.364 < config.xi_target <= 0.39:
+        raise ValueError("농도 유지 목표는 보호하한 36.4%보다 높고 39.0% 이하여야 합니다.")
+    # Operating band is separate from the empirical protection floor.
+    config.xi_regen_on = max(0.364, config.xi_target - 0.005)
     config.xi_aux_on = config.xi_regen_on
-    config.xi_abs_stop = config.xi_regen_on
+    config.xi_abs_stop = 0.364
+    config.xi_abs_restart = min(config.xi_target, 0.366)
     config.lg_ratio_abs = to_number(payload, "lgRatio", config.lg_ratio_abs)
     # Regenerator L/G=3 in Lim et al. belongs to a different numerical model;
     # retain the present correlation's validated design flow instead.
@@ -345,6 +346,9 @@ def dehumidification_metrics(result):
 
 def ld_usage_heatmap(result, operation_column="ABS_ON"):
     usage = result[["time", operation_column]].copy()
+    duty_column = "REG_DUTY_FRACTION" if operation_column == "REG_ON" else "ABS_DUTY_FRACTION"
+    if duty_column in result:
+        usage[operation_column] = result[duty_column].clip(0, 1)
     usage["time"] = pd.to_datetime(usage["time"])
     usage["month"] = usage["time"].dt.month
     usage["hour"] = usage["time"].dt.hour
@@ -1238,6 +1242,23 @@ def simulate(payload):
     target_unmet_hours = float(row.get("TARGET_HUMIDITY_UNMET_hours", 0) or 0)
     solar_share = tes_to_reg / reg_need if reg_need > 0 else 0
     warnings = empirical_warnings(payload)
+    capacity_hours = float(result["REG_CAPACITY_DEFICIT_HOURS"].sum())
+    target_capacity_hours = float(result["REG_TARGET_CAPACITY_DEFICIT_HOURS"].sum())
+    protection_hours = float(result["ABS_PROTECTION_HOURS"].sum())
+    if capacity_hours > 0:
+        warnings.append(
+            f"설치된 재생부의 허용 운전조건에서 흡수량 및 농도 회복 요구량을 "
+            f"감당하지 못한 시간이 {capacity_hours:.2f} h입니다. 대수는 자동으로 늘리지 않습니다."
+        )
+    if protection_hours > 0:
+        warnings.append(f"LiCl 36.4% 보호하한을 지키기 위한 제습 정지시간은 {protection_hours:.2f} h입니다.")
+    if target_capacity_hours > 0:
+        warnings.append(f"목표농도 {config.xi_target * 100:.2f}%에서의 재생 용량이 실제 흡수량보다 작은 시간은 {target_capacity_hours:.2f} h입니다.")
+    row["REG_CAPACITY_DEFICIT_hours"] = capacity_hours
+    row["REG_TARGET_CAPACITY_DEFICIT_hours"] = target_capacity_hours
+    row["REG_ACTUAL_RUNTIME_hours"] = float((result["REG_DUTY_FRACTION"] * result["dt_h"]).sum())
+    row["ABS_PROTECTION_hours"] = protection_hours
+    row["LD_CONTROL_VERSION"] = "concentration-feedforward-v1"
     if target_unmet_hours > 0:
         lg_control_text = (
             f"L/G를 {config.lg_ratio_min:.2f}~{config.lg_ratio_max:.2f}에서 자동제어"

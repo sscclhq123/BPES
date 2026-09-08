@@ -59,9 +59,11 @@ class SystemConfig:
     t_solution_tank_init_c: float = 42.0
     xi_tank_init: float = 0.38
     xi_target: float = 0.38
-    xi_regen_on: float = 0.364
+    xi_regen_on: float = 0.375
     xi_aux_on: float = 0.364
     xi_abs_stop: float = 0.364
+    xi_abs_restart: float = 0.366
+    concentration_recovery_time_s: float = 3600.0
     ua_solution_tank_w_k: float = 2.0
 
     sa_abs_m3h: float = 1200.0
@@ -636,6 +638,52 @@ def controlled_regenerator_solution_temperature(config, solution_xi, absorber_ta
     return float(config.reg_temp_min_c + depletion * (upper - config.reg_temp_min_c))
 
 
+def regeneration_water_demand(salt_kg, water_kg, target_xi, absorption_kg_s,
+                              recovery_time_s, dt_s):
+    """Feed forward absorption; recover accumulated dilution over a finite time."""
+    debt = max(water_kg - salt_kg * (1 / target_xi - 1), 0.0)
+    # Finish a negligible recovery tail rather than running indefinitely.
+    horizon = dt_s if debt <= 1e-5 * (salt_kg + water_kg) else max(recovery_time_s, dt_s)
+    return max(absorption_kg_s + debt / horizon, 0.0)
+
+
+def controlled_regeneration(config, ta, rh, w_oa, h_oa, air_flow, solution_flow,
+                            modules, xi, requested_kg_s):
+    """Select temperature, then real run-time fraction at validated on-state flows.
+
+    The correlation is never clipped to the requested water rate. All returned
+    rates are instantaneous ON-state rates; the caller integrates the duty.
+    """
+    upper = float(np.clip(config.t_reg_in_target_c, config.reg_temp_min_c, config.reg_temp_max_c))
+
+    def evaluate(temp, concentration=xi):
+        return parallel_regenerator_block(ta, rh, w_oa, h_oa, config.p_atm_kpa,
+            air_flow, solution_flow, modules, temp, concentration, np.nan, config.eff_enthalpy)
+
+    maximum = evaluate(upper)
+    target_capacity = evaluate(upper, config.xi_target)["m_water_desorb"]
+    selected, temperature = maximum, upper
+    if config.reg_temp_auto_control and requested_kg_s < maximum["m_water_desorb"]:
+        lower = config.reg_temp_min_c
+        low_result = evaluate(lower)
+        if low_result["m_water_desorb"] >= requested_kg_s:
+            selected, temperature = low_result, lower
+        else:
+            # Monotonic T^3.223 correlation within its prescribed domain.
+            high = upper
+            for _ in range(12):
+                middle = (lower + high) / 2
+                if evaluate(middle)["m_water_desorb"] < requested_kg_s:
+                    lower = middle
+                else:
+                    high = middle
+            temperature = high
+            selected = evaluate(temperature)
+    capacity = selected["m_water_desorb"]
+    duty = min(max(requested_kg_s, 0.0) / capacity, 1.0) if capacity > 0 else 0.0
+    return selected, temperature, duty, maximum["m_water_desorb"], target_capacity
+
+
 def regenerator_block(
     ta,
     rh,
@@ -975,6 +1023,7 @@ def run_simulation(
 
     rows = []
     regen_cycle_active = False
+    absorber_protection_active = False
     previous_schedule_on = False
     for k, row in weather.iterrows():
         ta = float(row.Ta_degC)
@@ -1038,6 +1087,11 @@ def run_simulation(
             "tes_net_kWh": 0.0,
             "res_tes_kWh": 0.0,
             "res_sol_kJ": 0.0,
+            "reg_requested_water": 0.0,
+            "reg_capacity_deficit_time": 0.0,
+            "reg_target_capacity_margin": 0.0,
+            "reg_target_capacity_deficit_time": 0.0,
+            "abs_protection_time": 0.0,
         }
         last_abs = empty_absorber_result()
         last_reg = empty_regenerator_result()
@@ -1067,7 +1121,13 @@ def run_simulation(
             elif xi_0 >= config.xi_target - 1e-12:
                 regen_cycle_active = False
 
-            abs_on = ld_needed_hour and (xi_0 > config.xi_abs_stop + 1e-12)
+            if xi_0 <= config.xi_abs_stop + 1e-12:
+                absorber_protection_active = True
+            elif xi_0 >= min(config.xi_abs_restart, config.xi_target) - 1e-12:
+                absorber_protection_active = False
+            abs_on = ld_needed_hour and not absorber_protection_active
+            # Start alongside absorption instead of waiting for the validity floor.
+            regen_cycle_active = regen_cycle_active or abs_on
             regen_by_solar = regen_cycle_active and (
                 (qcollector_w > 50) or (t_tes_0 > config.t_tes_min_c + 1)
             )
@@ -1086,6 +1146,7 @@ def run_simulation(
             qreg_need_w = 0.0
             qtes_to_reg_w = 0.0
             qaux_w = 0.0
+            reg_duty = 0.0
 
             if abs_on:
                 m_abs_in = m_dot_sol_abs_cmd
@@ -1109,27 +1170,38 @@ def run_simulation(
                 )
                 abs_solution_t_controlled = abs_res["ABS_SOL_IN_T_CONTROLLED_degC"]
                 m_abs_in = abs_res["ABS_SOL_IN_mdot_kg_s"]
+                water_headroom = max(m_salt_0 * (1 / config.xi_abs_stop - 1) - m_water_0, 0.0)
+                abs_duty = min(1.0, water_headroom / max(abs_res["m_water_absorb"] * dt_sub_s, 1e-12))
                 h_abs_in = solution_enthalpy(xi_0, abs_solution_t_controlled)
+                m_abs_in *= abs_duty
                 qcool_abs_w = m_abs_in * max(h_sol_0 - h_abs_in, 0) * 1000
-                abs_ret_m, abs_ret_xi, abs_ret_h = abs_res["m_sol_out"], abs_res["xi_out"], abs_res["h_sol_out"]
+                abs_ret_m, abs_ret_xi, abs_ret_h = abs_res["m_sol_out"] * abs_duty, abs_res["xi_out"], abs_res["h_sol_out"]
+                abs_res = dict(abs_res)
+                abs_res["m_water_absorb"] *= abs_duty
                 acc["abs_water"] += abs_res["m_water_absorb"] * dt_sub_s
                 acc["abs_cooling_kWh"] += qcool_abs_w * dt_sub_h / 1000
-                acc["abs_lg_time"] += abs_res["ABS_LG_CONTROLLED"] * dt_sub_s
-                acc["abs_active_time"] += dt_sub_s
+                acc["abs_lg_time"] += abs_res["ABS_LG_CONTROLLED"] * dt_sub_s * abs_duty
+                acc["abs_active_time"] += dt_sub_s * abs_duty
+                acc["abs_protection_time"] += (1 - abs_duty) * dt_sub_s
                 last_abs = abs_res
                 hour_abs_on = True
+            elif ld_needed_hour:
+                acc["abs_protection_time"] += dt_sub_s
 
-            absorber_target_unmet = bool(
-                abs_on
-                and float(last_abs["w_air_out"])
-                > config.target_supply_w_g_kg / 1000 + 1e-9
-            )
             if reg_on_request:
-                reg_solution_t_controlled = controlled_regenerator_solution_temperature(
-                    config,
-                    xi_0,
-                    absorber_target_unmet,
-                )
+                absorbed_rate = last_abs["m_water_absorb"] if abs_on else 0.0
+                requested_reg_rate = regeneration_water_demand(
+                    m_salt_0, m_water_0, config.xi_target, absorbed_rate,
+                    config.concentration_recovery_time_s, dt_sub_s)
+                reg_res, reg_solution_t_controlled, reg_duty, reg_capacity, target_capacity = controlled_regeneration(
+                    config, ta, rh, w_oa, h_oa, m_dot_oa_reg, m_dot_sol_reg_design,
+                    reg_module_count, xi_0, requested_reg_rate)
+                acc["reg_requested_water"] += requested_reg_rate * dt_sub_s
+                if requested_reg_rate > reg_capacity + 1e-9:
+                    acc["reg_capacity_deficit_time"] += dt_sub_s
+                acc["reg_target_capacity_margin"] += (target_capacity - absorbed_rate) * dt_sub_s
+                if absorbed_rate > target_capacity + 1e-9:
+                    acc["reg_target_capacity_deficit_time"] += dt_sub_s
                 cp_reg = cp_licl_solution_kjkgk(xi_0, (t_sol_0 + reg_solution_t_controlled) / 2)
                 m_water_at_target = m_salt_0 * (1 / config.xi_target - 1)
                 water_removable_to_target = max(m_water_0 - m_water_at_target, 0)
@@ -1164,7 +1236,7 @@ def run_simulation(
                 qreg_need_est_w = m_reg_in * cp_reg * 1000 * dt_reg_est
                 qtes_temp_limit_est_w = m_reg_in * cp_reg * 1000 * max(t_after_tes_limit - t_sol_0, 0)
                 qtes_possible_est_w = min(qreg_need_est_w, qtes_energy_limit_w, qtes_temp_limit_est_w)
-                if (m_desorb_cap_kg_s <= 1e-10) or (m_reg_in <= 1e-10):
+                if (m_desorb_cap_kg_s <= 1e-10) or (m_reg_in <= 1e-10) or reg_duty <= 0:
                     reg_on_request = False
                     m_reg_in = 0.0
                 elif regen_by_aux:
@@ -1190,21 +1262,8 @@ def run_simulation(
                     np.nan,
                     config.eff_enthalpy,
                 )
-                if reg_res["m_water_desorb"] > m_desorb_cap_kg_s:
-                    reg_res = parallel_regenerator_block(
-                        ta,
-                        rh,
-                        w_oa,
-                        h_oa,
-                        config.p_atm_kpa,
-                        m_reg_air_active,
-                        m_reg_in,
-                        reg_active_modules,
-                        reg_solution_t_controlled,
-                        xi_0,
-                        m_desorb_cap_kg_s / 1.2,
-                        config.eff_enthalpy,
-                    )
+                reg_duty = min(1.0, requested_reg_rate / max(reg_res["m_water_desorb"], 1e-12),
+                               m_desorb_cap_kg_s / max(reg_res["m_water_desorb"], 1e-12))
                 cp_reg_actual = cp_licl_solution_kjkgk(xi_0, (t_sol_0 + reg_solution_t_controlled) / 2)
                 qreg_need_w = m_reg_in * cp_reg_actual * 1000 * max(reg_solution_t_controlled - t_sol_0, 0)
                 t_after_tes_actual = t_sol_0 + config.eps_tes_reg_hx * max(t_tes_0 - t_sol_0, 0)
@@ -1223,25 +1282,31 @@ def run_simulation(
                     qreg_need_w = qtes_to_reg_w = qaux_w = 0.0
 
             if reg_on_request:
-                reg_ret_m, reg_ret_xi, reg_ret_h = reg_res["m_sol_out"], reg_res["xi_out"], reg_res["h_sol_out"]
-                qlatent_w = reg_res["m_water_desorb"] * latent_heat_vaporization_water_kjkg(reg_solution_t_controlled) * 1000
-                acc["des_water"] += reg_res["m_water_desorb"] * dt_sub_s
+                reg_ret_m, reg_ret_xi, reg_ret_h = reg_res["m_sol_out"] * reg_duty, reg_res["xi_out"], reg_res["h_sol_out"]
+                # Average actual ON duration consistently for water, circulation and heat.
+                m_reg_in *= reg_duty
+                m_reg_air_active *= reg_duty
+                qreg_need_w *= reg_duty
+                qtes_to_reg_w *= reg_duty
+                qaux_w *= reg_duty
+                qlatent_w = reg_res["m_water_desorb"] * reg_duty * latent_heat_vaporization_water_kjkg(reg_solution_t_controlled) * 1000
+                acc["des_water"] += reg_res["m_water_desorb"] * reg_duty * dt_sub_s
                 acc["reg_need_kWh"] += qreg_need_w * dt_sub_h / 1000
                 acc["tes_kWh"] += qtes_to_reg_w * dt_sub_h / 1000
                 acc["aux_kWh"] += qaux_w * dt_sub_h / 1000
                 acc["latent_kWh"] += qlatent_w * dt_sub_h / 1000
                 acc["reg_mdot_time"] += m_reg_in * dt_sub_s
                 acc["reg_air_mdot_time"] += m_reg_air_active * dt_sub_s
-                acc["reg_module_time"] += reg_active_modules * dt_sub_s
-                acc["reg_temp_time"] += reg_solution_t_controlled * dt_sub_s
-                acc["reg_active_time"] += dt_sub_s
+                acc["reg_module_time"] += reg_active_modules * dt_sub_s * reg_duty
+                acc["reg_temp_time"] += reg_solution_t_controlled * dt_sub_s * reg_duty
+                acc["reg_active_time"] += dt_sub_s * reg_duty
                 last_reg = reg_res
                 hour_reg_on = True
                 hour_aux_on = hour_aux_on or (qaux_w > 1e-6)
                 regen_reason = regen_reason or (
                     "post_schedule_recovery"
                     if post_schedule_recovery
-                    else ("LD_need_low_xi_aux" if regen_by_aux else "solar_TES_concentration_recovery")
+                    else "absorption_feedforward_concentration_recovery"
                 )
 
             m_salt_in = abs_ret_m * abs_ret_xi + reg_ret_m * reg_ret_xi
@@ -1310,6 +1375,13 @@ def run_simulation(
                 "mode": 1 if hour_abs_on else (2 if hour_reg_on else 3),
                 "ABS_ON": hour_abs_on,
                 "REG_ON": hour_reg_on,
+                "ABS_DUTY_FRACTION": acc["abs_active_time"] / dt_s,
+                "REG_DUTY_FRACTION": acc["reg_active_time"] / dt_s,
+                "ABS_PROTECTION_HOURS": acc["abs_protection_time"] / 3600,
+                "REG_CAPACITY_DEFICIT_HOURS": acc["reg_capacity_deficit_time"] / 3600,
+                "REG_TARGET_CAPACITY_DEFICIT_HOURS": acc["reg_target_capacity_deficit_time"] / 3600,
+                "REG_REQUESTED_WATER_kg_h": acc["reg_requested_water"] / dt_h,
+                "REG_TARGET_CAPACITY_MARGIN_kg_h": acc["reg_target_capacity_margin"] / dt_h,
                 "AUX_ON": hour_aux_on,
                 "LD_NEED": ld_needed_hour,
                 "SCHEDULE_ON": schedule_on,
