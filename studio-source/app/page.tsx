@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { animate, stagger } from "animejs";
 
 type View = "intro" | "overview" | "wizard" | "calculating" | "result";
@@ -169,7 +170,15 @@ function SystemOverview({onBack,onNext,reset}:{onBack:()=>void;onNext:()=>void;r
     {no:"05",label:"TES",title:"TES·보조열원",body:"집열된 열을 TES에 충전하고 LD 재생 요구가 발생하면 방전합니다. 동일 시간대의 공급·수요를 우선 대응하며, 부족분은 보조열원, 저장 한계를 넘는 생산량은 미활용·잉여열로 구분합니다."}
   ];
   const [activeDetail,setActiveDetail] = useState<number|null>(null);
+  const [portalReady,setPortalReady] = useState(false);
   const detail = activeDetail===null?null:schematicDetails[activeDetail];
+  useEffect(()=>setPortalReady(true),[]);
+  useEffect(()=>{
+    if(activeDetail===null)return;
+    const closeDetail=(event:KeyboardEvent)=>{if(event.key==="Escape")setActiveDetail(null)};
+    window.addEventListener("keydown",closeDetail);
+    return()=>window.removeEventListener("keydown",closeDetail);
+  },[activeDetail]);
   return <main className="entry overview-screen"><Logo reset={reset}/><section className="system-overview screen-reveal"><header><div><span>SYSTEM DEFINITION</span><h2>SYSTEM SCHEMATIC</h2></div><small>INTRODUCTION · 00 / 04</small></header>
     <div className="system-scene" aria-label="SALDDP 시스템 구성도">
       <div className="scene-visual">
@@ -227,9 +236,9 @@ function SystemOverview({onBack,onNext,reset}:{onBack:()=>void;onNext:()=>void;r
       <div className="scene-hint">설비 번호를 선택해 세부 계산 범위를 확인하세요</div>
       </div>
       </div>
-      {detail&&activeDetail!==0&&activeDetail!==1&&activeDetail!==2&&activeDetail!==3&&<aside className="scene-detail-panel" aria-live="polite"><b>{detail.no}</b><div><span>{detail.label}</span><h3>{detail.title}</h3><p>{detail.body}</p></div></aside>}
+      {detail&&activeDetail!==0&&activeDetail!==1&&activeDetail!==2&&activeDetail!==3&&<aside className="scene-detail-panel" role="dialog" aria-modal="true" aria-label={`${detail.label} 상세 설명`}><button type="button" className="scene-detail-close" aria-label="상세 설명 닫기" onClick={()=>setActiveDetail(null)}>×</button><b>{detail.no}</b><div><span>{detail.label}</span><h3>{detail.title}</h3><p>{detail.body}</p></div></aside>}
     </div>
-    <div className="overview-grid"><article><span>USER INPUT</span><h3>사용자가 정하는 요구조건</h3><p>지역과 분석기간, 건물 용도·규모, 목표 급기 절대습도와 허용상한, 목표 재생열 커버율, TES 공급·환수온도</p></article><article><span>PROGRAM OUTPUT</span><h3>프로그램이 산정하는 설계값</h3><p>최소 외기도입량, LD 병렬 대수, 목표를 만족하는 L/G·용액온도 운전조건, 제습 미충족 지표, 재생열 요구량과 최소 집열기 면적</p></article></div><div className="storyboard"><span>USE SCENARIO</span><ol><li><b>1</b><p>LD 시스템 개발자가 적용 건물과 기후를 선택합니다.</p></li><li><b>2</b><p>프로그램이 외기부하와 LD 운전 가능 범위를 시간별로 계산합니다.</p></li><li><b>3</b><p>목표 커버율을 만족하는 최소 집열기 면적과 에너지 부족분을 비교합니다.</p></li><li><b>4</b><p>면적 증가에 따른 열 확보와 설치 부담 사이의 설계 판단자료로 활용합니다.</p></li></ol></div><p className="scope-note"><b>현재 설계 범위</b> DOAS 방식의 외기 제습부하와 태양열 재생 시스템을 대상으로 하는 초기 설계 가이드입니다. 경제성 최적화와 상세 TES 성층화 해석은 현재 범위에 포함하지 않습니다.</p><footer className="overview-actions"><button onClick={onBack}>← 인트로로</button><button onClick={onNext}>기상데이터 선택 시작 <i>→</i></button></footer></section></main>;
+    <div className="overview-grid"><article><span>USER INPUT</span><h3>사용자가 정하는 요구조건</h3><p>지역과 분석기간, 건물 용도·규모, 목표 급기 절대습도와 허용상한, 목표 재생열 커버율, TES 공급·환수온도</p></article><article><span>PROGRAM OUTPUT</span><h3>프로그램이 산정하는 설계값</h3><p>최소 외기도입량, LD 병렬 대수, 목표를 만족하는 L/G·용액온도 운전조건, 제습 미충족 지표, 재생열 요구량과 최소 집열기 면적</p></article></div><div className="storyboard"><span>USE SCENARIO</span><ol><li><b>1</b><p>LD 시스템 개발자가 적용 건물과 기후를 선택합니다.</p></li><li><b>2</b><p>프로그램이 외기부하와 LD 운전 가능 범위를 시간별로 계산합니다.</p></li><li><b>3</b><p>목표 커버율을 만족하는 최소 집열기 면적과 에너지 부족분을 비교합니다.</p></li><li><b>4</b><p>면적 증가에 따른 열 확보와 설치 부담 사이의 설계 판단자료로 활용합니다.</p></li></ol></div><p className="scope-note"><b>현재 설계 범위</b> DOAS 방식의 외기 제습부하와 태양열 재생 시스템을 대상으로 하는 초기 설계 가이드입니다. 경제성 최적화와 상세 TES 성층화 해석은 현재 범위에 포함하지 않습니다.</p><footer className="overview-actions"><button onClick={onBack}>← 인트로로</button><button onClick={onNext}>기상데이터 선택 시작 <i>→</i></button></footer></section>{portalReady&&activeDetail!==null&&createPortal(<button type="button" className="schematic-global-close" aria-label="스케메틱 상세 설명 닫기" onClick={()=>setActiveDetail(null)}>×</button>,document.body)}</main>;
 }
 
 function ProgressDial({progress,mode,onCalculate,calculateEnabled=true,onNext,onPrev,buildingUse,buildingSize,ldError=false}:{progress:number;mode:string;onCalculate?:()=>void;calculateEnabled?:boolean;onNext?:()=>void;onPrev?:()=>void;buildingUse?:string;buildingSize?:string;ldError?:boolean}) {
