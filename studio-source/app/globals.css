@@ -499,3 +499,4 @@ button,a { font:inherit; } button { cursor:pointer; }
   }
   .schematic-global-close:focus-visible{outline:3px solid #4ee7f0;outline-offset:3px}
 }
+.trace-action{display:flex;align-items:center;gap:24px;flex-wrap:wrap;padding:20px;margin:20px 0;border:1px solid #b8dfe5;border-radius:14px;background:#f0fafb;color:#23434a}.trace-action>div{flex:1;min-width:220px}.trace-action p{margin:0 0 10px;font-size:15px;line-height:1.7}.trace-action strong{font-size:15px}.trace-action button{min-height:48px;padding:12px 18px;border:0;border-radius:10px;background:#087f92;color:white;font-size:15px;font-weight:700;cursor:pointer}.trace-action button:disabled{background:#dce5e6;color:#57696d;cursor:not-allowed}.trace-action button:focus-visible{outline:3px solid #087f92;outline-offset:4px}
