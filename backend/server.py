@@ -1222,6 +1222,8 @@ def upload_weather(headers, body):
 
 
 def substep_trace(payload):
+    if "times" in payload:
+        return substep_windows(payload)
     request = payload.get("request")
     if not isinstance(request, dict):
         raise ValueError("기존 계산 조건이 필요합니다. 설계 계산을 다시 실행하세요.")
@@ -1243,6 +1245,51 @@ def substep_trace(payload):
         "hourSupplyHumidity": float(row.SUPPLY_AIR_w_kgkg * 1000),
         "steps": [{k: clean_value(v) for k, v in step.items()} for step in result.attrs["substep_trace"]],
     }
+
+
+def substep_windows(payload):
+    request = payload.get("request")
+    if not isinstance(request, dict) or not payload.get("times"):
+        raise ValueError("계산 조건과 선택 시점이 필요합니다.")
+    stamps = sorted(set(pd.Timestamp(t) for t in payload["times"]))
+    if any(pd.isna(t) for t in stamps):
+        raise ValueError("유효하지 않은 시점입니다.")
+    kind, collector, config = build_configs(request)
+    config = replace(config, reg_flow_control_by_tes=False, t_tes_init_c=config.t_tes_min_c, ua_tes_w_k=0.)
+    collector = replace(collector, area_m2=0.)
+    path = resolve_weather_file(request)
+    weather = prepare_weather(path, collector, config)
+    available = set(weather.time)
+    if any(t not in available for t in stamps):
+        raise ValueError("선택 시점이 분석 기간에 없습니다.")
+    windows = []
+    for t in stamps:
+        start, end = t-pd.Timedelta(minutes=30), t+pd.Timedelta(minutes=90)
+        if windows and start <= windows[-1][1]:
+            windows[-1][1] = max(end, windows[-1][1])
+        else:
+            windows.append([start, end])
+    hours = [t for t in weather.time if any(t < b and t+pd.Timedelta(hours=1) > a for a,b in windows)]
+    result, _ = run_simulation(path, kind, config=config, collector=collector, trace_times=hours)
+    traces = []
+    for a,b in windows:
+        steps = [dict(s) for s in result.attrs["substep_trace"] if a <= pd.Timestamp(s["time"]) < b]
+        if not steps:
+            continue
+        start = pd.Timestamp(steps[0]["time"])
+        end = pd.Timestamp(steps[-1]["time"])+pd.Timedelta(seconds=steps[-1]["durationSeconds"])
+        for s in steps:
+            s["startSeconds"] = (pd.Timestamp(s["time"])-start).total_seconds()
+            s["endSeconds"] = s["startSeconds"]+s["durationSeconds"]
+        duration = sum(s["durationSeconds"] for s in steps)
+        traces.append(dict(time=str(start), endTime=str(end), durationSeconds=duration,
+            clipped=start>a or end<b, outdoorTemp=steps[0]["outdoorTemp"],
+            outdoorHumidity=steps[0]["outdoorHumidity"], irradiance=steps[0]["irradiance"],
+            target=config.target_supply_w_g_kg, upper=config.target_supply_w_g_kg+config.target_humidity_tolerance_g_kg,
+            floor=config.xi_abs_stop*100,
+            hourSupplyHumidity=sum(s["supplyHumidity"]*s["durationSeconds"] for s in steps)/duration,
+            steps=steps))
+    return {"traces": traces}
 
 
 def simulate(payload):

@@ -965,11 +965,16 @@ def run_simulation(
     config: SystemConfig | None = None,
     collector: CollectorConfig | None = None,
     trace_time: str | None = None,
+    trace_times: list | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     config = config or SystemConfig()
     collector = collector or CollectorConfig.for_type(collector_type)
     weather = prepare_weather(weather_file, collector, config)
     trace_stamp = pd.Timestamp(trace_time) if trace_time is not None else None
+    trace_stamps = set(pd.Timestamp(t) for t in (trace_times or []))
+    if trace_stamp is not None:
+        trace_stamps.add(trace_stamp)
+    trace_end = max(trace_stamps) if trace_stamps else None
     if trace_stamp is not None and not weather.time.eq(trace_stamp).any():
         raise ValueError("선택한 시점이 계산 기상 구간에 없습니다.")
     trace_steps = []
@@ -1106,7 +1111,7 @@ def run_simulation(
         regen_reason = ""
 
         for _ in range(n_sub):
-            trace_before = {key: acc[key] for key in ("abs_water", "des_water", "abs_active_time", "reg_active_time", "reg_need_kWh")} if trace_stamp == row.time else None
+            trace_before = {key: acc[key] for key in ("abs_water", "des_water", "abs_active_time", "reg_active_time", "reg_need_kWh")} if row.time in trace_stamps else None
             m_salt_0 = state_sol_m_salt
             m_water_0 = state_sol_m_water
             m_sol_0 = m_salt_0 + m_water_0
@@ -1334,6 +1339,9 @@ def run_simulation(
                 abs_fraction = (acc["abs_active_time"] - trace_before["abs_active_time"]) / dt_sub_s
                 reg_fraction = (acc["reg_active_time"] - trace_before["reg_active_time"]) / dt_sub_s
                 trace_steps.append({
+                    "time": str(row.time + pd.Timedelta(seconds=_ * dt_sub_s)),
+                    "outdoorTemp": ta, "outdoorHumidity": w_oa * 1000,
+                    "irradiance": float(row.GT_COLLECTOR_W_m2),
                     "startSeconds": _ * dt_sub_s, "endSeconds": (_ + 1) * dt_sub_s,
                     "durationSeconds": dt_sub_s,
                     "concentrationStart": xi_0 * 100, "concentrationEnd": xi_next * 100,
@@ -1481,7 +1489,7 @@ def run_simulation(
             }
         )
         previous_schedule_on = schedule_on
-        if trace_stamp == row.time:
+        if trace_end == row.time:
             break
 
     result = pd.DataFrame(rows)
