@@ -964,10 +964,15 @@ def run_simulation(
     collector_type: CollectorType,
     config: SystemConfig | None = None,
     collector: CollectorConfig | None = None,
+    trace_time: str | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     config = config or SystemConfig()
     collector = collector or CollectorConfig.for_type(collector_type)
     weather = prepare_weather(weather_file, collector, config)
+    trace_stamp = pd.Timestamp(trace_time) if trace_time is not None else None
+    if trace_stamp is not None and not weather.time.eq(trace_stamp).any():
+        raise ValueError("선택한 시점이 계산 기상 구간에 없습니다.")
+    trace_steps = []
 
     m_dot_oa_abs = config.sa_abs_m3h / 3600 * config.rho_air_kg_m3
     m_dot_sol_abs_cmd = config.lg_ratio_abs * m_dot_oa_abs
@@ -1101,6 +1106,7 @@ def run_simulation(
         regen_reason = ""
 
         for _ in range(n_sub):
+            trace_before = {key: acc[key] for key in ("abs_water", "des_water", "abs_active_time", "reg_active_time", "reg_need_kWh")} if trace_stamp == row.time else None
             m_salt_0 = state_sol_m_salt
             m_water_0 = state_sol_m_water
             m_sol_0 = m_salt_0 + m_water_0
@@ -1322,6 +1328,25 @@ def run_simulation(
             h_next = (u_expected - qloss_sol_kj) / m_sol_next
             t_sol_next = solution_temperature_from_h(h_next, xi_next)
             state_sol_m_salt, state_sol_m_water, state_sol_t = m_salt_next, m_water_next, t_sol_next
+            if trace_before is not None:
+                absorbed = acc["abs_water"] - trace_before["abs_water"]
+                desorbed = acc["des_water"] - trace_before["des_water"]
+                abs_fraction = (acc["abs_active_time"] - trace_before["abs_active_time"]) / dt_sub_s
+                reg_fraction = (acc["reg_active_time"] - trace_before["reg_active_time"]) / dt_sub_s
+                trace_steps.append({
+                    "startSeconds": _ * dt_sub_s, "endSeconds": (_ + 1) * dt_sub_s,
+                    "durationSeconds": dt_sub_s,
+                    "concentrationStart": xi_0 * 100, "concentrationEnd": xi_next * 100,
+                    "saltKg": m_salt_next, "waterStartKg": m_water_0, "waterEndKg": m_water_next,
+                    "absorbedKg": absorbed, "desorbedKg": desorbed,
+                    "supplyHumidity": max(w_oa - absorbed / max(dt_sub_s * m_dot_oa_abs, 1e-9), 0) * 1000,
+                    "absFraction": abs_fraction, "regFraction": reg_fraction,
+                    "lg": last_abs.get("ABS_LG_CONTROLLED") if abs_fraction > 0 else None,
+                    "absTemp": last_abs.get("ABS_SOL_IN_T_CONTROLLED_degC") if abs_fraction > 0 else None,
+                    "regTemp": reg_solution_t_controlled if reg_fraction > 0 else None,
+                    "regenHeatKWh": acc["reg_need_kWh"] - trace_before["reg_need_kWh"],
+                    "protection": bool(ld_needed_hour and abs_fraction < 1 - 1e-9),
+                })
             acc["res_sol_kJ"] += m_sol_next * solution_enthalpy(xi_next, t_sol_next) - (u_expected - qloss_sol_kj)
 
             qnet_tes_w = qcollector_w - qtes_to_reg_w - qloss_tes_w
@@ -1456,8 +1481,11 @@ def run_simulation(
             }
         )
         previous_schedule_on = schedule_on
+        if trace_stamp == row.time:
+            break
 
     result = pd.DataFrame(rows)
+    result.attrs["substep_trace"] = trace_steps
     summary = build_summary(
         result,
         config,

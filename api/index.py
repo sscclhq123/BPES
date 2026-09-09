@@ -4,7 +4,7 @@ import json
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
-from backend.server import render_calculation_page, simulate, upload_weather, weather_preview
+from backend.server import render_calculation_page, simulate, substep_trace, upload_weather, weather_preview
 
 
 class handler(BaseHTTPRequestHandler):
@@ -40,9 +40,9 @@ class handler(BaseHTTPRequestHandler):
                 return
             if path == "/api/weather-upload":
                 response = upload_weather(self.headers, raw_body)
-            elif path in {"/api/weather-preview", "/api/simulate"}:
+            elif path in {"/api/weather-preview", "/api/simulate", "/api/substep-trace"}:
                 payload = json.loads(raw_body or b"{}")
-                response = weather_preview(payload) if path == "/api/weather-preview" else simulate(payload)
+                response = substep_trace(payload) if path == "/api/substep-trace" else weather_preview(payload) if path == "/api/weather-preview" else simulate(payload)
             else:
                 self._send(404, "application/json; charset=utf-8", b'{"error":"Not found"}')
                 return

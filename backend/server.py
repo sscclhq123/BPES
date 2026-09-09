@@ -1207,6 +1207,30 @@ def upload_weather(headers, body):
         }
 
 
+def substep_trace(payload):
+    request = payload.get("request")
+    if not isinstance(request, dict):
+        raise ValueError("기존 계산 조건이 필요합니다. 설계 계산을 다시 실행하세요.")
+    stamp = pd.Timestamp(payload.get("time"))
+    if pd.isna(stamp):
+        raise ValueError("계산 시점을 선택하세요.")
+    collector_type, collector, config = build_configs(request)
+    load_config = replace(config, reg_flow_control_by_tes=False, t_tes_init_c=config.t_tes_min_c, ua_tes_w_k=0.0)
+    result, _ = run_simulation(resolve_weather_file(request), collector_type,
+        config=load_config, collector=replace(collector, area_m2=0.0), trace_time=str(stamp))
+    row = result.iloc[-1]
+    return {
+        "time": str(stamp), "durationSeconds": float(row.dt_h * 3600),
+        "outdoorTemp": float(row.Ta_degC), "outdoorHumidity": float(row.OA_w_kgkg * 1000),
+        "irradiance": float(row.GT_COLLECTOR_W_m2),
+        "target": config.target_supply_w_g_kg,
+        "upper": config.target_supply_w_g_kg + config.target_humidity_tolerance_g_kg,
+        "floor": config.xi_abs_stop * 100,
+        "hourSupplyHumidity": float(row.SUPPLY_AIR_w_kgkg * 1000),
+        "steps": [{k: clean_value(v) for k, v in step.items()} for step in result.attrs["substep_trace"]],
+    }
+
+
 def simulate(payload):
     collector_type, collector, config = build_configs(payload)
     weather_file = resolve_weather_file(payload)
@@ -1329,6 +1353,7 @@ def simulate(payload):
 
     return {
         "warnings": warnings,
+        "traceRequest": payload,
         "summary": {key: clean_value(value) for key, value in row.items()},
         "monthly": monthly_rows(result),
         "solutionConcentrationDrilldown": solution_concentration_drilldown(result),
@@ -1429,7 +1454,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         path = urlparse(self.path).path
-        if path not in {"/calculate", "/api/simulate", "/api/weather-preview", "/api/weather-upload"}:
+        if path not in {"/calculate", "/api/simulate", "/api/substep-trace", "/api/weather-preview", "/api/weather-upload"}:
             self.send_error(404)
             return
 
@@ -1451,7 +1476,7 @@ class Handler(SimpleHTTPRequestHandler):
                 response = upload_weather(self.headers, raw_body)
             else:
                 payload = json.loads(raw_body or b"{}")
-                response = weather_preview(payload) if path == "/api/weather-preview" else simulate(payload)
+                response = substep_trace(payload) if path == "/api/substep-trace" else weather_preview(payload) if path == "/api/weather-preview" else simulate(payload)
             body = json.dumps(response, ensure_ascii=False).encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")

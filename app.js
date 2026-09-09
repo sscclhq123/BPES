@@ -1859,6 +1859,7 @@ async function runCalculation() {
             solutionConcentrationDrilldown: result.solutionConcentrationDrilldown,
             weatherMonthly: result.weatherMonthly,
             unmetTrend: result.unmetTrend,
+            traceRequest: result.traceRequest,
             ldUsageHeatmap: result.ldUsageHeatmap,
             regUsageHeatmap: result.regUsageHeatmap,
             areaResults: result.areaResults || result.candidates || [],

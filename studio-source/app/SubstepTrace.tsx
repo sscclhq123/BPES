@@ -1,0 +1,45 @@
+"use client";
+import {useEffect,useState} from "react";
+
+type Step={startSeconds:number;endSeconds:number;durationSeconds:number;concentrationStart:number;concentrationEnd:number;saltKg:number;waterStartKg:number;waterEndKg:number;absorbedKg:number;desorbedKg:number;supplyHumidity:number;absFraction:number;regFraction:number;lg:number|null;absTemp:number|null;regTemp:number|null;regenHeatKWh:number;protection:boolean};
+type Trace={time:string;durationSeconds:number;outdoorTemp:number;outdoorHumidity:number;irradiance:number;target:number;upper:number;floor:number;hourSupplyHumidity:number;steps:Step[]};
+const f=(v:number|null,d=2)=>v===null?"—":v.toFixed(d);
+
+function Plot({title,unit,series,limit,duration}:{title:string;unit:string;series:{name:string;color:string;points:[number,number][]}[];limit?:number;duration:number}){
+ const values=series.flatMap(s=>s.points.map(p=>p[1]));if(limit!==undefined)values.push(limit);
+ const lo=Math.min(...values),hi=Math.max(...values),pad=Math.max((hi-lo)*.12,.05),min=lo-pad,max=hi+pad;
+ const x=(v:number)=>75+v/duration*660,y=(v:number)=>220-(v-min)/(max-min)*180;
+ return <figure style={{margin:"20px 0"}}><figcaption><strong>{title}</strong> <span>({unit})</span></figcaption><div style={{overflowX:"auto"}}><svg viewBox="0 0 800 280" role="img" aria-label={`${title} 추이, x축 경과 분, y축 ${unit}`} style={{width:"100%",minWidth:560,display:"block"}}>
+ {[0,1,2,3,4].map(i=>{const v=min+(max-min)*i/4;return <g key={i}><line x1={75} x2={735} y1={y(v)} y2={y(v)} stroke="#d8e2e5"/><text x={65} y={y(v)+5} textAnchor="end" fontSize={15} fill="#344a50">{v.toFixed(2)}</text></g>})}
+ <path d="M75 40 V220 H735" stroke="#586c72" fill="none"/>
+ {[0,1,2,3,4,5,6].map(i=><text key={i} x={x(duration*i/6)} y={245} textAnchor="middle" fontSize={16} fill="#344a50">{(duration*i/360).toFixed(0)}</text>)}<text x={405} y={273} textAnchor="middle" fontSize={16} fill="#344a50">경과 시간 (분)</text>
+ {limit!==undefined&&<line x1={75} x2={735} y1={y(limit)} y2={y(limit)} stroke="#786555" strokeDasharray="6 5"/>}
+ {series.map(s=><polyline key={s.name} points={s.points.map(([a,b])=>`${x(a)},${y(b)}`).join(" ")} fill="none" stroke={s.color} strokeWidth={2.5}/>)}
+ </svg></div><div>{series.map(s=><span key={s.name} style={{color:s.color,marginRight:20}}>━ {s.name}</span>)}{limit!==undefined&&<span>┄ 기준 {f(limit)} {unit}</span>}</div></figure>;
+}
+
+export default function SubstepTrace({request,time}:{request?:Record<string,unknown>;time:string}){
+ const [trace,setTrace]=useState<Trace|null>(null),[error,setError]=useState(""),[attempt,setAttempt]=useState(0);
+ useEffect(()=>{const controller=new AbortController();setTrace(null);setError("");
+  if(!request){setError("상세 계산 조건이 없는 이전 결과입니다. 설계 계산을 다시 실행하세요.");return;}
+  fetch("/api/substep-trace",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({request,time}),signal:controller.signal}).then(async r=>{const data=await r.json();if(!r.ok||data.error)throw Error(data.error||"상세 계산 요청 실패");return data;}).then(data=>{if(!controller.signal.aborted)setTrace(data)}).catch(e=>{if(!controller.signal.aborted)setError(String(e.message))});
+  return ()=>controller.abort();
+ },[request,time,attempt]);
+ const box={marginTop:24,padding:24,border:"1px solid #cbdcdf",borderRadius:16,background:"#f8fbfc",color:"#233c43"};
+ if(error)return <section style={box} role="alert"><p>{error}</p><button type="button" onClick={()=>setAttempt(a=>a+1)}>다시 시도</button></section>;
+ if(!trace)return <section style={box} role="status" aria-busy="true">{time.slice(5)} 상세 계산 중… 이전 탱크 상태부터 이어서 재현합니다.</section>;
+ const steps=trace.steps;
+ if(!steps.length)return <section style={box}>이 시점의 내부 계산 기록이 없습니다.</section>;
+ const staircase=(key:"supplyHumidity"|"absorbedKg"|"desorbedKg")=>steps.flatMap(s=>{const value=key==="supplyHumidity"?s[key]:s[key]*3600/s.durationSeconds;return [[s.startSeconds,value],[s.endSeconds,value]] as [number,number][]});
+ return <section style={box} aria-label="선택 시점 내부 계산 상세"><h3>{time.slice(5)} · 내부 계산 상세</h3>
+ <p>계산 간격 {f(steps[0].durationSeconds,0)}초 · 외기 {f(trace.outdoorTemp,1)}℃ / {f(trace.outdoorHumidity)} g/kgDA · 집열면 일사강도 {f(trace.irradiance,0)} W/m²</p>
+ <p>외기는 이 구간 내 고정 입력입니다. 급기습도는 각 내부 구간의 부분운전을 포함한 평균, 농도는 구간 끝 상태입니다. 제습 제한 시 미처리 공기도 평균에 포함됩니다. 작은 화면에서는 그래프와 표를 좌우로 밀어 전체 구간을 확인하세요.</p>
+ <Plot title="급기 절대습도" unit="g/kgDA" duration={trace.durationSeconds} limit={trace.upper} series={[{name:"내부 구간 평균",color:"#098ea4",points:staircase("supplyHumidity")},{name:`시간 평균 ${f(trace.hourSupplyHumidity)}`,color:"#53666f",points:[[0,trace.hourSupplyHumidity],[trace.durationSeconds,trace.hourSupplyHumidity]]}]}/>
+ <Plot title="탱크 LiCl 농도" unit="wt%" duration={trace.durationSeconds} limit={trace.floor} series={[{name:"탱크 농도",color:"#098ea4",points:[[0,steps[0].concentrationStart],...steps.map(s=>[s.endSeconds,s.concentrationEnd] as [number,number])]}]}/>
+ <Plot title="수분 흡수·제거율" unit="kg/h" duration={trace.durationSeconds} series={[{name:"제습 흡수율",color:"#098ea4",points:staircase("absorbedKg")},{name:"재생 제거율",color:"#c74b40",points:staircase("desorbedKg")}]}/>
+ <details><summary style={{cursor:"pointer",padding:12}}>계산식과 {steps.length}개 구간 결과표 펼치기</summary>
+ <p>종료 수분량 = 시작 수분량 + 흡수량 − 제거량<br/>종료 농도 = 염 질량 ÷ (염 질량 + 종료 수분량) × 100<br/>급기 절대습도 = 외기 절대습도 − 구간 흡수량 ÷ (공기 질량유량 × 구간 초) × 1000</p>
+ <p>흡수·제거량은 해당 구간의 kg이며, 위 그래프는 kg/h로 환산합니다. 재생열은 요구량으로, 태양열·보조열원의 분 단위 배분을 뜻하지 않습니다.</p>
+ <div style={{overflowX:"auto",maxHeight:480}}><table style={{borderCollapse:"collapse",minWidth:1250,width:"100%",fontSize:15}}><thead><tr>{["경과 분","농도 시작→끝 wt%","수분 시작→끝 kg","흡수 kg","제거 kg","급기 g/kgDA","제습/재생 %","L/G","제습/재생 ℃","재생열 kWh","농도 보호"].map(t=><th key={t} scope="col" style={{padding:10,textAlign:"left",background:"#e4eef1"}}>{t}</th>)}</tr></thead><tbody>{steps.map((s,i)=><tr key={i} style={{background:i%2?"#edf4f6":"white"}}>{[`${f(s.startSeconds/60,1)}–${f(s.endSeconds/60,1)}`,`${f(s.concentrationStart,3)} → ${f(s.concentrationEnd,3)}`,`${f(s.waterStartKg,3)} → ${f(s.waterEndKg,3)}`,f(s.absorbedKg,3),f(s.desorbedKg,3),f(s.supplyHumidity),`${f(s.absFraction*100,0)} / ${f(s.regFraction*100,0)}`,f(s.lg),`${f(s.absTemp,1)} / ${f(s.regTemp,1)}`,f(s.regenHeatKWh,3),s.protection?"제습 제한":"—"].map((v,j)=><td key={j} style={{padding:10,borderBottom:"1px solid #d9e3e6"}}>{v}</td>)}</tr>)}</tbody></table></div></details>
+ </section>;
+}
