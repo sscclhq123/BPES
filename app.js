@@ -1858,6 +1858,7 @@ async function runCalculation() {
             monthly: result.monthly,
             solutionConcentrationDrilldown: result.solutionConcentrationDrilldown,
             weatherMonthly: result.weatherMonthly,
+            weatherHourly: result.weatherHourly,
             unmetTrend: result.unmetTrend,
             traceRequest: result.traceRequest,
             ldUsageHeatmap: result.ldUsageHeatmap,

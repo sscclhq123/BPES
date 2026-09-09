@@ -262,6 +262,20 @@ def monthly_rows(result):
     ]
 
 
+def weather_hourly_rows(result):
+    """Actual simulation weather; solar is irradiance, not accumulated energy."""
+    return [
+        {"month": int(pd.Timestamp(row.time).month),
+         "day": int(pd.Timestamp(row.time).day),
+         "hour": int(pd.Timestamp(row.time).hour),
+         "outdoorTemp": clean_value(row.Ta_degC),
+         "outdoorHumidity": clean_value(row.OA_w_kgkg * 1000),
+         "irradiance": clean_value(row.GT_COLLECTOR_W_m2),
+         "duration": clean_value(row.dt_h)}
+        for row in result.itertuples(index=False)
+    ]
+
+
 def monthly_weather_rows(result):
     """Monthly weather inputs actually used by the simulation."""
     weather = result[["time", "Ta_degC", "OA_w_kgkg", "GT_COLLECTOR_W_m2", "dt_h"]].copy()
@@ -1358,6 +1372,7 @@ def simulate(payload):
         "monthly": monthly_rows(result),
         "solutionConcentrationDrilldown": solution_concentration_drilldown(result),
         "weatherMonthly": monthly_weather_rows(result),
+        "weatherHourly": weather_hourly_rows(result),
         "ldUsageHeatmap": ld_usage_heatmap(result, "ABS_ON"),
         "regUsageHeatmap": ld_usage_heatmap(result, "REG_ON"),
         "unmetTrend": unmet_dehumidification_trend(
