@@ -57,6 +57,7 @@ export default function Home() {
   const [weatherFile, setWeatherFile] = useState<File | null>(null);
   const [resultSummary, setResultSummary] = useState<CalculationSummary | null>(null);
   const [calculationError, setCalculationError] = useState("");
+  const [batchProgress,setBatchProgress]=useState<Array<{label:string;status:string;error:string}>>([]);
   const screenRef = useRef<HTMLElement>(null);
   const progress = view === "intro" ? 0 : view === "wizard" ? step + 1 : 4;
   const ldRangeError = design.solutionConcentration<36.4||design.solutionConcentration>39||design.lgRatio<1||design.lgRatio>3||design.absSolutionTemp<20||design.absSolutionTemp>31.4||design.regenTemp<48.5||design.regenTemp>59.4;
@@ -84,7 +85,9 @@ export default function Home() {
   useEffect(() => {
     const receiveResult = (event:MessageEvent) => {
       if (!["https://salddp.vercel.app","https://saldop.vercel.app"].includes(event.origin)) return;
+      if (event.data?.type === "saldop:calculation-progress") {setBatchProgress(event.data.regions||[]);setCalculationError("");}
       if (event.data?.type === "saldop:calculation-complete") {
+        if(event.data.summary?.failedCount){setCalculationError("모든 지역이 완료되지 않았습니다.");return;}
         setResultSummary(event.data.summary as CalculationSummary);
         setCalculationError("");
         setView("result");
@@ -154,7 +157,7 @@ export default function Home() {
         )}
         <ProgressDial progress={progress} mode={view === "calculating" ? "calculating" : step === 3 ? "ready" : "wizard"} onCalculate={startCalculation} calculateEnabled={design.targetSolarShare!==""&&design.targetSolarShare>0&&design.targetSolarShare<=100} onNext={view === "wizard" && step < 3 && (step!==1 || design.buildingInputMode!=="template" || Boolean(design.buildingUse&&design.buildingSize)) && !(step===2&&ldRangeError) ? ()=>setStep(step+1) : undefined} onPrev={view === "wizard" && step > 0 ? ()=>setStep(step-1) : undefined} buildingUse={design.buildingUse} buildingSize={design.buildingSize} ldError={step===2&&ldRangeError} />
       </section>
-      {view==="calculating"&&<><iframe className="calculation-frame" title="SALDDP 계산 엔진" src={appUrl} onLoad={(event)=>{if(design.weatherMode==="upload"&&weatherFile)event.currentTarget.contentWindow?.postMessage({type:"saldop:weather-file",file:weatherFile},window.location.origin);}}/><div className={`calculation-error${calculationError?" visible":""}`}>{calculationError}</div></>}
+      {view==="calculating"&&<><iframe className="calculation-frame" title="SALDDP 계산 엔진" src={appUrl} onLoad={(event)=>{if(design.weatherMode==="upload"&&weatherFile)event.currentTarget.contentWindow?.postMessage({type:"saldop:weather-file",file:weatherFile},window.location.origin);}}/><section className="batch-progress" aria-live="polite"><b>모든 지역 계산 완료 후 결과를 표시합니다.</b>{batchProgress.map((r,i)=><p key={i}>{r.label} · {r.status}{r.error&&<small> — {r.error}</small>}</p>)}{calculationError&&<><p role="alert">{calculationError}</p><button onClick={()=>{setCalculationError("");(document.querySelector(".calculation-frame") as HTMLIFrameElement)?.contentWindow?.postMessage({type:"saldop:retry-failed"},window.location.origin)}}>실패 지역만 재시도</button></>}</section></>}
       <nav className="step-rail">{steps.map((item,index)=><button key={item.no} className={index===step&&view==="wizard"?"active":index<progress?"done":""} onClick={()=>{if(view==="wizard")setStep(index)}}><span>{item.no}</span>{item.label}</button>)}</nav>
     </main>
   );
@@ -252,7 +255,7 @@ function ProgressDial({progress,mode,onCalculate,calculateEnabled=true,onNext,on
     {onPrev&&<button type="button" className="dial-sector-nav dial-sector-prev" onClick={onPrev} aria-label="이전 단계로 이동"><span><i>←</i> 이전 단계</span></button>}
     {onNext&&<button type="button" className="dial-sector-nav dial-sector-next" onClick={onNext} aria-label="다음 단계로 이동"><span>다음 단계 <i>→</i></span></button>}
     <div className="dial-core">{Array.from({length:20}).map((_,i)=><span className="pulse-dot" key={i}/>)}
-      {mode === "ready" ? <button className="calculate-button" disabled={!calculateEnabled} onClick={onCalculate}><b>{calculateEnabled?"계산 시작":"커버율 입력"}</b><small>{calculateEnabled?"RUN CALCULATION":"ENTER TARGET SHARE"}</small></button> : mode === "calculating" ? <div className="wait-status"><b>CALCULATING</b><small>예상 대기시간 6~12초</small><em>900개 설계 조합</em></div> : ldError?<div className="dial-status stage-icon ld-error-icon"><b>!</b><small>RANGE ERROR</small></div>:<div className={`dial-status stage-icon stage-icon-${progress}${progress===2?` building-symbol size-${buildingSize||"none"}`:""}`}><b>{progress===2?(buildingIcons[buildingUse||""]||"?"):stageIcons[progress]}</b><small>{progress===2?(buildingLabels[buildingUse||""]||"SELECT BUILDING"):progress ? steps[progress-1].label : "START"}</small></div>}
+      {mode === "ready" ? <button className="calculate-button" disabled={!calculateEnabled} onClick={onCalculate}><b>{calculateEnabled?"계산 시작":"커버율 입력"}</b><small>{calculateEnabled?"RUN CALCULATION":"ENTER TARGET SHARE"}</small></button> : mode === "calculating" ? <div className="wait-status"><b>CALCULATING</b><small>지역별 계산 진행 중</small><em>모든 지역 완료까지 기다려 주세요</em></div> : ldError?<div className="dial-status stage-icon ld-error-icon"><b>!</b><small>RANGE ERROR</small></div>:<div className={`dial-status stage-icon stage-icon-${progress}${progress===2?` building-symbol size-${buildingSize||"none"}`:""}`}><b>{progress===2?(buildingIcons[buildingUse||""]||"?"):stageIcons[progress]}</b><small>{progress===2?(buildingLabels[buildingUse||""]||"SELECT BUILDING"):progress ? steps[progress-1].label : "START"}</small></div>}
     </div>
     <span className={`dial-label label-a${progress===1?" active":""}`}>WEATHER</span><span className={`dial-label label-building${progress===2?" active":""}`}>BUILDING</span><span className={`dial-label label-b${progress===3?" active":""}`}>LD CONTROL</span><span className={`dial-label label-c${progress===4?" active":""}`}>SOLAR / TES</span>
   </div>;

@@ -519,7 +519,7 @@ function requestJsonViaXhr(url, options = {}) {
     const request = new XMLHttpRequest();
     request.open(options.method || "GET", url, true);
     Object.entries(options.headers || {}).forEach(([key, value]) => request.setRequestHeader(key, value));
-    request.timeout = 120000;
+    request.timeout = 330000;
     request.onload = () => {
       try {
         resolve({
@@ -1781,7 +1781,14 @@ function restoreCalculationInputs(input) {
   updateBuildingModeFields();
 }
 
+let batchRunning = false;
+let batchSignature = "";
+let batchResults = [];
+function postBatch(data) {
+  if (window.parent !== window) window.parent.postMessage(data, window.location.origin);
+}
 async function runCalculation() {
+  if (batchRunning) return;
   const input = readInputs();
   const validationMessages = validateDesignInputs(input);
   renderCalculationIssues(validationMessages);
@@ -1793,6 +1800,7 @@ async function runCalculation() {
   }
 
   const estimate = estimateCalculation(input);
+  batchRunning = true;
   $("statusPill").textContent = "계산 중";
   $("runButton").disabled = true;
   $("runButton").textContent = "계산 중";
@@ -1802,13 +1810,21 @@ async function runCalculation() {
   animateFlow();
 
   const datasetKeys = input.weatherDatasets;
-  const results = new Array(datasetKeys.length);
+  const signature = JSON.stringify(input);
+  if (signature !== batchSignature) { batchResults = []; batchSignature = signature; }
+  const results = datasetKeys.map((key,index)=>batchResults[index]?.key===key&&batchResults[index]?.result?batchResults[index]:null);
+  const states = results.map(item=>item?"완료":"대기");
+  const progress = ()=>postBatch({type:"saldop:calculation-progress",regions:datasetKeys.map((key,i)=>({label:weatherDatasets[key]?.label||key,status:states[i],error:results[i]?.error||""}))});
+  progress();
   let nextIndex = 0;
   let completed = 0;
   const worker = async () => {
     while (nextIndex < datasetKeys.length) {
       const index = nextIndex++;
       const key = datasetKeys[index];
+      if (results[index]?.result) continue;
+      states[index] = "계산 중";
+      progress();
       try {
         const response = await requestJson("/api/simulate", {
           method: "POST",
@@ -1819,10 +1835,13 @@ async function runCalculation() {
           throw new Error(response.result.error || `HTTP ${response.status}`);
         }
         results[index] = { key, result: response.result };
+        states[index] = "완료";
       } catch (error) {
         results[index] = { key, error: error.message };
+        states[index] = "실패";
       }
       completed += 1;
+      progress();
       $("calculationTiming").textContent = `${completed}/${datasetKeys.length}개 지역 계산 완료`;
       renderRegionResults(results.filter(Boolean));
     }
@@ -1831,6 +1850,8 @@ async function runCalculation() {
   try {
     await Promise.all(Array.from({ length: Math.min(3, datasetKeys.length) }, () => worker()));
     const successful = results.filter((item) => item?.result);
+    batchResults = results;
+    if (successful.length !== datasetKeys.length) throw new Error(`${successful.length}/${datasetKeys.length}개 지역 완료. 실패 지역을 재시도해야 결과를 열 수 있습니다.`);
     if (!successful.length) throw new Error("선택한 모든 지역의 계산에 실패했습니다.");
     const detailed = successful.find((item) => item.key === input.weatherDataset) || successful[0];
     if (detailed.key !== $("weatherDataset").value) {
@@ -1878,6 +1899,7 @@ async function runCalculation() {
       window.parent.postMessage({ type: "saldop:calculation-failed", message: error.message }, parentOrigin);
     }
   } finally {
+    batchRunning = false;
     $("runButton").disabled = false;
     $("runButton").textContent = "계산 실행";
   }
@@ -1885,6 +1907,7 @@ async function runCalculation() {
 
 function bindEvents() {
   window.addEventListener("message", (event) => {
+    if (event.origin === window.location.origin && event.source === window.parent && event.data?.type === "saldop:retry-failed") { void runCalculation(); return; }
     if (event.origin !== "https://saldop.vercel.app" || !(event.data?.file instanceof File)) {
       return;
     }
