@@ -442,6 +442,10 @@ def unmet_dehumidification_trend(result, accepted_upper_humidity):
             "humidityExcess": clean_value(row.humidityExcess),
             "outdoorTemp": clean_value(row.Ta_degC),
             "outdoorHumidity": clean_value(row.OA_w_kgkg * 1000),
+            "absLg": clean_value(getattr(row, "ABS_LG_CONTROLLED", None)) if getattr(row, "ABS_DUTY_FRACTION", 0) > 0 else None,
+            "regLg": clean_value(getattr(row, "REG_SOL_IN_LG", None)) if getattr(row, "REG_DUTY_FRACTION", 0) > 0 else None,
+            "absTemp": clean_value(getattr(row, "ABS_SOL_IN_T_MEAN_degC", None)),
+            "regTemp": clean_value(getattr(row, "REG_SOL_IN_T_CONTROLLED_degC", None)),
         }
         for row in unmet.itertuples(index=False)
     ]

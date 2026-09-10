@@ -1088,6 +1088,7 @@ def run_simulation(
             "reg_temp_time": 0.0,
             "reg_active_time": 0.0,
             "abs_lg_time": 0.0,
+            "abs_temp_time": 0.0,
             "abs_active_time": 0.0,
             "incident_kWh": 0.0,
             "absorbed_kWh": 0.0,
@@ -1192,6 +1193,7 @@ def run_simulation(
                 acc["abs_water"] += abs_res["m_water_absorb"] * dt_sub_s
                 acc["abs_cooling_kWh"] += qcool_abs_w * dt_sub_h / 1000
                 acc["abs_lg_time"] += abs_res["ABS_LG_CONTROLLED"] * dt_sub_s * abs_duty
+                acc["abs_temp_time"] += abs_solution_t_controlled * dt_sub_s * abs_duty
                 acc["abs_active_time"] += dt_sub_s * abs_duty
                 acc["abs_protection_time"] += (1 - abs_duty) * dt_sub_s
                 last_abs = abs_res
@@ -1445,6 +1447,7 @@ def run_simulation(
                 "ABS_TEMP_CONTROL_ACTIVE": last_abs.get("ABS_TEMP_CONTROL_ACTIVE", False),
                 "ABS_LG_CONTROL_ACTIVE": last_abs.get("ABS_LG_CONTROL_ACTIVE", False),
                 "ABS_LG_CONTROLLED": safe_div(acc["abs_lg_time"], acc["abs_active_time"]),
+                "ABS_SOL_IN_T_MEAN_degC": safe_div(acc["abs_temp_time"], acc["abs_active_time"]) if acc["abs_active_time"] > 0 else np.nan,
                 "ABS_AIR_OUT_m3_h": dry_air_volume_flow_m3h(m_dot_oa_abs, last_abs["T_air_out"], last_abs["w_air_out"], config.p_atm_kpa),
                 "ABS_SOL_OUT_T_degC": last_abs["T_sol_out"],
                 "ABS_SOL_OUT_xi": last_abs["xi_out"],
