@@ -680,6 +680,10 @@ function readInputs() {
   data.weatherDataset = getCurrentWeatherDatasetKey();
   data.weatherDatasets = selectedWeatherDatasetKeys();
   data.simulationMonths = selectedSimulationMonths();
+  const regenParams = new URLSearchParams(window.location.search);
+  data.regenSizingMode = regenParams.get("regenSizingMode") || "load";
+  data.regenLgRatio = Number(regenParams.get("regenLgRatio") ?? 1.2);
+  data.regenMaxAirRatio = Number(regenParams.get("regenMaxAirRatio") ?? 3);
   return data;
 }
 

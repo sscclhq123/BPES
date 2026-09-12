@@ -161,6 +161,13 @@ def build_configs(payload):
     # Independent air/solution flow control stays inside per-module input bounds.
     config.lg_ratio_reg_design = 1.1
     config.reg_flow_auto_control = payload.get("regenFlowMode", "auto") == "auto"
+    config.reg_capacity_auto_size = payload.get("regenSizingMode", "load") != "legacy"
+    config.reg_fixed_lg = to_number(payload, "regenLgRatio", 1.2)
+    config.reg_max_air_ratio = to_number(payload, "regenMaxAirRatio", 3.0)
+    if not np.isfinite(config.reg_max_air_ratio) or not .5 <= config.reg_max_air_ratio <= 10:
+        raise ValueError("재생 외기량 상한 배수는 0.5~10 사이로 입력하세요(설계 검토용 제한).")
+    if not np.isfinite(config.reg_fixed_lg) or not .65 <= config.reg_fixed_lg <= 2:
+        raise ValueError("재생 L/G는 모듈 유량 교집합이 존재하는 0.65~2.0 사이여야 합니다.")
     config.lg_auto_control = payload.get("lgMode", "auto") == "auto"
     config.t_abs_in_target_c = to_number(payload, "absSolutionTemp", config.t_abs_in_target_c)
     config.abs_temp_auto_control = payload.get("absTempMode", "fixed") == "auto"
@@ -1339,7 +1346,7 @@ def simulate(payload):
     if capacity_hours > 0:
         warnings.append(
             f"설치된 재생부의 허용 운전조건에서 흡수량 및 농도 회복 요구량을 "
-            f"감당하지 못한 시간이 {capacity_hours:.2f} h입니다. 대수는 자동으로 늘리지 않습니다."
+            f"감당하지 못한 시간이 {capacity_hours:.2f} h입니다. 운전 중 설치 대수를 초과해 늘리지 않습니다."
         )
     if protection_hours > 0:
         warnings.append(f"LiCl 36.4% 보호하한을 지키기 위한 제습 정지시간은 {protection_hours:.2f} h입니다.")
@@ -1361,7 +1368,7 @@ def simulate(payload):
                 f"{lg_control_text}하고 재생부 용액온도를 "
                 f"{config.reg_temp_min_c:.1f}~{config.reg_temp_max_c:.1f} °C에서 자동제어했지만, "
                 f"목표 급기 절대습도 미충족 시간이 {target_unmet_hours} h입니다. "
-                "현재 실험식 권장 재생온도 범위만으로는 해당 피크 조건을 달성할 수 없습니다."
+                "제습부 자체 성능, 농도 보호 및 재생 용량 제한을 함께 확인해야 합니다."
             )
         else:
             warnings.append(
@@ -1369,6 +1376,10 @@ def simulate(payload):
                 f"목표 급기 절대습도 미충족 시간이 {target_unmet_hours} h입니다."
             )
     monthly_candidate_cache = {}
+    regen_design = {key.removeprefix("REG_DESIGN_"): clean_value(value)
+                    for key,value in row.items() if key.startswith("REG_DESIGN_")}
+    if regen_design.get("limited"):
+        warnings.append("독립 산정한 재생 용량이 외기량 상한 또는 재생 불가 외기조건으로 제한됩니다. 결과를 목표 충족으로 간주하지 마세요.")
 
     def candidate_with_monthly(candidate):
         cache_key = candidate["collectorArea"]
@@ -1434,6 +1445,10 @@ def simulate(payload):
         ),
         "best": {
             **{key: value for key, value in best.items() if key != "searchHierarchy"},
+            **{"regenDesign" + key[0].upper() + key[1:]: value for key,value in regen_design.items()},
+            "regenFixedLg": config.reg_fixed_lg,
+            "regenSizingMode": "load" if config.reg_capacity_auto_size else "legacy",
+            "integrationStepSeconds": clean_value(row.get("LD_integration_step_s",config.dt_internal_s)),
             "lgRatio": clean_value(row["LG_ratio_abs"]),
             "lgMode": "auto" if config.lg_auto_control else "fixed",
             "lgRatioMean": clean_value(row["LG_control_mean"]),

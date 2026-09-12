@@ -76,6 +76,12 @@ class SystemConfig:
     lg_ratio_reg_design: float = 1.0
     reg_flow_control_by_tes: bool = True
     reg_flow_auto_control: bool = True
+    reg_capacity_auto_size: bool = False  # Website opts in; legacy replay remains available.
+    reg_fixed_lg: float = 1.2
+    reg_max_air_ratio: float = 3.0  # User-adjustable screening budget, NOT a physical law.
+    reg_fan_pressure_pa: float = 300.0  # Preliminary assumptions, not a fan curve.
+    reg_fan_efficiency: float = 0.60
+    reg_duct_velocity_m_s: float = 5.0
 
     d_outlet_m: float = 0.30
     fan_static_pressure_design_pa: float = 150.0
@@ -668,6 +674,37 @@ def controlled_regeneration(config, ta, rh, w_oa, h_oa, air_flow, solution_flow,
     """
     upper = float(np.clip(config.t_reg_in_target_c, config.reg_temp_min_c, config.reg_temp_max_c))
 
+    if config.reg_capacity_auto_size:
+        amin, amax = regeneration_air_domain(config)
+        amin, amax = amin * modules, amax * modules
+        def evaluate(t, air=amax, concentration=xi):
+            return parallel_regenerator_block(ta, rh, w_oa, h_oa, config.p_atm_kpa,
+                air, air * config.reg_fixed_lg, modules, t, concentration, np.nan, config.eff_enthalpy)
+        maximum = evaluate(upper)
+        target_capacity = evaluate(upper, concentration=config.xi_target)["m_water_desorb"]
+        temperature = upper
+        if config.reg_temp_auto_control and maximum["m_water_desorb"] >= requested_kg_s:
+            low, high = config.reg_temp_min_c, upper
+            if evaluate(low)["m_water_desorb"] >= requested_kg_s:
+                high = low
+            else:
+                for _ in range(10):
+                    mid = (low + high) / 2
+                    if evaluate(mid)["m_water_desorb"] >= requested_kg_s:
+                        high = mid
+                    else:
+                        low = mid
+            temperature = high
+        base = evaluate(temperature)["m_water_desorb"]
+        # At fixed L/G both mass flows scale together: exponent 0.1649 + 0.4818.
+        scale = min(max(requested_kg_s, 0) / max(base, 1e-12), 1.) ** (1 / .6467)
+        air = float(np.clip(amax * scale, amin, amax))
+        result = evaluate(temperature, air)
+        result.update(controlled_air_kg_s=air, controlled_solution_kg_s=air * config.reg_fixed_lg)
+        capacity = result["m_water_desorb"]
+        duty = min(max(requested_kg_s, 0) / capacity, 1.) if capacity > 0 else 0.
+        return result, temperature, duty, maximum["m_water_desorb"], target_capacity
+
     if config.reg_flow_auto_control:
         # Proposed controller, not a fitted correlation: independent on-state
         # air/solution flows within the existing per-module domain. Module count
@@ -840,6 +877,84 @@ def parallel_regenerator_block(
     result["m_sol_out"] *= module_count
     result["module_count"] = module_count
     return result
+
+
+def regeneration_air_domain(config):
+    """Intersection of air and solution domains for a fixed mass-based L/G."""
+    if not np.isfinite(config.reg_fixed_lg) or config.reg_fixed_lg <= 0:
+        raise ValueError("재생 L/G는 양수여야 합니다.")
+    low = max(config.reg_module_air_min_kg_s, config.reg_module_solution_min_kg_s / config.reg_fixed_lg)
+    high = min(config.reg_module_air_max_kg_s, config.reg_module_solution_max_kg_s / config.reg_fixed_lg)
+    if low > high + 1e-12:
+        raise ValueError("재생 L/G와 모듈당 공기·용액 유량 범위를 동시에 만족할 수 없습니다.")
+    return low, high
+
+
+def size_regeneration_bank(weather, config, absorber_air_kg_s):
+    """Size at TARGET concentration, before dilution/protection can hide the load.
+
+    Each installed module retains the correlation's geometry and flow domain.
+    The airflow ratio is a design-budget constraint only, not capacity sizing.
+    """
+    _, air_max = regeneration_air_domain(config)
+    budget = absorber_air_kg_s * config.reg_max_air_ratio
+    max_modules = math.floor(budget / air_max + 1e-10)
+    if max_modules < 1:
+        raise ValueError("재생 외기유량 상한이 모듈 1대의 설계유량보다 작습니다. 상한을 늘려주세요.")
+    required, impossible, worst_time, peak_load = 1, 0, "", 0.
+    temp = float(np.clip(config.t_reg_in_target_c, config.reg_temp_min_c, config.reg_temp_max_c))
+    for row in weather.itertuples(index=False):
+        if not is_operation_hour(row.time, config):
+            continue
+        w = humidity_ratio_from_trh(row.Ta_degC, row.RH_pct, config.p_atm_kpa)
+        if w <= (config.target_supply_w_g_kg + config.target_humidity_tolerance_g_kg) / 1000:
+            continue
+        need = absorber_air_kg_s * max(w - config.target_supply_w_g_kg / 1000, 0)
+        peak_load = max(peak_load, need)
+        r = regenerator_block(row.Ta_degC, row.RH_pct, w, moist_air_enthalpy(row.Ta_degC,w),
+            config.p_atm_kpa, air_max, air_max * config.reg_fixed_lg, temp, config.xi_target, np.nan, config.eff_enthalpy)
+        capacity = r["m_water_desorb"]
+        if capacity <= 1e-12:
+            impossible += 1
+            continue
+        count = max(1, math.ceil(need / capacity - 1e-10))
+        if count > required:
+            required, worst_time = count, str(row.time)
+    installed = min(required, max_modules)
+    return {"modules": installed, "requiredModules": required,
+        "limited": required > max_modules or impossible > 0, "zeroCapacityHours": impossible,
+        "sizingTime": worst_time, "peakLoadKgH": peak_load * 3600,
+        "designAirKgS": installed * air_max, "designSolutionKgS": installed * air_max * config.reg_fixed_lg,
+        "airRatio": installed * air_max / absorber_air_kg_s, "maxAirRatio": config.reg_max_air_ratio}
+
+
+def minute_trace_records(records):
+    """Keep UI logs at 60 s while integrating a fast-turnover tank more finely."""
+    groups = {}
+    for record in records:
+        groups.setdefault(record["time"][:16], []).append(record)
+    output = []
+    sums = {"absorbedKg", "desorbedKg", "regenHeatKWh"}
+    ends = {"waterEndKg", "concentrationEnd", "tankTempEnd", "endSeconds"}
+    starts = {"time", "waterStartKg", "concentrationStart", "tankTempStart", "startSeconds", "saltKg"}
+    abs_fields = {"lg", "absTemp", "absSolutionFlow", "absAirOutTemp", "absSolutionOutTemp"}
+    reg_fields = {"regTemp", "regAirFlow", "regSolutionFlow", "regAirOutTemp", "regSolutionOutTemp"}
+    for group in groups.values():
+        duration = sum(r["durationSeconds"] for r in group)
+        merged = dict(group[0])
+        for key in merged:
+            if key in starts: continue
+            if key in ends: merged[key] = group[-1][key]
+            elif key in sums: merged[key] = sum(r[key] for r in group)
+            elif key == "durationSeconds": merged[key] = duration
+            elif key == "protection": merged[key] = any(r[key] for r in group)
+            else:
+                fraction = "absFraction" if key in abs_fields else "regFraction" if key in reg_fields else None
+                weighted = [(r[key], r["durationSeconds"] * (r[fraction] if fraction else 1)) for r in group if r[key] is not None]
+                total = sum(w for _,w in weighted)
+                merged[key] = sum(v*w for v,w in weighted)/total if total else None
+        output.append(merged)
+    return output
 
 
 def read_asos_weather(filename: str | Path) -> pd.DataFrame:
@@ -1052,6 +1167,12 @@ def run_simulation(
         config.reg_module_solution_max_kg_s,
         "재생기",
     )
+    regeneration_design = None
+    if config.reg_capacity_auto_size:
+        regeneration_design = size_regeneration_bank(weather, config, m_dot_oa_abs)
+        reg_module_count = regeneration_design["modules"]
+        m_dot_oa_reg = regeneration_design["designAirKgS"]
+        m_dot_sol_reg_design = regeneration_design["designSolutionKgS"]
     m_dot_sol_abs_cmd = bounded_solution_flow(
         m_dot_sol_abs_cmd,
         abs_module_count,
@@ -1081,6 +1202,14 @@ def run_simulation(
     state_sol_t = config.t_solution_tank_init_c
     state_tes_m = config.rho_w_kg_m3 * config.v_tes_l / 1000
     state_tes_t = config.t_tes_init_c
+    integration_step_s = config.dt_internal_s
+    if config.reg_capacity_auto_size:
+        # Explicit mixed-tank balance must not exchange multiple inventories in
+        # one step. Retain existing physical tank size; refine time, not volume.
+        min_inventory = solution_tank_mass_kg * config.xi_tank_init / max(config.xi_target, config.xi_tank_init)
+        max_circulation = abs_module_count * config.abs_module_solution_max_kg_s + m_dot_sol_reg_design
+        safe_step = min(config.dt_internal_s, .5 * min_inventory / max(max_circulation, 1e-9))
+        integration_step_s = 60 / max(1, math.ceil(60 / safe_step))
 
     rows = []
     regen_cycle_active = False
@@ -1093,7 +1222,7 @@ def run_simulation(
         h_oa = moist_air_enthalpy(ta, w_oa)
         dt_s = float(row.dt_s)
         dt_h = float(row.dt_h)
-        n_sub = max(1, round(dt_s / config.dt_internal_s))
+        n_sub = max(1, round(dt_s / integration_step_s))
         dt_sub_s = dt_s / n_sub
         dt_sub_h = dt_sub_s / 3600
 
@@ -1298,7 +1427,7 @@ def run_simulation(
                         m_reg_in = min(m_dot_sol_reg_design, m_reg_heat_limit)
                 else:
                     m_reg_in = selected_reg_solution
-                if config.reg_flow_auto_control and m_reg_in > 0:
+                if (config.reg_flow_auto_control or config.reg_capacity_auto_size) and m_reg_in > 0:
                     m_reg_air_active, reg_active_modules = selected_reg_air, reg_module_count
                 else:
                     m_reg_in, m_reg_air_active, reg_active_modules = staged_regenerator_flow(
@@ -1569,7 +1698,8 @@ def run_simulation(
             break
 
     result = pd.DataFrame(rows)
-    result.attrs["substep_trace"] = trace_steps
+    result.attrs["substep_trace"] = minute_trace_records(trace_steps) if config.reg_capacity_auto_size else trace_steps
+    result.attrs["regeneration_design"] = regeneration_design
     summary = build_summary(
         result,
         config,
@@ -1583,6 +1713,14 @@ def run_simulation(
         a_outlet,
         v_outlet,
     )
+    if regeneration_design:
+        design_flow = m_dot_oa_reg / config.rho_air_kg_m3
+        for key, value in regeneration_design.items():
+            summary["REG_DESIGN_" + key] = value
+        summary["REG_DESIGN_airM3h"] = design_flow * 3600
+        summary["REG_DESIGN_ductAreaM2"] = design_flow / config.reg_duct_velocity_m_s
+        summary["REG_DESIGN_fanKW"] = design_flow * config.reg_fan_pressure_pa / config.reg_fan_efficiency / 1000
+        summary["LD_integration_step_s"] = integration_step_s
     return result, summary
 
 
@@ -1615,7 +1753,7 @@ def build_summary(
         "LG_control_min": result.loc[abs_on, "ABS_LG_CONTROLLED"].min(),
         "LG_control_max": result.loc[abs_on, "ABS_LG_CONTROLLED"].max(),
         "SA_reg_factor": config.sa_reg_factor,
-        "SA_reg_m3h": config.sa_abs_m3h * config.sa_reg_factor,
+        "SA_reg_m3h": m_dot_oa_reg / config.rho_air_kg_m3 * 3600,
         "LG_ratio_reg_design": m_dot_sol_reg_design / m_dot_oa_reg,
         "REG_module_count": reg_module_count,
         "REG_module_air_design_kg_s": m_dot_oa_reg / reg_module_count,
