@@ -505,3 +505,18 @@ button,a { font:inherit; } button { cursor:pointer; }
 .trace-plots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:16px 0}.trace-plot{min-width:0;margin:0;padding:12px;border:1px solid #dbe6e9;border-radius:12px;background:white}.trace-plot figcaption{font-size:15px;line-height:1.5}.trace-legend{display:flex;flex-wrap:wrap;gap:5px 10px;font-size:13px;line-height:1.5}.trace-legend span{margin-right:0!important}@media(max-width:1100px){.trace-plots{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:700px){.trace-plots{grid-template-columns:1fr}.trace-plot{padding:8px}}
 .event-table-detailed>div,.event-table-detailed>button{grid-template-columns:150px 190px 115px 140px 110px 100px 100px 135px 135px;min-width:1175px}.ld-event-note{font-size:14px;line-height:1.7;color:#4b656d;margin:18px 0 10px}
 .batch-progress{position:relative;z-index:10;margin:20px auto;padding:20px;max-width:720px;background:#202622;color:#eaf2ef;border:1px solid #53655e;border-radius:12px;font-size:15px}.batch-progress p{margin:8px 0;line-height:1.6}.batch-progress small{color:#ffaba2}.batch-progress button{padding:12px 18px;background:#4ee7f0;color:#132323;border:0;border-radius:8px;cursor:pointer}.batch-progress button:focus-visible{outline:3px solid white;outline-offset:3px}
+.ld-mini-schematic.ld-shared-tank{position:fixed;z-index:100;top:50%;left:50%;width:min(1040px,calc(100vw - 32px));max-height:90dvh;overflow-y:auto;transform:translate(-50%,-50%);background:#0b1110}
+.ld-shared-tank .ld-tank-diagram{overflow-x:auto;scrollbar-color:#8db89a #19241f}
+.ld-shared-tank svg{min-width:800px;max-height:none;height:auto;margin:12px 0}
+.ld-shared-tank svg text{font:600 18px/1.4 sans-serif}
+.ld-shared-tank svg .unit-title{font-size:21px;font-weight:750}
+.ld-shared-tank svg .unit-sub{font-size:20px}
+.ld-shared-tank svg .tank-note{font-size:15px;fill:#bacbc2}
+.ld-shared-tank svg .solution-copy{font-size:17px;fill:#9ee678}
+.ld-shared-tank svg .transfer-copy{font-size:17px;fill:#b9d8e9}
+.tank-pipe{fill:none;stroke-width:3;stroke-linejoin:round}.tank-pipe.solution{stroke:#9ee678}.tank-pipe.return{stroke-dasharray:7 5}.tank-pipe.air{stroke:#ffd24c}.tank-pipe.cold{stroke:#4ee7f0}.tank-pipe.heat{stroke:#ff6d64}
+.tank-hx rect{fill:#162a28;stroke:#4ee7f0;stroke-width:2}.tank-hx.heat rect{fill:#302221;stroke:#ff6d64}
+.common-solution-tank path,.common-solution-tank ellipse{fill:#20362a;stroke:#9ee678;stroke-width:2}
+.ld-tank-help{color:#bacbc2;font-size:14px;line-height:1.6;margin:12px 0 0;text-wrap:pretty}
+.ld-shared-tank header b{text-wrap:balance}.ld-tank-diagram:focus-visible{outline:2px solid #4ee7f0;outline-offset:-2px}
+@media(max-width:700px){.ld-mini-schematic.ld-shared-tank{width:calc(100vw - 20px);max-height:calc(100dvh - 100px);padding:18px 14px}.ld-shared-tank header{padding-right:0}.ld-shared-tank .ld-mini-legend span{font-size:13px}}
