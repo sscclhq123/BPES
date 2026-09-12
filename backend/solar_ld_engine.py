@@ -75,6 +75,7 @@ class SystemConfig:
     sa_reg_factor: float = 1.0
     lg_ratio_reg_design: float = 1.0
     reg_flow_control_by_tes: bool = True
+    reg_flow_auto_control: bool = True
 
     d_outlet_m: float = 0.30
     fan_static_pressure_design_pa: float = 150.0
@@ -272,6 +273,11 @@ def cp_licl_solution_kjkgk(xi, t_c):
     return max(-2.379 * xi - 0.002 * t_c + 3.726, 0.1)
 
 
+def solution_heating_kw(flow_kg_s, xi, inlet_c, outlet_c):
+    """Same enthalpy reference as the shared solution tank, positive heating."""
+    return flow_kg_s * max(solution_enthalpy(xi, outlet_c) - solution_enthalpy(xi, inlet_c), 0.)
+
+
 def calc_twb_stull(t_c, rh):
     return (
         t_c * np.arctan(0.151977 * np.sqrt(rh + 8.313659))
@@ -372,7 +378,8 @@ def absorber_block(ta, rh, w_oa, h_oa, p_atm, m_dot_oa, m_dot_sol_in, t_sol_in, 
     xi_out = max(0.20, min(0.60, xi_out))
     h_air_out = moist_air_enthalpy(t_air_out, w_air_out)
     h_sol_in = solution_enthalpy(xi_in, t_sol_in)
-    h_sol_out = (h_sol_in * m_dot_sol_in + (h_oa - h_air_out) * eff_enthalpy * m_dot_oa) / max(
+    # Adiabatic contactor: the full air enthalpy change enters the solution.
+    h_sol_out = (h_sol_in * m_dot_sol_in + (h_oa - h_air_out) * m_dot_oa) / max(
         m_sol_out, 1e-9
     )
     t_sol_out = solution_temperature_from_h(h_sol_out, xi_out)
@@ -466,7 +473,7 @@ def apply_absorber_target_control(
     h_sol_in = solution_enthalpy(solution_xi, solution_t_c)
     controlled["h_sol_out"] = (
         h_sol_in * total_solution_kg_s
-        + (inlet_air_h_kjkg - h_air_out) * eff_enthalpy * total_air_kg_s
+        + (inlet_air_h_kjkg - h_air_out) * total_air_kg_s
     ) / max(controlled["m_sol_out"], 1e-9)
     controlled["T_sol_out"] = solution_temperature_from_h(
         controlled["h_sol_out"], controlled["xi_out"]
@@ -488,7 +495,7 @@ def controlled_parallel_absorber_block(
     eff_enthalpy,
     target_w_kgkg,
     auto_temperature_control=True,
-    solution_t_min_c=8.05,
+    solution_t_min_c=20.0,
     solution_t_max_c=31.4,
     auto_lg_control=False,
     lg_ratio_min=1.00,
@@ -502,6 +509,11 @@ def controlled_parallel_absorber_block(
     """
 
     def evaluate(solution_t_c, solution_flow_kg_s=total_solution_kg_s):
+        minimum = max(module_count * 0.63, lg_ratio_min * total_air_kg_s)
+        maximum = min(module_count * 2.08, lg_ratio_max * total_air_kg_s)
+        if minimum > maximum:
+            raise ValueError("제습부 모듈 유량 범위와 L/G 범위를 동시에 만족할 수 없습니다.")
+        solution_flow_kg_s = float(np.clip(solution_flow_kg_s, minimum, maximum))
         result = parallel_absorber_block(
             ta,
             rh,
@@ -656,6 +668,45 @@ def controlled_regeneration(config, ta, rh, w_oa, h_oa, air_flow, solution_flow,
     """
     upper = float(np.clip(config.t_reg_in_target_c, config.reg_temp_min_c, config.reg_temp_max_c))
 
+    if config.reg_flow_auto_control:
+        # Proposed controller, not a fitted correlation: independent on-state
+        # air/solution flows within the existing per-module domain. Module count
+        # stays fixed. Use lowest feasible temperature, then lowest solution flow
+        # among three air-flow candidates (ties prefer lower air flow).
+        amin, amax = modules * config.reg_module_air_min_kg_s, modules * config.reg_module_air_max_kg_s
+        smin, smax = modules * config.reg_module_solution_min_kg_s, modules * config.reg_module_solution_max_kg_s
+        def at(t, a=amax, s=smax, concentration=xi):
+            return parallel_regenerator_block(ta, rh, w_oa, h_oa, config.p_atm_kpa,
+                a, s, modules, t, concentration, np.nan, config.eff_enthalpy)
+        maximum = at(upper)
+        target_capacity = at(upper, concentration=config.xi_target)["m_water_desorb"]
+        temperature = upper
+        if config.reg_temp_auto_control:
+            low = config.reg_temp_min_c
+            if at(low)["m_water_desorb"] >= requested_kg_s:
+                temperature = low
+            elif maximum["m_water_desorb"] >= requested_kg_s:
+                hi = upper
+                for _ in range(10):
+                    mid = (low + hi) / 2
+                    if at(mid)["m_water_desorb"] >= requested_kg_s:
+                        hi = mid
+                    else:
+                        low = mid
+                temperature = hi
+        candidates = []
+        for air in (amin, (amin + amax) / 2, amax):
+            base = at(temperature, air, smax)["m_water_desorb"]
+            solution = float(np.clip(smax * (max(requested_kg_s, 0) / max(base, 1e-12)) ** (1 / .4818), smin, smax))
+            result = at(temperature, air, solution)
+            candidates.append((result, air, solution))
+        feasible = [c for c in candidates if c[0]["m_water_desorb"] >= requested_kg_s - 1e-10]
+        selected, air, solution = min(feasible, key=lambda c:(c[2], c[1])) if feasible else max(candidates, key=lambda c:c[0]["m_water_desorb"])
+        selected["controlled_air_kg_s"] = air
+        selected["controlled_solution_kg_s"] = solution
+        capacity = selected["m_water_desorb"]
+        return selected, temperature, min(max(requested_kg_s, 0) / capacity, 1.) if capacity > 0 else 0., maximum["m_water_desorb"], target_capacity
+
     def evaluate(temp, concentration=xi):
         return parallel_regenerator_block(ta, rh, w_oa, h_oa, config.p_atm_kpa,
             air_flow, solution_flow, modules, temp, concentration, np.nan, config.eff_enthalpy)
@@ -737,7 +788,7 @@ def regenerator_block(
     t_air_out = max(ta, min(ta + eff * (t_sol_in - ta), t_sol_in))
     h_air_out = moist_air_enthalpy(t_air_out, w_air_out)
     h_sol_in = solution_enthalpy(xi_in, t_sol_in)
-    h_sol_out = (h_sol_in * m_dot_sol_in - (h_air_out - h_oa) * eff_enthalpy * m_dot_oa_reg) / max(
+    h_sol_out = (h_sol_in * m_dot_sol_in - (h_air_out - h_oa) * m_dot_oa_reg) / max(
         m_sol_out, 1e-9
     )
     t_sol_out = solution_temperature_from_h(h_sol_out, xi_out)
@@ -1089,6 +1140,9 @@ def run_simulation(
             "reg_active_time": 0.0,
             "abs_lg_time": 0.0,
             "abs_temp_time": 0.0,
+            "abs_heating_kWh": 0.0,
+            "reg_cooling_kWh": 0.0,
+            "hx_residual_kWh": 0.0,
             "abs_active_time": 0.0,
             "incident_kWh": 0.0,
             "absorbed_kWh": 0.0,
@@ -1192,6 +1246,7 @@ def run_simulation(
                 abs_res["m_water_absorb"] *= abs_duty
                 acc["abs_water"] += abs_res["m_water_absorb"] * dt_sub_s
                 acc["abs_cooling_kWh"] += qcool_abs_w * dt_sub_h / 1000
+                acc["abs_heating_kWh"] += m_abs_in * max(h_abs_in - h_sol_0, 0) * dt_sub_h
                 acc["abs_lg_time"] += abs_res["ABS_LG_CONTROLLED"] * dt_sub_s * abs_duty
                 acc["abs_temp_time"] += abs_solution_t_controlled * dt_sub_s * abs_duty
                 acc["abs_active_time"] += dt_sub_s * abs_duty
@@ -1209,13 +1264,16 @@ def run_simulation(
                 reg_res, reg_solution_t_controlled, reg_duty, reg_capacity, target_capacity = controlled_regeneration(
                     config, ta, rh, w_oa, h_oa, m_dot_oa_reg, m_dot_sol_reg_design,
                     reg_module_count, xi_0, requested_reg_rate)
+                selected_reg_air = reg_res.get("controlled_air_kg_s", m_dot_oa_reg)
+                selected_reg_solution = reg_res.get("controlled_solution_kg_s", m_dot_sol_reg_design)
                 acc["reg_requested_water"] += requested_reg_rate * dt_sub_s
                 if requested_reg_rate > reg_capacity + 1e-9:
                     acc["reg_capacity_deficit_time"] += dt_sub_s
                 acc["reg_target_capacity_margin"] += (target_capacity - absorbed_rate) * dt_sub_s
                 if absorbed_rate > target_capacity + 1e-9:
                     acc["reg_target_capacity_deficit_time"] += dt_sub_s
-                cp_reg = cp_licl_solution_kjkgk(xi_0, (t_sol_0 + reg_solution_t_controlled) / 2)
+                # dh/dT of the tank's h(xi,T) model; do not mix property models.
+                cp_reg = 2.7
                 m_water_at_target = m_salt_0 * (1 / config.xi_target - 1)
                 water_removable_to_target = max(m_water_0 - m_water_at_target, 0)
                 if abs_on:
@@ -1239,13 +1297,12 @@ def run_simulation(
                     else:
                         m_reg_in = min(m_dot_sol_reg_design, m_reg_heat_limit)
                 else:
-                    m_reg_in = m_dot_sol_reg_design
-                m_reg_in, m_reg_air_active, reg_active_modules = staged_regenerator_flow(
-                    m_reg_in,
-                    lg_ratio_reg_actual,
-                    reg_module_count,
-                    config,
-                )
+                    m_reg_in = selected_reg_solution
+                if config.reg_flow_auto_control and m_reg_in > 0:
+                    m_reg_air_active, reg_active_modules = selected_reg_air, reg_module_count
+                else:
+                    m_reg_in, m_reg_air_active, reg_active_modules = staged_regenerator_flow(
+                        m_reg_in, lg_ratio_reg_actual, reg_module_count, config)
                 qreg_need_est_w = m_reg_in * cp_reg * 1000 * dt_reg_est
                 qtes_temp_limit_est_w = m_reg_in * cp_reg * 1000 * max(t_after_tes_limit - t_sol_0, 0)
                 qtes_possible_est_w = min(qreg_need_est_w, qtes_energy_limit_w, qtes_temp_limit_est_w)
@@ -1277,8 +1334,8 @@ def run_simulation(
                 )
                 reg_duty = min(1.0, requested_reg_rate / max(reg_res["m_water_desorb"], 1e-12),
                                m_desorb_cap_kg_s / max(reg_res["m_water_desorb"], 1e-12))
-                cp_reg_actual = cp_licl_solution_kjkgk(xi_0, (t_sol_0 + reg_solution_t_controlled) / 2)
-                qreg_need_w = m_reg_in * cp_reg_actual * 1000 * max(reg_solution_t_controlled - t_sol_0, 0)
+                cp_reg_actual = 2.7
+                qreg_need_w = solution_heating_kw(m_reg_in, xi_0, t_sol_0, reg_solution_t_controlled) * 1000
                 t_after_tes_actual = t_sol_0 + config.eps_tes_reg_hx * max(t_tes_0 - t_sol_0, 0)
                 t_after_tes_actual = min(t_after_tes_actual, reg_solution_t_controlled)
                 qtes_temp_limit_w = m_reg_in * cp_reg_actual * 1000 * max(t_after_tes_actual - t_sol_0, 0)
@@ -1305,6 +1362,8 @@ def run_simulation(
                 qlatent_w = reg_res["m_water_desorb"] * reg_duty * latent_heat_vaporization_water_kjkg(reg_solution_t_controlled) * 1000
                 acc["des_water"] += reg_res["m_water_desorb"] * reg_duty * dt_sub_s
                 acc["reg_need_kWh"] += qreg_need_w * dt_sub_h / 1000
+                acc["reg_cooling_kWh"] += m_reg_in * max(h_sol_0 - solution_enthalpy(xi_0, reg_solution_t_controlled), 0) * dt_sub_h
+                acc["hx_residual_kWh"] += (qreg_need_w - qtes_to_reg_w - qaux_w) * dt_sub_h / 1000
                 acc["tes_kWh"] += qtes_to_reg_w * dt_sub_h / 1000
                 acc["aux_kWh"] += qaux_w * dt_sub_h / 1000
                 acc["latent_kWh"] += qlatent_w * dt_sub_h / 1000
@@ -1354,6 +1413,17 @@ def run_simulation(
                     "lg": last_abs.get("ABS_LG_CONTROLLED") if abs_fraction > 0 else None,
                     "absTemp": last_abs.get("ABS_SOL_IN_T_CONTROLLED_degC") if abs_fraction > 0 else None,
                     "regTemp": reg_solution_t_controlled if reg_fraction > 0 else None,
+                    "tankTempStart": t_sol_0, "tankTempEnd": t_sol_next,
+                    "absAirFlow": m_dot_oa_abs,
+                    "absSolutionFlow": m_abs_in / abs_fraction if abs_fraction > 0 else None,
+                    "regAirFlow": m_reg_air_active / reg_fraction if reg_fraction > 0 else None,
+                    "regSolutionFlow": m_reg_in / reg_fraction if reg_fraction > 0 else None,
+                    "absAirInTemp": ta, "regAirInTemp": ta,
+                    "absAirOutTemp": last_abs["T_air_out"] if abs_fraction > 0 else None,
+                    "regAirOutTemp": last_reg["T_air_out"] if reg_fraction > 0 else None,
+                    "absSolutionOutTemp": last_abs["T_sol_out"] if abs_fraction > 0 else None,
+                    "regSolutionOutTemp": last_reg["T_sol_out"] if reg_fraction > 0 else None,
+                    "heatBalanceResidualKW": (qreg_need_w-qtes_to_reg_w-qaux_w)/1000,
                     "regenHeatKWh": acc["reg_need_kWh"] - trace_before["reg_need_kWh"],
                     "protection": bool(ld_needed_hour and abs_fraction < 1 - 1e-9),
                 })
@@ -1467,6 +1537,9 @@ def run_simulation(
                 "SUPPLY_AIR_w_kgkg": supply_w,
                 "SUPPLY_AIR_h_kJkg": supply_h,
                 "ABS_SOLUTION_COOLING_kWh": acc["abs_cooling_kWh"],
+                "ABS_SOLUTION_HEATING_kWh": acc["abs_heating_kWh"],
+                "REG_SOLUTION_COOLING_kWh": acc["reg_cooling_kWh"],
+                "REG_HX_BALANCE_RESIDUAL_kWh": acc["hx_residual_kWh"],
                 "REG_HX_HEAT_NEED_kWh": acc["reg_need_kWh"],
                 "REG_HX_HEAT_FROM_TES_kWh": acc["tes_kWh"],
                 "REG_HX_HEAT_FROM_AUX_kWh": acc["aux_kWh"],

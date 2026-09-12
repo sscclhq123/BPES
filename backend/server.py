@@ -157,9 +157,10 @@ def build_configs(payload):
     config.xi_abs_stop = 0.364
     config.xi_abs_restart = min(config.xi_target, 0.366)
     config.lg_ratio_abs = to_number(payload, "lgRatio", config.lg_ratio_abs)
-    # Regenerator L/G=3 in Lim et al. belongs to a different numerical model;
-    # retain the present correlation's validated design flow instead.
+    # 1.1 is the installed-module sizing reference, NOT the on-state control L/G.
+    # Independent air/solution flow control stays inside per-module input bounds.
     config.lg_ratio_reg_design = 1.1
+    config.reg_flow_auto_control = payload.get("regenFlowMode", "auto") == "auto"
     config.lg_auto_control = payload.get("lgMode", "auto") == "auto"
     config.t_abs_in_target_c = to_number(payload, "absSolutionTemp", config.t_abs_in_target_c)
     config.abs_temp_auto_control = payload.get("absTempMode", "fixed") == "auto"
@@ -719,6 +720,7 @@ def apply_tes_dispatch(result, dispatch, design_flow_m3_h):
     adjusted["TES_STORAGE_TO_REG_kWh"] = dispatch["storageToReg"]
     adjusted["REG_HX_HEAT_FROM_TES_kWh"] = dispatch["tesToReg"]
     adjusted["REG_HX_HEAT_FROM_AUX_kWh"] = dispatch["aux"]
+    adjusted["REG_HX_BALANCE_RESIDUAL_kWh"] = adjusted["REG_HX_HEAT_NEED_kWh"] - adjusted["REG_HX_HEAT_FROM_TES_kWh"] - adjusted["REG_HX_HEAT_FROM_AUX_kWh"]
     adjusted["TES_DESIGN_FLOW_m3_h"] = design_flow_m3_h
     adjusted["TES_ACTUAL_FLOW_m3_h"] = dispatch["flow"]
     adjusted["TES_LOSS_SIZED_kWh"] = dispatch["loss"]

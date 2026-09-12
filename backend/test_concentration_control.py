@@ -11,7 +11,7 @@ from backend.solar_ld_engine import (
 
 class ConcentrationControlTests(unittest.TestCase):
     def controller(self, demand, auto=False):
-        config = SystemConfig(reg_temp_auto_control=auto)
+        config = SystemConfig(reg_temp_auto_control=auto, reg_flow_auto_control=False)
         w = humidity_ratio_from_trh(30, 70)
         return controlled_regeneration(config, 30, 70, w, moist_air_enthalpy(30, w),
                                        0.36, 0.396, 1, 0.38, demand)
@@ -57,7 +57,10 @@ class ConcentrationControlTests(unittest.TestCase):
         self.assertGreaterEqual(result.TANK_xi_NEXT.min(), .3799)
         self.assertLessEqual(result.TANK_xi_NEXT.max(), .38 + 1e-10)
         self.assertTrue(result.REG_DUTY_FRACTION.between(0, 1).all())
-        self.assertTrue(((result.REG_DUTY_FRACTION > 0) & (result.REG_DUTY_FRACTION < 1)).any())
+        # Independent flow modulation may satisfy demand without duty cycling.
+        active = result[result.REG_DUTY_FRACTION > 0]
+        self.assertTrue((active.REG_SOL_IN_mdot_kg_s > 0).all())
+        self.assertTrue((active.REG_SOL_IN_mdot_kg_s <= active.REG_ACTIVE_MODULE_COUNT * .48 + 1e-9).all())
 
     def test_capacity_shortage_protects_domain_and_conserves_salt_and_water(self):
         result = self.run_day(reg_factor=.2, temperature=32, humidity=85)
