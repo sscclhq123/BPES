@@ -26,9 +26,9 @@
 .ldp-legend .dilute:before{border-color:#75b8ff;border-top-style:dashed}.ldp-legend .concentrated:before{border-color:#ffb366;border-top-style:dashed}
 .ldp-footer p{margin:7px 0 0;text-align:center;font-size:12px;line-height:1.4;color:#b9c9be;text-wrap:pretty}
 @media(max-width:600px) and (orientation:portrait){
- .ldp-dialog{width:calc(100vw - 12px);height:min(calc(144.32vw + 112px),calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));border-radius:10px}
+ .ldp-dialog{width:calc(100vw - 12px);height:calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));border-radius:10px}
  .ldp-header{padding:8px 10px}.ldp-header h2{font-size:17px}
- .ldp-content{margin:8px 6px 4px}.ldp-content .ldp-wide{display:none}.ldp-content .ldp-narrow{display:block}
+ .ldp-content{margin:8px 6px 4px;overflow-y:auto;overscroll-behavior:contain;scrollbar-color:#829789 #101815}.ldp-content .ldp-wide{display:none}.ldp-content .ldp-narrow{display:block;height:auto}
  .ldp-dialog .ldp-narrow .ldp-unit-name{font-size:23px}.ldp-dialog .ldp-mobile-hx{font-size:20px}
  .ldp-footer{padding:8px 8px 10px}.ldp-legend{gap:6px 13px}.ldp-legend span{font-size:12px;gap:5px}.ldp-legend span:before{width:17px}
  .ldp-footer p{font-size:11px}

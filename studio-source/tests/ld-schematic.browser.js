@@ -8,6 +8,8 @@ async page => {
  const reports=[];
  for(const [width,height] of [[1440,1000],[1366,768],[768,1024],[390,844],[320,740],[844,390]]){
   await page.setViewportSize({width,height});
+  await modal.locator('.ldp-content').evaluate(el=>el.scrollTop=0);
+  const mobile=width<=600&&height>width;
   const data=await modal.evaluate(el=>{
    const r=el.getBoundingClientRect(),content=el.querySelector('.ldp-content'),svg=Array.from(el.querySelectorAll('.ldp-diagram')).find(s=>s.getBoundingClientRect().width>0);
    const sr=svg.getBoundingClientRect(),texts=Array.from(svg.querySelectorAll('text')),overlaps=[],clipped=[];
@@ -23,15 +25,23 @@ async page => {
    return {bounds:[r.left,r.top,r.right,r.bottom],overflow:[content.scrollWidth-content.clientWidth,content.scrollHeight-content.clientHeight,el.scrollHeight-el.clientHeight],overlaps,clipped,tankBottom:tank.bottom,close:[close.width,close.height,close.top,close.bottom],scrollLock:document.body.style.overflow};
   });
   check(data.bounds[0]>=0&&data.bounds[1]>=0&&data.bounds[2]<=width+1&&data.bounds[3]<=height+1,`Modal clips at ${width}`);
-  check(data.overflow.every(n=>n<=1),`Scroll needed at ${width}: ${data.overflow}`);
+  check(data.overflow[0]<=1&&data.overflow[2]<=1&&(mobile||data.overflow[1]<=1),`Unexpected overflow at ${width}: ${data.overflow}`);
   check(!data.overlaps.length,`Overlapping labels at ${width}: ${JSON.stringify(data.overlaps)}`);
   check(!data.clipped.length,`Clipped labels at ${width}: ${data.clipped}`);
-  check(data.tankBottom<height,`Tank offscreen at ${width}`);
+  if(!mobile)check(data.tankBottom<height,`Tank offscreen at ${width}`);
   check(data.close[0]>=44&&data.close[1]>=44&&data.close[2]>=0&&data.close[3]<=height,`Close clipped at ${width}`);
   check(data.scrollLock==='hidden','Background scroll not locked');
   check(await modal.locator('button').count()===1,'Unexpected playback button');
   check(await modal.locator('h3').count()===0,'Duplicate section headings');
   await page.screenshot({path:`/tmp/ld-compact-${width}-${height}.png`});
+  if(mobile){
+   await modal.locator('.ldp-content').evaluate(el=>el.scrollTop=el.scrollHeight);
+   const tank=await modal.locator('.ldp-narrow .ldp-common-tank').boundingBox();
+   const close=await modal.locator('.ldp-close').boundingBox();
+   check(tank.y>=0&&tank.y+tank.height<=height,'Mobile tank cannot be reached');
+   check(close.y>=0&&close.y+close.height<=height,'Mobile close disappears on scroll');
+   await page.screenshot({path:`/tmp/ld-compact-${width}-${height}-bottom.png`});
+  }
   reports.push({width,height,...data});
  }
  await page.setViewportSize({width:1440,height:1000});

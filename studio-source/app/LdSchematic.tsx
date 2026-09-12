@@ -35,23 +35,6 @@ function DesktopLoop({regen=false,x=0}:{regen?:boolean;x?:number}){
   <text className="ldp-note" x="260" y="313">{regen?"TES·보조열원":"냉열원"}</text>
  </g>;
 }
-function MobileLoop({regen=false,y=0}:{regen?:boolean;y?:number}){
- const ret=regen?"concentrated":"dilute",thermal=regen?"heat":"cold";
- return <g transform={`translate(0 ${y})`}>
-  <text x="220" y="22">외기 유입</text><text x="356" y="22">{regen?"습윤 배기":"건조 급기"}</text>
-  <Flow d="M220 32V58" color="air"/><Flow d="M356 59V32" color={thermal}/>
-  <Unit regen={regen} mobile/>
-  <Flow d="M14 204H82V52H148V98H158"/>
-  <Flow d={regen?"M298 184V204H408Q420 184 432 204":"M298 184V204H420"} dashed color={ret} arrow={false}/>
-  <rect className={`ldp-equipment ${thermal}`} x="28" y="76" width="106" height="76" rx="8"/>
-  <text className="ldp-mobile-hx" x="81" y="105">{regen?"용액 가열":"용액 냉각"}</text><text className="ldp-note" x="81" y="133">열교환기</text>
-  <text className="ldp-route-label" style={{fill:colors.solution}} x="88" y="37">공급</text>
-  <text className="ldp-route-label" style={{fill:colors[ret]}} x="354" y="196">{regen?"농축 환수":"희석 환수"}</text>
-  <Flow d="M150 236H52V214Q32 204 52 194V157" color={thermal}/>
-  <text className="ldp-thermal-label" style={{fill:colors[thermal]}} x="237" y="237">{regen?"열 공급":"냉각 공급"}</text>
-  <text className="ldp-note" x="372" y="237">{regen?"TES·보조열원":"냉열원"}</text>
- </g>;
-}
 function Tank({x,y}:{x:number;y:number}){
  return <g className="ldp-common-tank" transform={`translate(${x} ${y})`}><path d="M0 13V69C0 90 220 90 220 69V13Z"/><ellipse cx="110" cy="13" rx="110" ry="13"/><text x="110" y="44">공통 수용액탱크</text><text className="ldp-note" x="110" y="70">LiCl · 완전 혼합</text></g>;
 }
@@ -81,12 +64,12 @@ export default function LdSchematic({onClose}:{onClose:()=>void}){
     <Tank x={330} y={384}/>
     <text className="ldp-note" x="178" y="461">탱크 → 두 장치 공급</text><text className="ldp-note" x="706" y="461">두 환수액 → 탱크 혼합</text>
    </svg>
-   <svg className="ldp-diagram ldp-narrow" viewBox="0 0 440 635" role="img" aria-label="공통 탱크에 연결된 제습·재생 병렬 회로. 녹색 공급, 파란 희석 환수, 주황 농축 환수.">
-    <Flow d="M110 582H14V204" arrow={false}/>
-    <Flow d="M420 204V520H244V543" color="dilute" dashed/>
-    <Flow d="M432 464V535H286V548" color="concentrated" dashed/>
-    <MobileLoop/><MobileLoop regen y={260}/>
-    <Tank x={110} y={549}/>
+   <svg className="ldp-diagram ldp-narrow" viewBox="0 0 440 886" role="img" aria-label="공통 탱크에 연결된 제습·재생 병렬 회로. 아래로 스크롤하면 공통 탱크가 보입니다. 녹색 공급, 파란 희석 환수, 주황 농축 환수.">
+    <Flow d="M110 830H10V340H96" arrow={false}/><Flow d="M10 720H96" arrow={false}/>
+    <Flow d="M344 340H418V758H245V781" color="dilute" dashed/>
+    <Flow d="M344 720H406Q418 700 430 720H432V770H290V781" color="concentrated" dashed/>
+    <DesktopLoop/><g transform="translate(0 380)"><DesktopLoop regen/></g>
+    <Tank x={110} y={786}/>
    </svg>
   </div>
   <footer className="ldp-footer"><div className="ldp-legend"><span className="solution">용액 공급</span><span className="dilute">희석 환수</span><span className="concentrated">농축 환수</span></div><p>냉각·가열은 열교환기 작용 방향 · 열매체와 용액은 분리</p></footer>

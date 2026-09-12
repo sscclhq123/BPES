@@ -520,3 +520,10 @@ button,a { font:inherit; } button { cursor:pointer; }
 .ld-tank-help{color:#bacbc2;font-size:14px;line-height:1.6;margin:12px 0 0;text-wrap:pretty}
 .ld-shared-tank header b{text-wrap:balance}.ld-tank-diagram:focus-visible{outline:2px solid #4ee7f0;outline-offset:-2px}
 @media(max-width:700px){.ld-mini-schematic.ld-shared-tank{width:calc(100vw - 20px);max-height:calc(100dvh - 100px);padding:18px 14px}.ld-shared-tank header{padding-right:0}.ld-shared-tank .ld-mini-legend span{font-size:13px}}
+.ld-auto-scope h4{margin:16px 0 8px;font-size:14px;color:#dce8df}
+.ld-auto-scope .ld-range-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ld-auto-scope .ld-range-grid p{font-size:13px;line-height:1.5}
+.ld-auto-scope .ld-range-grid p b{font-size:12px;color:#a7bbae}
+.ld-auto-scope small{display:block;font-size:12px!important;line-height:1.65}
+.ld-auto-scope a{color:#8ee8ec;text-decoration:underline}
+.ld-auto-scope .ld-auto-budget{margin:14px 0;padding:12px;font-size:13px;line-height:1.65;border-color:#426052}
