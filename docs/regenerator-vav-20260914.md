@@ -61,5 +61,25 @@ the existing engine.
 - VAV tests cover flow bounds, fixed L/G, module domains, capped capacity,
   equilibrium shutoff, tank mass conservation and heat-balance residuals.
 
-Local timings do not guarantee production timing. Production multi-region
-completion must be checked on the deployed version.
+## Production verification (05a2c31)
+
+On saldop.vercel.app, select Seoul + Manila, medium office, 7,745 m³/h,
+09:00–18:00, annual, automatic LD, fixed regeneration L/G 1.2, 3x maximum,
+solar target 80%, and ideal TES 60/45 °C:
+
+- Seoul finished in approximately 103 seconds; Manila in 152 seconds.
+- Both completed after 257.648 seconds including browser startup, and only
+  then did the UI open the result screen. Each region returned 8,760 flow rows.
+- Hourly ON-state airflow ratios: Seoul 1.000–2.944x; Manila 1.000–3.000x.
+- Maximum fixed-L/G deviation in rounded exported flows: below 4e-9.
+- Seoul has 0 unmet hours; Manila retains 2 unmet hours. Successful calculation
+  is not a guarantee that the design meets all humidity requirements.
+- Actual browser progress verified on mobile; results support region switch
+  and July/day drilldown. Browser reported no JavaScript errors.
+- Automated backend suite: 49 passing tests. Batch tests use eight simulated
+  regions, including one failed-region retry; they are not eight real annual runs.
+- Three-day Manila cache benchmark (same new controller): 1.173 s uncached,
+  0.200 s cached. Local timings do not guarantee all production runtimes.
+
+Vercel runtime-log access was unavailable through the connected account;
+verification used deployment status, HTTP responses and the real browser flow.

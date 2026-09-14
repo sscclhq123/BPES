@@ -66,3 +66,15 @@ class RegenerationVavTests(unittest.TestCase):
         self.assertEqual(cap,0)
         self.assertEqual(d,0)
         self.assertEqual(r['m_water_desorb'],0)
+
+    def test_recovery_after_absorber_schedule_ends(self):
+        c=self.config(xi_tank_init=.37,xi_target=.38)
+        col=e.CollectorConfig(area_m2=0)
+        weather=e.prepare_weather(DEFAULT_WEATHER,col,c)
+        weather=weather[(weather.time.dt.day==31)&weather.time.dt.hour.between(18,20)].reset_index(drop=True)
+        with patch.object(e,'prepare_weather',return_value=weather):
+            result,_=e.run_simulation(DEFAULT_WEATHER,'flat_plate',c,col)
+        self.assertTrue((result.ABS_DUTY_FRACTION==0).all())
+        self.assertTrue((result.REG_DUTY_FRACTION>0).all())
+        self.assertGreater(result.TANK_xi_NEXT.iloc[-1],.379)
+        self.assertLess(result.TANK_xi_NEXT.iloc[0],.38)

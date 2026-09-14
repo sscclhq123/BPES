@@ -17,7 +17,8 @@ test('HTTP 504 non-JSON response keeps the actionable timeout message',async()=>
 
 test('all regions finish before result; retry only failures; only one active request',async()=>{
  const messages=[],calls=[],elements=new Map();let active=0,peak=0,fail=true;
- const keys=['manila_tmy','seoul_epw','busan_tmyx'];
+ const keys=['manila_tmy','seoul_epw','busan_tmyx','hanoi_tmyx',
+  'shanghai_tmyx','houston_tmyx','berlin_tmyx','jeju_tmyx'];
  const context=vm.createContext({window:{location:{origin:'https://saldop.vercel.app'},parent:{postMessage:m=>messages.push(m)}},
   document:{referrer:'https://saldop.vercel.app/'},URL,
   $:key=>{if(!elements.has(key))elements.set(key,{value:'manila_tmy'});return elements.get(key)},
@@ -37,6 +38,6 @@ test('all regions finish before result; retry only failures; only one active req
  fail=false;await context.runCalculation();
  assert.deepEqual(calls,[...keys,'seoul_epw']);
  const complete=messages.filter(m=>m.type==='saldop:calculation-complete');
- assert.equal(complete.length,1);assert.equal(complete[0].summary.regions.length,3);
+ assert.equal(complete.length,1);assert.equal(complete[0].summary.regions.length,8);
  assert.equal(complete[0].summary.failedCount,0);
 });
