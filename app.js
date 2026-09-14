@@ -522,10 +522,19 @@ function requestJsonViaXhr(url, options = {}) {
     request.timeout = 330000;
     request.onload = () => {
       try {
+        let result;
+        try { result = JSON.parse(request.responseText || "{}"); }
+        catch {
+          const message = request.status === 504
+            ? "서버 계산 제한시간을 초과했습니다. 지역별 진행 상황을 확인하고 다시 계산해 주세요."
+            : `계산 서버가 정상 데이터를 반환하지 않았습니다 (HTTP ${request.status}).`;
+          if (request.status >= 200 && request.status < 300) throw new Error(message);
+          result = { error: message };
+        }
         resolve({
           ok: request.status >= 200 && request.status < 300,
           status: request.status,
-          result: JSON.parse(request.responseText || "{}"),
+          result,
         });
       } catch (error) {
         reject(error);
@@ -1800,6 +1809,7 @@ async function runCalculation() {
     $("statusPill").textContent = "입력 오류";
     renderValidityWarnings(empiricalWarnings(input));
     $("seasonSummary").textContent = validationMessages.join(" ");
+    postBatch({type:"saldop:calculation-failed",message:validationMessages.join(" ")});
     return;
   }
 
@@ -1821,7 +1831,7 @@ async function runCalculation() {
   const progress = ()=>postBatch({type:"saldop:calculation-progress",regions:datasetKeys.map((key,i)=>({label:weatherDatasets[key]?.label||key,status:states[i],error:results[i]?.error||""}))});
   progress();
   let nextIndex = 0;
-  let completed = 0;
+  let completed = results.filter(item=>item?.result).length;
   const worker = async () => {
     while (nextIndex < datasetKeys.length) {
       const index = nextIndex++;
@@ -1852,7 +1862,9 @@ async function runCalculation() {
   };
 
   try {
-    await Promise.all(Array.from({ length: Math.min(3, datasetKeys.length) }, () => worker()));
+    // CPU-bound annual simulations share the deployment's execution budget.
+    // Queue regions instead of tripling CPU contention; retain successes on retry.
+    await worker();
     const successful = results.filter((item) => item?.result);
     batchResults = results;
     if (successful.length !== datasetKeys.length) throw new Error(`${successful.length}/${datasetKeys.length}개 지역 완료. 실패 지역을 재시도해야 결과를 열 수 있습니다.`);
@@ -1884,6 +1896,7 @@ async function runCalculation() {
             solutionConcentrationDrilldown: result.solutionConcentrationDrilldown,
             weatherMonthly: result.weatherMonthly,
             weatherHourly: result.weatherHourly,
+            ldFlowHourly: result.ldFlowHourly,
             unmetTrend: result.unmetTrend,
             traceRequest: result.traceRequest,
             ldUsageHeatmap: result.ldUsageHeatmap,

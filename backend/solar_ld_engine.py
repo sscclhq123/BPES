@@ -78,7 +78,10 @@ class SystemConfig:
     reg_flow_auto_control: bool = True
     reg_capacity_auto_size: bool = False  # Website opts in; legacy replay remains available.
     reg_fixed_lg: float = 1.2
+    reg_vav_control: bool = False  # Website enables linked fan/pump control.
+    reg_min_air_ratio: float = 1.0
     reg_max_air_ratio: float = 3.0  # User-adjustable screening budget, NOT a physical law.
+    control_cache_enabled: bool = True  # Exact-state lookup; no state rounding.
     reg_fan_pressure_pa: float = 300.0  # Preliminary assumptions, not a fan curve.
     reg_fan_efficiency: float = 0.60
     reg_duct_velocity_m_s: float = 5.0
@@ -665,6 +668,73 @@ def regeneration_water_demand(salt_kg, water_kg, target_xi, absorption_kg_s,
     return max(absorption_kg_s + debt / horizon, 0.0)
 
 
+def regeneration_vav_domains(config, installed_modules):
+    """Feasible ON-state bank flows: geometry AND the user's total-flow bounds."""
+    module_min, module_max = regeneration_air_domain(config)
+    absorber_air = config.sa_abs_m3h / 3600 * config.rho_air_kg_m3
+    low = absorber_air * config.reg_min_air_ratio
+    high = absorber_air * config.reg_max_air_ratio
+    domains = []
+    for n in range(1, installed_modules + 1):
+        a, b = max(low, n * module_min), min(high, n * module_max)
+        if a <= b + 1e-12:
+            domains.append((n, a, b))
+    return domains
+
+
+def controlled_vav_regeneration(config, ta, rh, w_oa, h_oa, modules, xi, requested):
+    """Fan/pump VAV at fixed L/G; stage modules without violating per-module flow.
+
+    Minimize feasible inlet temperature first, then total air flow. This is a
+    proposed controller, not a new empirical fit. Low load below the minimum
+    ON-state capacity uses duty cycling; it does not run below the ON flow floor.
+    """
+    domains = regeneration_vav_domains(config, modules)
+    if not domains:
+        raise ValueError("재생 VAV 풍량 범위와 설치 모듈의 실험 유량 범위가 겹치지 않습니다.")
+    _, module_max = regeneration_air_domain(config)
+    upper = min(config.reg_temp_max_c, max(config.reg_temp_min_c, config.t_reg_in_target_c))
+    def rates(temp, concentration=xi):
+        unit = regenerator_block(ta, rh, w_oa, h_oa, config.p_atm_kpa,
+            module_max, module_max*config.reg_fixed_lg, temp, concentration,
+            np.nan, config.eff_enthalpy)["m_water_desorb"]
+        # The existing Liu correlation: n*(A/n)^.1649*(L/G*A/n)^.4818.
+        def rate(n, air):
+            return min(unit*n*(air/(n*module_max))**.6467, .8*air*config.reg_fixed_lg)
+        return rate
+    high_rate = rates(upper)
+    maximum = max(high_rate(n,b) for n,a,b in domains)
+    target_rate = rates(upper, config.xi_target)
+    target_capacity = max(target_rate(n,b) for n,a,b in domains)
+    temp = upper
+    if config.reg_temp_auto_control and maximum >= requested:
+        low, high = config.reg_temp_min_c, upper
+        low_rate = rates(low)
+        if max(low_rate(n,b) for n,a,b in domains) >= requested:
+            high = low
+        else:
+            for _ in range(10):
+                mid = (low+high)/2
+                rate = rates(mid)
+                if max(rate(n,b) for n,a,b in domains) >= requested: high=mid
+                else: low=mid
+        temp=high
+    rate = rates(temp)
+    candidates=[]
+    for n,a,b in domains:
+        cap=rate(n,b)
+        air=min(b,max(a,b*(max(requested,0)/max(cap,1e-12))**(1/.6467)))
+        candidates.append((n,air,rate(n,air)))
+    feasible=[r for r in candidates if r[2]>=requested-1e-10]
+    n,air,_=min(feasible,key=lambda r:(r[1],r[0])) if feasible else max(candidates,key=lambda r:r[2])
+    result=parallel_regenerator_block(ta,rh,w_oa,h_oa,config.p_atm_kpa,
+        air,air*config.reg_fixed_lg,n,temp,xi,np.nan,config.eff_enthalpy)
+    result.update(controlled_air_kg_s=air,controlled_solution_kg_s=air*config.reg_fixed_lg,controlled_modules=n)
+    capacity=result["m_water_desorb"]
+    duty=min(max(requested,0)/capacity,1.) if capacity>0 else 0.
+    return result,temp,duty,maximum,target_capacity
+
+
 def controlled_regeneration(config, ta, rh, w_oa, h_oa, air_flow, solution_flow,
                             modules, xi, requested_kg_s):
     """Select temperature, then real run-time fraction at validated on-state flows.
@@ -673,6 +743,9 @@ def controlled_regeneration(config, ta, rh, w_oa, h_oa, air_flow, solution_flow,
     rates are instantaneous ON-state rates; the caller integrates the duty.
     """
     upper = float(np.clip(config.t_reg_in_target_c, config.reg_temp_min_c, config.reg_temp_max_c))
+
+    if config.reg_vav_control and config.reg_capacity_auto_size:
+        return controlled_vav_regeneration(config, ta, rh, w_oa, h_oa, modules, xi, requested_kg_s)
 
     if config.reg_capacity_auto_size:
         amin, amax = regeneration_air_domain(config)
@@ -898,10 +971,12 @@ def size_regeneration_bank(weather, config, absorber_air_kg_s):
     """
     _, air_max = regeneration_air_domain(config)
     budget = absorber_air_kg_s * config.reg_max_air_ratio
-    max_modules = math.floor(budget / air_max + 1e-10)
+    max_modules = (math.ceil(budget / air_max - 1e-10) if config.reg_vav_control
+                   else math.floor(budget / air_max + 1e-10))
     if max_modules < 1:
         raise ValueError("재생 외기유량 상한이 모듈 1대의 설계유량보다 작습니다. 상한을 늘려주세요.")
     required, impossible, worst_time, peak_load = 1, 0, "", 0.
+    budget_limited_hours = 0
     temp = float(np.clip(config.t_reg_in_target_c, config.reg_temp_min_c, config.reg_temp_max_c))
     for row in weather.itertuples(index=False):
         if not is_operation_hour(row.time, config):
@@ -914,18 +989,30 @@ def size_regeneration_bank(weather, config, absorber_air_kg_s):
         r = regenerator_block(row.Ta_degC, row.RH_pct, w, moist_air_enthalpy(row.Ta_degC,w),
             config.p_atm_kpa, air_max, air_max * config.reg_fixed_lg, temp, config.xi_target, np.nan, config.eff_enthalpy)
         capacity = r["m_water_desorb"]
+        if config.reg_vav_control:
+            domains = regeneration_vav_domains(config, max_modules)
+            available = max((capacity * n * (b / (n * air_max)) ** .6467
+                             for n, a, b in domains), default=0.)
+            if need > available + 1e-10:
+                budget_limited_hours += 1
         if capacity <= 1e-12:
             impossible += 1
             continue
         count = max(1, math.ceil(need / capacity - 1e-10))
         if count > required:
             required, worst_time = count, str(row.time)
+    if config.reg_vav_control:
+        # A small residual load must still support the minimum 1x fan flow.
+        required = max(required, math.ceil(absorber_air_kg_s * config.reg_min_air_ratio / air_max - 1e-10))
     installed = min(required, max_modules)
+    design_air = min(installed * air_max, budget)
     return {"modules": installed, "requiredModules": required,
-        "limited": required > max_modules or impossible > 0, "zeroCapacityHours": impossible,
+        "limited": required > max_modules or impossible > 0 or budget_limited_hours > 0,
+        "budgetLimitedHours": budget_limited_hours, "zeroCapacityHours": impossible,
         "sizingTime": worst_time, "peakLoadKgH": peak_load * 3600,
-        "designAirKgS": installed * air_max, "designSolutionKgS": installed * air_max * config.reg_fixed_lg,
-        "airRatio": installed * air_max / absorber_air_kg_s, "maxAirRatio": config.reg_max_air_ratio}
+        "designAirKgS": design_air, "designSolutionKgS": design_air * config.reg_fixed_lg,
+        "airRatio": design_air / absorber_air_kg_s, "maxAirRatio": config.reg_max_air_ratio,
+        "minAirRatio": config.reg_min_air_ratio if config.reg_vav_control else None}
 
 
 def minute_trace_records(records):
@@ -938,7 +1025,7 @@ def minute_trace_records(records):
     ends = {"waterEndKg", "concentrationEnd", "tankTempEnd", "endSeconds"}
     starts = {"time", "waterStartKg", "concentrationStart", "tankTempStart", "startSeconds", "saltKg"}
     abs_fields = {"lg", "absTemp", "absSolutionFlow", "absAirOutTemp", "absSolutionOutTemp"}
-    reg_fields = {"regTemp", "regAirFlow", "regSolutionFlow", "regAirOutTemp", "regSolutionOutTemp"}
+    reg_fields = {"regTemp", "regAirFlow", "regSolutionFlow", "regAirOutTemp", "regSolutionOutTemp", "regModules", "regLg"}
     for group in groups.values():
         duration = sum(r["durationSeconds"] for r in group)
         merged = dict(group[0])
@@ -1215,6 +1302,7 @@ def run_simulation(
     regen_cycle_active = False
     absorber_protection_active = False
     previous_schedule_on = False
+    control_cache_hits = 0
     for k, row in weather.iterrows():
         ta = float(row.Ta_degC)
         rh = float(row.RH_pct)
@@ -1268,6 +1356,7 @@ def run_simulation(
             "reg_temp_time": 0.0,
             "reg_active_time": 0.0,
             "abs_lg_time": 0.0,
+            "abs_mdot_time": 0.0,
             "abs_temp_time": 0.0,
             "abs_heating_kWh": 0.0,
             "reg_cooling_kWh": 0.0,
@@ -1293,6 +1382,9 @@ def run_simulation(
         hour_reg_on = False
         hour_aux_on = False
         regen_reason = ""
+        # Weather and equipment settings are constant inside this hour. Reuse
+        # only exactly identical concentration/demand states, never quantize them.
+        abs_control_cache, reg_control_cache = {}, {}
 
         for _ in range(n_sub):
             trace_before = {key: acc[key] for key in ("abs_water", "des_water", "abs_active_time", "reg_active_time", "reg_need_kWh")} if row.time in trace_stamps else None
@@ -1345,24 +1437,23 @@ def run_simulation(
 
             if abs_on:
                 m_abs_in = m_dot_sol_abs_cmd
-                abs_res = controlled_parallel_absorber_block(
-                    ta,
-                    rh,
-                    w_oa,
-                    h_oa,
-                    config.p_atm_kpa,
-                    m_dot_oa_abs,
-                    m_abs_in,
-                    abs_module_count,
-                    config.t_abs_in_target_c,
-                    xi_0,
-                    config.eff_enthalpy,
-                    config.target_supply_w_g_kg / 1000,
-                    config.abs_temp_auto_control,
-                    auto_lg_control=config.lg_auto_control,
-                    lg_ratio_min=config.lg_ratio_min,
-                    lg_ratio_max=config.lg_ratio_max,
-                )
+                abs_res = abs_control_cache.get(xi_0) if config.control_cache_enabled else None
+                if abs_res is not None:
+                    control_cache_hits += 1
+                else:
+                    abs_res = controlled_parallel_absorber_block(
+                        ta, rh, w_oa, h_oa, config.p_atm_kpa,
+                        m_dot_oa_abs, m_abs_in, abs_module_count,
+                        config.t_abs_in_target_c, xi_0, config.eff_enthalpy,
+                        config.target_supply_w_g_kg / 1000,
+                        config.abs_temp_auto_control,
+                        auto_lg_control=config.lg_auto_control,
+                        lg_ratio_min=config.lg_ratio_min,
+                        lg_ratio_max=config.lg_ratio_max,
+                    )
+                    if config.control_cache_enabled:
+                        if len(abs_control_cache) >= 64: abs_control_cache.clear()
+                        abs_control_cache[xi_0] = abs_res
                 abs_solution_t_controlled = abs_res["ABS_SOL_IN_T_CONTROLLED_degC"]
                 m_abs_in = abs_res["ABS_SOL_IN_mdot_kg_s"]
                 water_headroom = max(m_salt_0 * (1 / config.xi_abs_stop - 1) - m_water_0, 0.0)
@@ -1377,6 +1468,7 @@ def run_simulation(
                 acc["abs_cooling_kWh"] += qcool_abs_w * dt_sub_h / 1000
                 acc["abs_heating_kWh"] += m_abs_in * max(h_abs_in - h_sol_0, 0) * dt_sub_h
                 acc["abs_lg_time"] += abs_res["ABS_LG_CONTROLLED"] * dt_sub_s * abs_duty
+                acc["abs_mdot_time"] += m_abs_in * dt_sub_s
                 acc["abs_temp_time"] += abs_solution_t_controlled * dt_sub_s * abs_duty
                 acc["abs_active_time"] += dt_sub_s * abs_duty
                 acc["abs_protection_time"] += (1 - abs_duty) * dt_sub_s
@@ -1390,9 +1482,18 @@ def run_simulation(
                 requested_reg_rate = regeneration_water_demand(
                     m_salt_0, m_water_0, config.xi_target, absorbed_rate,
                     config.concentration_recovery_time_s, dt_sub_s)
-                reg_res, reg_solution_t_controlled, reg_duty, reg_capacity, target_capacity = controlled_regeneration(
-                    config, ta, rh, w_oa, h_oa, m_dot_oa_reg, m_dot_sol_reg_design,
-                    reg_module_count, xi_0, requested_reg_rate)
+                reg_key = (xi_0, requested_reg_rate)
+                reg_control = reg_control_cache.get(reg_key) if config.control_cache_enabled else None
+                if reg_control is not None:
+                    control_cache_hits += 1
+                else:
+                    reg_control = controlled_regeneration(
+                        config, ta, rh, w_oa, h_oa, m_dot_oa_reg, m_dot_sol_reg_design,
+                        reg_module_count, xi_0, requested_reg_rate)
+                    if config.control_cache_enabled:
+                        if len(reg_control_cache) >= 64: reg_control_cache.clear()
+                        reg_control_cache[reg_key] = reg_control
+                reg_res, reg_solution_t_controlled, reg_duty, reg_capacity, target_capacity = reg_control
                 selected_reg_air = reg_res.get("controlled_air_kg_s", m_dot_oa_reg)
                 selected_reg_solution = reg_res.get("controlled_solution_kg_s", m_dot_sol_reg_design)
                 acc["reg_requested_water"] += requested_reg_rate * dt_sub_s
@@ -1428,7 +1529,8 @@ def run_simulation(
                 else:
                     m_reg_in = selected_reg_solution
                 if (config.reg_flow_auto_control or config.reg_capacity_auto_size) and m_reg_in > 0:
-                    m_reg_air_active, reg_active_modules = selected_reg_air, reg_module_count
+                    m_reg_air_active = selected_reg_air
+                    reg_active_modules = int(reg_res.get("controlled_modules", reg_module_count))
                 else:
                     m_reg_in, m_reg_air_active, reg_active_modules = staged_regenerator_flow(
                         m_reg_in, lg_ratio_reg_actual, reg_module_count, config)
@@ -1547,6 +1649,8 @@ def run_simulation(
                     "absSolutionFlow": m_abs_in / abs_fraction if abs_fraction > 0 else None,
                     "regAirFlow": m_reg_air_active / reg_fraction if reg_fraction > 0 else None,
                     "regSolutionFlow": m_reg_in / reg_fraction if reg_fraction > 0 else None,
+                    "regLg": lg_ratio_reg_actual if reg_fraction > 0 else None,
+                    "regModules": reg_active_modules if reg_fraction > 0 else None,
                     "absAirInTemp": ta, "regAirInTemp": ta,
                     "absAirOutTemp": last_abs["T_air_out"] if abs_fraction > 0 else None,
                     "regAirOutTemp": last_reg["T_air_out"] if reg_fraction > 0 else None,
@@ -1646,6 +1750,8 @@ def run_simulation(
                 "ABS_TEMP_CONTROL_ACTIVE": last_abs.get("ABS_TEMP_CONTROL_ACTIVE", False),
                 "ABS_LG_CONTROL_ACTIVE": last_abs.get("ABS_LG_CONTROL_ACTIVE", False),
                 "ABS_LG_CONTROLLED": safe_div(acc["abs_lg_time"], acc["abs_active_time"]),
+                "ABS_AIR_IN_mdot_ON_kg_s": m_dot_oa_abs,
+                "ABS_SOL_IN_mdot_kg_s": acc["abs_mdot_time"] / dt_s,
                 "ABS_SOL_IN_T_MEAN_degC": safe_div(acc["abs_temp_time"], acc["abs_active_time"]) if acc["abs_active_time"] > 0 else np.nan,
                 "ABS_AIR_OUT_m3_h": dry_air_volume_flow_m3h(m_dot_oa_abs, last_abs["T_air_out"], last_abs["w_air_out"], config.p_atm_kpa),
                 "ABS_SOL_OUT_T_degC": last_abs["T_sol_out"],
@@ -1700,6 +1806,7 @@ def run_simulation(
     result = pd.DataFrame(rows)
     result.attrs["substep_trace"] = minute_trace_records(trace_steps) if config.reg_capacity_auto_size else trace_steps
     result.attrs["regeneration_design"] = regeneration_design
+    result.attrs["control_cache_hits"] = control_cache_hits
     summary = build_summary(
         result,
         config,

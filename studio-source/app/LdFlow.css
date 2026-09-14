@@ -1,0 +1,42 @@
+.ld-flow-card{grid-column:1/-1;min-width:0}
+.ld-flow-card h2{text-wrap:balance}
+.ld-flow-diagnostics{min-width:0;color:#233c43;font-variant-numeric:tabular-nums}
+.ld-flow-definition,.ld-flow-note{font-size:14px;line-height:1.7;text-wrap:pretty}
+.ld-flow-note{color:#52676f;margin:12px 0 20px}
+.ld-flow-tools,.ld-flow-trace-action{display:flex;align-items:end;gap:16px;flex-wrap:wrap;margin:20px 0}
+.ld-flow-tools label,.ld-flow-trace-action label,.ld-flow-basis{display:flex;flex-direction:column;gap:6px;font-size:14px;color:#354f59}
+.ld-flow-tools select,.ld-flow-trace-action select,.ld-flow-basis select{min-height:44px;border:1px solid #aebfc5;border-radius:8px;background:white;color:#233c43;padding:8px 12px;font:inherit}
+.ld-flow-tools span{padding:12px;color:#52676f;font-size:14px}
+.ld-flow-checks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
+.ld-flow-checks>div{padding:16px;background:#edf5f7;border:1px solid #d2e2e7;border-radius:10px}
+.ld-flow-checks small{display:block;font-size:13px;line-height:1.5}
+.ld-flow-checks b{display:block;font-size:24px;margin-top:8px;font-variant-numeric:tabular-nums}
+.ld-flow-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:end;gap:20px}
+.ld-flow-grid>div{min-width:0}
+.ld-flow-basis{flex-direction:row;align-items:center;justify-content:end;margin-bottom:10px;flex-wrap:wrap}
+.ld-flow-plot{margin:0;border:1px solid #d2e2e7;border-radius:12px;background:#fff;padding:16px;min-width:0}
+.ld-flow-plot figcaption{display:flex;justify-content:space-between;gap:12px;align-items:center;color:#233c43;font-size:17px;line-height:1.5}
+.ld-flow-plot figcaption span{font-size:14px;color:#52676f;white-space:nowrap}
+.ld-flow-legend{display:flex;flex-wrap:wrap;gap:10px 16px;min-height:44px;align-items:center;margin-top:8px;font-size:13px}
+.ld-flow-legend span{display:flex;align-items:center;gap:6px}
+.ld-flow-legend i{width:20px;border-top:3px solid}
+.ld-flow-scroll{overflow-x:auto;max-width:100%}
+.ld-flow-canvas{min-width:240px}
+.ld-flow-canvas svg{display:block;width:100%;height:auto;overflow:visible}
+.ld-flow-xlabels{height:42px;position:relative}
+.ld-flow-xlabels button{position:absolute;transform:translateX(-50%);border:0;border-radius:4px;background:#edf5f7;color:#233c43;min-height:36px;font:inherit;font-size:13px;padding:4px;white-space:nowrap;cursor:pointer}
+.ld-flow-xlabels button:disabled{background:transparent;cursor:default;opacity:1}
+.ld-flow-xtitle{text-align:center;font-size:14px!important;line-height:1.5;margin:4px 0 0!important;color:#354f59}
+.ld-flow-trace-action{padding:16px;background:#edf5f7;border-radius:12px}
+.ld-flow-trace-action button{padding:12px 16px;background:#087e94;color:white;border:0;border-radius:8px;font:inherit;min-height:44px;cursor:pointer}
+.ld-flow-trace-action button:disabled{opacity:.45;cursor:not-allowed}
+.ld-flow-trace-action p{flex-basis:100%;margin:0;font-size:14px;line-height:1.6}
+.ld-flow-table summary{cursor:pointer;padding:14px 0;font-size:15px;color:#233c43}
+.ld-flow-table>div{overflow:auto;max-height:400px}
+.ld-flow-table table{border-collapse:collapse;min-width:1020px;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+.ld-flow-table caption{text-align:left;padding:12px;color:#52676f}
+.ld-flow-table th,.ld-flow-table td{padding:12px;text-align:right;border-bottom:1px solid #d2e2e7;white-space:nowrap}
+.ld-flow-table thead th{position:sticky;top:0;background:#edf5f7;z-index:1;color:#233c43}
+.ld-flow-table tbody th{text-align:left}
+.ld-flow-diagnostics button:focus-visible,.ld-flow-tools select:focus-visible,.ld-flow-trace-action button:focus-visible,.ld-flow-trace-action select:focus-visible{outline:3px solid #098ea4;outline-offset:3px}
+@media(max-width:900px){.ld-flow-grid{grid-template-columns:1fr}.ld-flow-checks{grid-template-columns:1fr}.ld-flow-checks>div{display:flex;align-items:center;justify-content:space-between;gap:10px}.ld-flow-checks b{margin:0;font-size:20px}.ld-flow-plot{padding:12px}.ld-flow-tools{gap:12px}.ld-flow-tools span{padding:0}.ld-flow-trace-action{align-items:stretch;flex-direction:column}.ld-flow-trace-action p{flex-basis:auto}}

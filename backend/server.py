@@ -162,10 +162,12 @@ def build_configs(payload):
     config.lg_ratio_reg_design = 1.1
     config.reg_flow_auto_control = payload.get("regenFlowMode", "auto") == "auto"
     config.reg_capacity_auto_size = payload.get("regenSizingMode", "load") != "legacy"
+    config.reg_vav_control = config.reg_capacity_auto_size
+    config.reg_min_air_ratio = 1.0
     config.reg_fixed_lg = to_number(payload, "regenLgRatio", 1.2)
     config.reg_max_air_ratio = to_number(payload, "regenMaxAirRatio", 3.0)
-    if not np.isfinite(config.reg_max_air_ratio) or not .5 <= config.reg_max_air_ratio <= 10:
-        raise ValueError("재생 외기량 상한 배수는 0.5~10 사이로 입력하세요(설계 검토용 제한).")
+    if not np.isfinite(config.reg_max_air_ratio) or not 1 <= config.reg_max_air_ratio <= 3:
+        raise ValueError("재생 VAV 외기량 상한은 제습 풍량의 1~3배 사이로 입력하세요.")
     if not np.isfinite(config.reg_fixed_lg) or not .65 <= config.reg_fixed_lg <= 2:
         raise ValueError("재생 L/G는 모듈 유량 교집합이 존재하는 0.65~2.0 사이여야 합니다.")
     config.lg_auto_control = payload.get("lgMode", "auto") == "auto"
@@ -282,6 +284,28 @@ def weather_hourly_rows(result):
          "duration": clean_value(row.dt_h)}
         for row in result.itertuples(index=False)
     ]
+
+
+def ld_flow_hourly(result):
+    """Compact diagnostic logs, not a new control model. Flows are ON-time means.
+
+    Fixed tuple schema v1 keeps multi-region annual responses small. Stopped
+    equipment has null ON flows/LG, never a fictitious zero liquid/gas ratio.
+    """
+    records = []
+    for r in result.itertuples(index=False):
+        a, g = float(r.ABS_DUTY_FRACTION), float(r.REG_DUTY_FRACTION)
+        on = lambda value, duty: clean_value(float(value) / duty) if duty > 0 else None
+        values = [str(r.time), float(r.dt_h) * 3600, a, g,
+                  clean_value(r.ABS_LG_CONTROLLED) if a > 0 else None,
+                  clean_value(r.REG_SOL_IN_LG) if g > 0 else None,
+                  clean_value(r.ABS_AIR_IN_mdot_ON_kg_s) if a > 0 else None,
+                  on(r.ABS_SOL_IN_mdot_kg_s, a),
+                  on(r.REG_AIR_IN_mdot_kg_s, g),
+                  on(r.REG_SOL_IN_mdot_kg_s, g),
+                  on(r.REG_ACTIVE_MODULE_COUNT, g)]
+        records.append([round(v, 8) if isinstance(v, float) else v for v in values])
+    return {"version": 1, "rows": records}
 
 
 def monthly_weather_rows(result):
@@ -1437,6 +1461,7 @@ def simulate(payload):
         "solutionConcentrationDrilldown": solution_concentration_drilldown(result),
         "weatherMonthly": monthly_weather_rows(result),
         "weatherHourly": weather_hourly_rows(result),
+        "ldFlowHourly": ld_flow_hourly(result),
         "ldUsageHeatmap": ld_usage_heatmap(result, "ABS_ON"),
         "regUsageHeatmap": ld_usage_heatmap(result, "REG_ON"),
         "unmetTrend": unmet_dehumidification_trend(

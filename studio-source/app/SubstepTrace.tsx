@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useState} from "react";
+import LdFlowPlots,{type FlowRow} from "./LdFlowPlots";
 
 type Step={tankTempStart?:number;tankTempEnd?:number;absAirFlow?:number;absSolutionFlow?:number;regAirFlow?:number;regSolutionFlow?:number;absAirInTemp?:number;regAirInTemp?:number;absAirOutTemp?:number;regAirOutTemp?:number;absSolutionOutTemp?:number;regSolutionOutTemp?:number;heatBalanceResidualKW?:number;time?:string;outdoorTemp?:number;outdoorHumidity?:number;irradiance?:number;startSeconds:number;endSeconds:number;durationSeconds:number;concentrationStart:number;concentrationEnd:number;saltKg:number;waterStartKg:number;waterEndKg:number;absorbedKg:number;desorbedKg:number;supplyHumidity:number;absFraction:number;regFraction:number;lg:number|null;absTemp:number|null;regTemp:number|null;regenHeatKWh:number;protection:boolean};
 type Trace={endTime?:string;clipped?:boolean;time:string;durationSeconds:number;outdoorTemp:number;outdoorHumidity:number;irradiance:number;target:number;upper:number;floor:number;hourSupplyHumidity:number;steps:Step[]};
@@ -18,7 +19,7 @@ function Plot({title,unit,series,limit,duration}:{title:string;unit:string;serie
  </svg></div><div className="trace-legend">{series.map(s=><span key={s.name} style={{color:s.color,marginRight:20}}>━ {s.name}</span>)}{limit!==undefined&&<span>┄ 기준 {f(limit)} {unit}</span>}</div></figure>;
 }
 
-export default function SubstepTrace({request,time,times,data}:{request?:Record<string,unknown>;time:string;times?:string[];data?:Trace}){
+export default function SubstepTrace({request,time,times,data,flowReference}:{request?:Record<string,unknown>;time:string;times?:string[];data?:Trace;flowReference?:number}){
  const [windows,setWindows]=useState<Trace[]|null>(null);
  const [trace,setTrace]=useState<Trace|null>(data||null),[error,setError]=useState(""),[attempt,setAttempt]=useState(0);
  useEffect(()=>{if(data)return;setWindows(null);const controller=new AbortController();setTrace(null);setError("");
@@ -27,10 +28,16 @@ export default function SubstepTrace({request,time,times,data}:{request?:Record<
   return ()=>controller.abort();
  },[request,time,times,data,attempt]);
  const box={marginTop:24,padding:24,border:"1px solid #cbdcdf",borderRadius:16,background:"#f8fbfc",color:"#233c43"};
- if(windows)return <div>{windows.map(w=><SubstepTrace key={w.time} time={w.time} data={w}/> )}</div>;
+ const reference=flowReference??(Number(request?.regenLgRatio)||undefined);
+ if(windows)return <div>{windows.map(w=><SubstepTrace key={w.time} time={w.time} data={w} flowReference={reference}/> )}</div>;
  if(error)return <section style={box} role="alert"><p>{error}</p><button type="button" onClick={()=>setAttempt(a=>a+1)}>다시 시도</button></section>;
  if(!trace)return <section style={box} role="status" aria-busy="true">{time.slice(5)} 상세 계산 중… 이전 탱크 상태부터 이어서 재현합니다.</section>;
  const steps=trace.steps;
+ const flowRows:FlowRow[]=steps.map(s=>{const logged=s as Step&{regLg?:number;regModules?:number};return {
+  time:s.time||time,label:s.time?.slice(11,16)||`${Math.round(s.startSeconds/60)}분`,seconds:s.durationSeconds,absDuty:s.absFraction,regDuty:s.regFraction,
+  absLg:s.absFraction>0?s.lg:null,regLg:s.regFraction>0?(logged.regLg??null):null,
+  absAir:s.absFraction>0?(s.absAirFlow??null):null,absSol:s.absFraction>0?(s.absSolutionFlow??null):null,
+  regAir:s.regFraction>0?(s.regAirFlow??null):null,regSol:s.regFraction>0?(s.regSolutionFlow??null):null,modules:logged.regModules??null};});
  if(!steps.length)return <section style={box}>이 시점의 내부 계산 기록이 없습니다.</section>;
  const staircase=(key:"supplyHumidity"|"absorbedKg"|"desorbedKg")=>steps.flatMap(s=>{const value=key==="supplyHumidity"?s[key]:s[key]*3600/s.durationSeconds;return [[s.startSeconds,value],[s.endSeconds,value]] as [number,number][]});
  return <section style={box} aria-label="선택 시점 내부 계산 상세"><h3>{time.slice(5)}{trace.endTime?" ~ "+trace.endTime.slice(5):""} · 내부 계산 상세</h3>
@@ -39,10 +46,10 @@ export default function SubstepTrace({request,time,times,data}:{request?:Record<
  {trace.clipped&&<p>분석 기간 경계로 인해 앞뒤 30분 중 데이터가 있는 범위만 표시합니다.</p>}<div className="trace-plots"><Plot title="급기 절대습도" unit="g/kgDA" duration={trace.durationSeconds} limit={trace.upper} series={[{name:"내부 구간 평균",color:"#098ea4",points:staircase("supplyHumidity")},{name:`구간 평균 ${f(trace.hourSupplyHumidity)}`,color:"#53666f",points:[[0,trace.hourSupplyHumidity],[trace.durationSeconds,trace.hourSupplyHumidity]]}]}/>
  <Plot title="탱크 LiCl 농도" unit="wt%" duration={trace.durationSeconds} limit={trace.floor} series={[{name:"탱크 농도",color:"#098ea4",points:[[0,steps[0].concentrationStart],...steps.map(s=>[s.endSeconds,s.concentrationEnd] as [number,number])]}]}/>
  <Plot title="수분 흡수·제거율" unit="kg/h" duration={trace.durationSeconds} series={[{name:"제습 흡수율",color:"#098ea4",points:staircase("absorbedKg")},{name:"재생 제거율",color:"#c74b40",points:staircase("desorbedKg")}]}/>
- </div><details><summary style={{cursor:"pointer",padding:12}}>입출구 상태 · 공기/용액 유량 · 열수지 확인</summary>
- <p>공용 완전혼합 용액탱크에서 두 접촉기로 분기합니다. 아래는 가동 중 순간 질량유량(kg/s)과 입출구 온도(℃)입니다. 제습 공기량은 건물 요구량으로 고정합니다.</p>
+ </div><LdFlowPlots rows={flowRows} reference={reference} xTitle="시각 (60초 집계)" compact/><details><summary style={{cursor:"pointer",padding:12}}>입출구 상태 · 공기/용액 유량 · 열수지 확인</summary>
+ <p>공용 완전혼합 용액탱크에서 두 접촉기로 분기합니다. 아래는 각 로그 구간의 가동 중 평균 질량유량(kg/s)과 입출구 온도(℃)입니다. 제습 공기량은 건물 요구량으로 고정합니다.</p>
  <p>단열 접촉기: 공기 유입 엔탈피 + 용액 유입 엔탈피 = 공기 유출 엔탈피 + 용액 유출 엔탈피.<br/>재생 가열열 = 용액 유량 × (가열 후 엔탈피 − 탱크 엔탈피) = TES 공급열 + 보조열원.</p>
- <p>열수지 잔차는 LD 부하 계산 단계 기준입니다. 실제 태양열·TES 배분은 별도의 시간별 에너지 계산 결과이며, 이 표를 분 단위 태양열 배분으로 해석하지 않습니다.</p>
+ <p>열수지 잔차는 LD 부하 계산 단계 기준입니다. 태양열·TES 배분은 별도의 이상적 월별 에너지 배분 결과이며, 이 표를 분 단위 태양열 배분으로 해석하지 않습니다.</p>
  <div style={{overflowX:"auto",maxHeight:420}}><table style={{minWidth:1600,width:"100%",fontSize:14}}><thead><tr>{["시각","탱크 시작→끝 ℃","제습 공기 kg/s","제습 용액 kg/s","제습 공기 입→출 ℃","제습 용액 입→출 ℃","재생 공기 kg/s","재생 용액 kg/s","재생 L/G","재생 공기 입→출 ℃","재생 용액 입→출 ℃","가열열 수지잔차 kW"].map(h=><th key={h} scope="col">{h}</th>)}</tr></thead><tbody>{steps.map((s,i)=><tr key={i}>{[s.time?.slice(5),f(s.tankTempStart??null,1)+" → "+f(s.tankTempEnd??null,1),f(s.absAirFlow??null,3),f(s.absSolutionFlow??null,3),f(s.absAirInTemp??null,1)+" → "+f(s.absAirOutTemp??null,1),f(s.absTemp,1)+" → "+f(s.absSolutionOutTemp??null,1),f(s.regAirFlow??null,3),f(s.regSolutionFlow??null,3),s.regAirFlow?f((s.regSolutionFlow||0)/s.regAirFlow):"—",f(s.regAirInTemp??null,1)+" → "+f(s.regAirOutTemp??null,1),f(s.regTemp,1)+" → "+f(s.regSolutionOutTemp??null,1),f(s.heatBalanceResidualKW??null,6)].map((v,j)=><td key={j} style={{padding:10,borderBottom:"1px solid #d9e3e6"}}>{v}</td>)}</tr>)}</tbody></table></div></details>
  <details><summary style={{cursor:"pointer",padding:12}}>계산식과 {steps.length}개 구간 결과표 펼치기</summary>
  <p>종료 수분량 = 시작 수분량 + 흡수량 − 제거량<br/>종료 농도 = 염 질량 ÷ (염 질량 + 종료 수분량) × 100<br/>급기 절대습도 = 외기 절대습도 − 구간 흡수량 ÷ (공기 질량유량 × 구간 초) × 1000</p>
