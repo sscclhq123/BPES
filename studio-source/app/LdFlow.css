@@ -13,6 +13,7 @@
 .ld-flow-checks b{display:block;font-size:24px;margin-top:8px;font-variant-numeric:tabular-nums}
 .ld-flow-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:end;gap:20px}
 .ld-flow-grid>div{min-width:0}
+.ld-flow-grid>div:last-child{grid-column:1/-1}
 .ld-flow-basis{flex-direction:row;align-items:center;justify-content:end;margin-bottom:10px;flex-wrap:wrap}
 .ld-flow-plot{margin:0;border:1px solid #d2e2e7;border-radius:12px;background:#fff;padding:16px;min-width:0}
 .ld-flow-plot figcaption{display:flex;justify-content:space-between;gap:12px;align-items:center;color:#233c43;font-size:17px;line-height:1.5}

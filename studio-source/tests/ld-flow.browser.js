@@ -12,6 +12,10 @@ async page => {
  const summary={primaryKey:'seoul_epw',regions:[base,{...base,key:'busan',label:'부산',ldFlowHourly:{version:1,rows:rows.filter(r=>r[0].includes('08-01'))}}]};
  await page.evaluate(summary=>window.dispatchEvent(new MessageEvent('message',{origin:'https://saldop.vercel.app',data:{type:'saldop:calculation-complete',summary}})),summary);
  const card=page.locator('.ld-flow-card');await card.waitFor();
+ const lgPlot=card.locator('.ld-flow-plot').filter({hasText:'제습·재생 액기비 변화'});
+ const multiplePlot=card.locator('.ld-flow-plot').filter({hasText:'제습 설계 풍량 대비 재생 외기량'});
+ check((await lgPlot.locator('svg text').allTextContents()).join(',')==='0.0,0.5,1.0,1.5,2.0,2.5,3.0','L/G axis must end at 3.0');
+ check(await multiplePlot.count()===1,'Airflow multiple plot missing');
  await page.getByLabel('액기비 분석 월').selectOption('07');await page.getByLabel('액기비 분석 일').selectOption('31');
  check(await card.locator('.ld-flow-checks').innerText().then(s=>!/[1-9]\.\d{6}/.test(s)),'Unexpected diagnostic difference');
  check((await card.locator('.ld-flow-xlabels button').allTextContents()).includes('23:00'),'Missing last hourly x label');
@@ -20,8 +24,10 @@ async page => {
  check((await tableRows.nth(0).innerText()).includes('—'),'OFF ratio is not null');
  check((await tableRows.nth(13).innerText()).includes('2.400'),'ON flow lost');
  await card.locator('.ld-flow-basis select').selectOption('period');
+ check((await multiplePlot.locator('svg title').allTextContents()).some(t=>t.includes('13:00 · 재생 풍량 배수 · 정지 포함 0.500')),'Airflow multiple period duty incorrect');
  check((await card.locator('svg title').allTextContents()).some(t=>t.includes('13:00 · 용액 질량유량 1.200')),'Partial duty not applied');
  await card.locator('.ld-flow-basis select').selectOption('on');
+ check((await multiplePlot.locator('svg title').allTextContents()).some(t=>t.includes('14:00 · 재생 풍량 배수 · 가동 중 1.500')),'Airflow multiple denominator incorrect');
  await card.locator('.ld-flow-table summary').click();
  await page.setViewportSize({width:1440,height:1000});await card.scrollIntoViewIfNeeded();
  await card.screenshot({path:'/tmp/ld-flow-desktop.png'});
@@ -45,6 +51,9 @@ async page => {
  check(await page.getByLabel('액기비 분석 월').inputValue()==='','Region did not reset period');
  check((await page.getByLabel('액기비 분석 월').locator('option').allTextContents()).join(',')==='전체 · 월별,8월','Wrong region dataset');
  check(!errors.length,errors.join('\n'));
+ const recovery={...base,key:'recovery',label:'재생 단독',traceRequest:{airflow:6000,regenMaxAirRatio:3,regenLgRatio:1.2},ldFlowHourly:{version:1,rows:[['2001-07-31 19:00:00',3600,0,1,null,1.2,null,null,3,3.6,6]]}};
+ await page.evaluate(region=>window.dispatchEvent(new MessageEvent('message',{origin:'https://saldop.vercel.app',data:{type:'saldop:calculation-complete',summary:{primaryKey:region.key,regions:[region]}}})),recovery);
+ check((await page.locator('.ld-flow-plot').filter({hasText:'제습 설계 풍량 대비 재생 외기량'}).locator('svg title').allTextContents()).some(t=>t.includes('1.500 배')),'Recovery-only period lost design airflow');
  await page.unroute('**/api/substep-trace');
  return {passed:true,desktop:true,mobile:true,partialDuty:true,offNull:true,minuteTrace:true,regionSwitch:true,pageErrors:errors};
 }
