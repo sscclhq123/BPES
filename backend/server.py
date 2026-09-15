@@ -26,6 +26,7 @@ from solar_ld_engine import (  # noqa: E402
     CollectorConfig as WeatherCollectorConfig,
     run_simulation,
 )
+from default_load_cache import signature as load_cache_signature, read_snapshot
 
 
 UPLOAD_DIR = Path("/tmp/bpes-weather-uploads") if os.environ.get("VERCEL") else ROOT / "data" / "weather" / "uploads"
@@ -1339,12 +1340,17 @@ def simulate(payload):
         ua_tes_w_k=0.0,
     )
     load_collector = replace(collector, area_m2=0.0)
-    result, summary = run_simulation(
-        weather_file,
-        collector_type,
-        config=load_config,
-        collector=load_collector,
-    )
+    cache_key = load_cache_signature(weather_file, collector_type, load_config, load_collector)
+    cached_load = read_snapshot(cache_key)
+    if cached_load is not None:
+        result, summary = cached_load
+    else:
+        result, summary = run_simulation(
+            weather_file,
+            collector_type,
+            config=load_config,
+            collector=load_collector,
+        )
     base_result = result
     best_case, area_designs = calculate_collector_area_sweep(base_result, payload, collector, config)
     result = best_case["result"]
@@ -1455,6 +1461,8 @@ def simulate(payload):
 
     return {
         "warnings": warnings,
+        "loadCache": {"hit": cached_load is not None, "key": cache_key,
+                      "scope": "default-annual-ld", "solarSizing": "live"},
         "traceRequest": payload,
         "summary": {key: clean_value(value) for key, value in row.items()},
         "monthly": monthly_rows(result),

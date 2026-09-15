@@ -4,10 +4,11 @@
     "api/index.py": {
       "maxDuration": 300,
       "includeFiles": "data/weather/tmy_collection/**/*.epw.gz",
-      "excludeFiles": "{backend/test_*.py,backend/outputs/**,backend/outputs_check/**,figures/**,GPT_WORK_HANDOFF.md}"
+      "excludeFiles": "{data/default_ld_cache/**,backend/test_*.py,backend/outputs/**,backend/outputs_check/**,figures/**,GPT_WORK_HANDOFF.md}"
     }
   },
   "routes": [
+    { "src": "/default-ld-cache/([a-f0-9]{64})\\.npz", "dest": "/data/default_ld_cache/$1.npz", "headers": {"Cache-Control": "public, max-age=31536000, immutable"} },
     { "src": "/calculate", "dest": "/api/index.py?route=calculate" },
     { "src": "/api/(.*)", "dest": "/api/index.py?route=$1" },
     { "src": "/engine/styles.css", "dest": "/styles.css" },

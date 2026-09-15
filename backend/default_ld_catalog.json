@@ -1,0 +1,940 @@
+{
+  "keys": {
+    "9e373029d5037965cf24d35632a0c2673e2d504040bfe6ab4e157ceba0a67876": {
+      "city": "seoul_epw",
+      "preset": "office_small"
+    },
+    "6dc2914d7426a452a4178f62c860f770b3e89c237db24e83470bb3eb936229e8": {
+      "city": "seoul_epw",
+      "preset": "office_medium"
+    },
+    "36e3875fb05c1180199d1cd5821357f4a41496907d4a28d54283ad14d0a49853": {
+      "city": "seoul_epw",
+      "preset": "office_large"
+    },
+    "e2b6d9675c232f058e8bcf073bc9eb2009b52423a787615985382e5b6015aef9": {
+      "city": "seoul_epw",
+      "preset": "mall_small"
+    },
+    "14900dca78605f5a98b214c61da3316bbe470d94bb53939a52d1758bfc330d78": {
+      "city": "seoul_epw",
+      "preset": "mall_medium"
+    },
+    "a921d7f7a948b8971a359d3699b56101f4b5b5f76194b2ff61b851e8c2b8eea0": {
+      "city": "seoul_epw",
+      "preset": "mall_large"
+    },
+    "e4ee5c3f2c3718d2935f3dc91ac25c4952f36fb3ef7d5baeb22df42a47ede343": {
+      "city": "seoul_epw",
+      "preset": "residential_small"
+    },
+    "0f1adf14ebb8a25cd4a7d7a8fb8103974c83cb2f53ef43d0d7c4734e8a4b66d6": {
+      "city": "seoul_epw",
+      "preset": "residential_medium"
+    },
+    "ab3fd51bc13e8464fb0f8f4a27b7f3252e4a1bb71703a8d123a7e49140ecd772": {
+      "city": "seoul_epw",
+      "preset": "residential_large"
+    },
+    "54ab61911257ba937c5ca7396e0f909a1f6d0d09b3c2c55f8f732163422d89d1": {
+      "city": "seoul_epw",
+      "preset": "hospital_small"
+    },
+    "f19b4530e950b398ab94405d01413d7a0262ad62db4921a28ba1e038b45ffeb4": {
+      "city": "seoul_epw",
+      "preset": "hospital_medium"
+    },
+    "4f108fc707170f26d3c1276d732a2c6886a24a1c6594082bbf730186c2b94610": {
+      "city": "seoul_epw",
+      "preset": "hospital_large"
+    },
+    "5882e20eece3bc17734311dd0085f2fe455ef8282daf84c416e82a57b8463d03": {
+      "city": "seoul_epw",
+      "preset": "factory_small"
+    },
+    "c209b14dd8f71c632995aa1ad8b928fca243dbf663aaf159d840f5ba3c23ab6d": {
+      "city": "seoul_epw",
+      "preset": "factory_medium"
+    },
+    "1049c56f06a2127c1c7f2b61697dce38e30662b9d2af227ad718d17335731757": {
+      "city": "seoul_epw",
+      "preset": "factory_large"
+    },
+    "f27f42a40dbd4677593a78d8c95794b73e61f8298df3e2640be98164cc1fd5ec": {
+      "city": "seoul_epw",
+      "preset": "agriculture_small"
+    },
+    "b55f5e6d6ae113441cb328481bb28411d43a5605f10474ad6425655a707f385b": {
+      "city": "seoul_epw",
+      "preset": "agriculture_medium"
+    },
+    "63c48eef39217528e35dc8139dfab0ce5fd6a78e042e277dd749cf585a5e2a5d": {
+      "city": "seoul_epw",
+      "preset": "agriculture_large"
+    },
+    "03b07d891ded446e0b9da13525c0617ffc99091e4428640195c21273f43e9df4": {
+      "city": "daejeon_tmyx",
+      "preset": "office_small"
+    },
+    "8c04de2920a1f5a6af144ef8615a8d08d706a35edd04f566eac4ace8fc89d92f": {
+      "city": "daejeon_tmyx",
+      "preset": "office_medium"
+    },
+    "fa437e393b9a1d9cdb9bf035e5fcb99c50b097991805a7bad65a592e5e394df0": {
+      "city": "daejeon_tmyx",
+      "preset": "office_large"
+    },
+    "577bcc5b1ccc033638a276a7603e958428ce2ae881e1f612aa6c15962e2f0381": {
+      "city": "daejeon_tmyx",
+      "preset": "mall_small"
+    },
+    "72f8176052263daf058c442d65b0f0d0924a8b79bef023c2aa3391d672d4c477": {
+      "city": "daejeon_tmyx",
+      "preset": "mall_medium"
+    },
+    "4e4beacbb956b194011302b8e6438fbd7b943bf174c25335d279194a0b7aaf3f": {
+      "city": "daejeon_tmyx",
+      "preset": "mall_large"
+    },
+    "f4a77d21aa889e96f086dcff26f262c023cf5ae13f770ea164a58b081eb70118": {
+      "city": "daejeon_tmyx",
+      "preset": "residential_small"
+    },
+    "cae96ee5105e0aa8ab7f3e513bcc428ea8b5abd00a52b9c5452a50551cfd0b97": {
+      "city": "daejeon_tmyx",
+      "preset": "residential_medium"
+    },
+    "111f9a589d7f7498d4bdc8b59c43134cc2f3a8375e08dc19930869e302f0ce70": {
+      "city": "daejeon_tmyx",
+      "preset": "residential_large"
+    },
+    "39bbadbb949e658bc2180b94fa51dbff17e56d8715cd3f48b997b646d3a40db5": {
+      "city": "daejeon_tmyx",
+      "preset": "hospital_small"
+    },
+    "5949be63c015036b3822665972bf8ac12a78024666e8df234867a5b2e69204f0": {
+      "city": "daejeon_tmyx",
+      "preset": "hospital_medium"
+    },
+    "e46ec0b380de994eb5b62938bc297d92034d3630e6c747928ea341d561d2e17f": {
+      "city": "daejeon_tmyx",
+      "preset": "hospital_large"
+    },
+    "ecc89baeb0b12e97141d49a0e2a122ede6114e03bdb5169d8a95c53d455c175f": {
+      "city": "daejeon_tmyx",
+      "preset": "factory_small"
+    },
+    "3939f053a3d3e527d5ac8e9aa534c8cc88f97ec22d8b6e51b21a969d5e261aaf": {
+      "city": "daejeon_tmyx",
+      "preset": "factory_medium"
+    },
+    "ca76f2131f00c99a99b0f66e5f7e6100d3a924b651b60901871f41dc759e4f1e": {
+      "city": "daejeon_tmyx",
+      "preset": "factory_large"
+    },
+    "5d55097b26309b4e67e5d615820c971b975e4b1badf7a55dc618c99751319b6d": {
+      "city": "daejeon_tmyx",
+      "preset": "agriculture_small"
+    },
+    "90c44b8247e9935d4980ff920211d202d2a602ff6093edbc0276b343b231a565": {
+      "city": "daejeon_tmyx",
+      "preset": "agriculture_medium"
+    },
+    "3a0b06feb335bfcba377621ba1d4f3cde5ed62948141f34de445f92ef699f057": {
+      "city": "daejeon_tmyx",
+      "preset": "agriculture_large"
+    },
+    "af9828a32307c762939c6297cc24b62c7d7bd257029cae268945f4d8276974e2": {
+      "city": "busan_tmyx",
+      "preset": "office_small"
+    },
+    "ec4c6938016a6fed14027e2ed6d963dc7addfe1d865331e89661e448f9405b9f": {
+      "city": "busan_tmyx",
+      "preset": "office_medium"
+    },
+    "f36fd39cb5b77e8c5932ad5f63a45360115dd697f5a37290b3d83371c6d77f3b": {
+      "city": "busan_tmyx",
+      "preset": "office_large"
+    },
+    "914d3502534fb41d575bc0596f543e609de06b94197f1605e7e227da7d49ea7d": {
+      "city": "busan_tmyx",
+      "preset": "mall_small"
+    },
+    "5087b5edf2986453862a945486ee3b8bf136482410dda234d4a4145920f400ac": {
+      "city": "busan_tmyx",
+      "preset": "mall_medium"
+    },
+    "05306b4c5452b32d9a42402b347aafbd7e3ba5fc0a7e3997d1e76d06ec1fe4e7": {
+      "city": "busan_tmyx",
+      "preset": "mall_large"
+    },
+    "e7a1830c0fdfa6596119320c079186c5df9fe9e901ec91ec16eacbd72432eecc": {
+      "city": "busan_tmyx",
+      "preset": "residential_small"
+    },
+    "e753f7368b0b85d90e2196ac85e51d6059afed8cbf3f37acc363d7b9c9e63d1e": {
+      "city": "busan_tmyx",
+      "preset": "residential_medium"
+    },
+    "c277bfb65eff9888e074f614108487bb6a63c4f04f08321602b387d9c9cc0c46": {
+      "city": "busan_tmyx",
+      "preset": "residential_large"
+    },
+    "555b55c4613e5f2450df577dd93bebb8eedf4b6a96b1dba609594f7d9dc53dd0": {
+      "city": "busan_tmyx",
+      "preset": "hospital_small"
+    },
+    "1cba70bc5984ab5e8bfbda7406551405a078f1da527d936d10745dfa3041fddf": {
+      "city": "busan_tmyx",
+      "preset": "hospital_medium"
+    },
+    "7f939419fbae6e53559f607df0f0ec6917834364eb9c659ff02ae9e290875c69": {
+      "city": "busan_tmyx",
+      "preset": "hospital_large"
+    },
+    "92dd5eb41d78be3fe043fe1e0bc8ebbc9e7101195ce2c2152f0aeb22f55fece6": {
+      "city": "busan_tmyx",
+      "preset": "factory_small"
+    },
+    "9469599effee2c303f038779e4f738f74fc1aded92737932f347d590a1f79a19": {
+      "city": "busan_tmyx",
+      "preset": "factory_medium"
+    },
+    "68228776043e2aa09a17479f9d8a4f49fd5cc47baff916d3f358be6529703304": {
+      "city": "busan_tmyx",
+      "preset": "factory_large"
+    },
+    "ade7a4db27c6ed1898cfbc9e2a4757dc45562814d5c2fda5dbbfabdc826db7fd": {
+      "city": "busan_tmyx",
+      "preset": "agriculture_small"
+    },
+    "876094d0c15c45438c6dee8abdc3d2c9bb830a63c68155e833a080104783c6c9": {
+      "city": "busan_tmyx",
+      "preset": "agriculture_medium"
+    },
+    "7990b4af7013677d83c88a99ef0eeec99d7a125debd6676814c9e8d48a4ee913": {
+      "city": "busan_tmyx",
+      "preset": "agriculture_large"
+    },
+    "8c35dadd270137905022c9dd62231c264e67075e2531d1479ec6f198f716f0f6": {
+      "city": "gwangju_tmyx",
+      "preset": "office_small"
+    },
+    "adb1434ac2c1fd6cacf566926c833b666a44813c419dfd30e27ee1f2c24bcd3f": {
+      "city": "gwangju_tmyx",
+      "preset": "office_medium"
+    },
+    "6950cab49b1f9e2d5c03cfaf709e293d8a3488961a6ccbe1463d9fb026595227": {
+      "city": "gwangju_tmyx",
+      "preset": "office_large"
+    },
+    "0ea05bdb62f5d7218f1aa8b3b259f19114ab9e56bcbc5b0fa2a1babbb8743b93": {
+      "city": "gwangju_tmyx",
+      "preset": "mall_small"
+    },
+    "1593678d13beca94c26f22917f154a14c241cee806ea226cdfec95bca7579fa7": {
+      "city": "gwangju_tmyx",
+      "preset": "mall_medium"
+    },
+    "0520db3593473a5e85c39b3df0cc2ad301754f78134cfb24bd4ce3d58151156d": {
+      "city": "gwangju_tmyx",
+      "preset": "mall_large"
+    },
+    "c53bb12789535da2846afba044b441584938daec0ab45400761fe92b29017fcb": {
+      "city": "gwangju_tmyx",
+      "preset": "residential_small"
+    },
+    "0002529961c4fa90eddc835cc26f7002bfe7ebf919701a0ea38c73e67778e788": {
+      "city": "gwangju_tmyx",
+      "preset": "residential_medium"
+    },
+    "dd7d253b36a10bdfc19a7dc2e68eab2b84b7242dba3827187dccd6c8308b792b": {
+      "city": "gwangju_tmyx",
+      "preset": "residential_large"
+    },
+    "a0f2d04e7295f4e7ed22ab52d39166d9cb2e292ab8f6d05b8632d7d6668ecddc": {
+      "city": "gwangju_tmyx",
+      "preset": "hospital_small"
+    },
+    "be12dfb4be2cca0d260aaf4270f8285102080f5da60fe8f7120c02977eee7d47": {
+      "city": "gwangju_tmyx",
+      "preset": "hospital_medium"
+    },
+    "30a47059110114bea53d2f9a5ad72fb673d58855be911ec4b3c5befec8401e6d": {
+      "city": "gwangju_tmyx",
+      "preset": "hospital_large"
+    },
+    "d3400ccce4e9d9dbe131280274a6f18e7b1b2c23f93421bdd81a5a961bea9f1e": {
+      "city": "gwangju_tmyx",
+      "preset": "factory_small"
+    },
+    "b728d6dc22acd16415ad605f54e5c56c989b729f73fedc070a3f2bd06a5ed7a5": {
+      "city": "gwangju_tmyx",
+      "preset": "factory_medium"
+    },
+    "ef4670ab373a82ae19f774e26fb14295a543f2574e6cead251e367db7cd6017c": {
+      "city": "gwangju_tmyx",
+      "preset": "factory_large"
+    },
+    "e0fa278ffb4fa198bbbde19ec02fec6c17f6cdb421cd1ce7e7440c9007497eea": {
+      "city": "gwangju_tmyx",
+      "preset": "agriculture_small"
+    },
+    "f3853f6aaa8c914da818aa84366e6ed6cd1c7737d86c30ad5283b4dfd21e1952": {
+      "city": "gwangju_tmyx",
+      "preset": "agriculture_medium"
+    },
+    "9d8b029ca2c193c40143e72fd8b24dee2d188d8e2400ad02746a115d82a0af59": {
+      "city": "gwangju_tmyx",
+      "preset": "agriculture_large"
+    },
+    "6c37cf2b386595a265a2f8f9914cb4e32f4eec8c113583ea04ff308f2843acad": {
+      "city": "daegu_tmyx",
+      "preset": "office_small"
+    },
+    "03a9ff2489d2439266c59ebf0b3ee10c6175f705613a20de2ab8eb5d28e2d9b5": {
+      "city": "daegu_tmyx",
+      "preset": "office_medium"
+    },
+    "7ce05ed2b860a3c6b8b28fabac0b7822fc7790183e8eec09d63e547fba01f6fe": {
+      "city": "daegu_tmyx",
+      "preset": "office_large"
+    },
+    "dbef1d5b56bc29a9b744854a06b65fd216c42a66b80bf026f0538024d27b39e1": {
+      "city": "daegu_tmyx",
+      "preset": "mall_small"
+    },
+    "28afc7c0953203cc89c109377ccfceeeafb2ca39576ea25f6ffcef215852d3ea": {
+      "city": "daegu_tmyx",
+      "preset": "mall_medium"
+    },
+    "03b7f4b582395819bee296a8d0eb3dcab44f222aec4d9bf8ba6b79c9a1f8a83c": {
+      "city": "daegu_tmyx",
+      "preset": "mall_large"
+    },
+    "a59e65333af253be7811eb923a2b403c5cee06c60b931a67e1f81143b7188ed7": {
+      "city": "daegu_tmyx",
+      "preset": "residential_small"
+    },
+    "e75a4fa4946a11b04450d39133550454caf3406ef2aa2de90e45b0900328a535": {
+      "city": "daegu_tmyx",
+      "preset": "residential_medium"
+    },
+    "be547ea17d5bb493cc00c49e53b759b3a7b348baa62ed6782a21104c31726da8": {
+      "city": "daegu_tmyx",
+      "preset": "residential_large"
+    },
+    "aecdddaab1d7afff466f6da07894cfe5b8250f17138d66334d716940f6ad14ff": {
+      "city": "daegu_tmyx",
+      "preset": "hospital_small"
+    },
+    "8bbef4c5d2d11214e3feb959c16e4ab1a50b9d75cf9a8791a9c464b33b931b80": {
+      "city": "daegu_tmyx",
+      "preset": "hospital_medium"
+    },
+    "47dc5d4f9385fe8a38663075b072c29e74c78fb44efbea71ea8b31772fd582bb": {
+      "city": "daegu_tmyx",
+      "preset": "hospital_large"
+    },
+    "2003d868e0cc3e2d9817146defd53ac3ae3b44c7fc807a0bc43ff4ec351a836c": {
+      "city": "daegu_tmyx",
+      "preset": "factory_small"
+    },
+    "82db4a3f853983396641e4f1afe237c415591d6b436636b6246e7463a68113cd": {
+      "city": "daegu_tmyx",
+      "preset": "factory_medium"
+    },
+    "5db0ceeb5e9825a6bf3b7e0f689c8b7123c2a6842566b86b1e6c4fc25a7e4cce": {
+      "city": "daegu_tmyx",
+      "preset": "factory_large"
+    },
+    "0350147ccad4d0c1c9ae00f18312c341e646e7b6d386907449553573c8a746da": {
+      "city": "daegu_tmyx",
+      "preset": "agriculture_small"
+    },
+    "01fe92bffde5345bb144e8fc02421f6da7dfb832f3a7e53a8945f913258c423c": {
+      "city": "daegu_tmyx",
+      "preset": "agriculture_medium"
+    },
+    "5fdd1253195bff3df171a80f4bedddf7a1d05cd44951444b025d7fdb09259ba7": {
+      "city": "daegu_tmyx",
+      "preset": "agriculture_large"
+    },
+    "12ba3372c5572baff9b034dc6edde6947fbbbac06159eb5d22541ef1e974a8ad": {
+      "city": "incheon_tmyx",
+      "preset": "office_small"
+    },
+    "4ce9847ab625f111f65bf09268612d251d63b52f5df2a40c8328a9113df0b603": {
+      "city": "incheon_tmyx",
+      "preset": "office_medium"
+    },
+    "4b73f030af076ebcf56f167d12b5be6aaca24bb2213963e2d83678719a6746bb": {
+      "city": "incheon_tmyx",
+      "preset": "office_large"
+    },
+    "c693957f506221425a1fb1588b534b1294012527e0fb6388d6778ab34657eca3": {
+      "city": "incheon_tmyx",
+      "preset": "mall_small"
+    },
+    "820a15e2044838f9334b3aa0472d9db56a0bd3abc378435fad1045da2edb1113": {
+      "city": "incheon_tmyx",
+      "preset": "mall_medium"
+    },
+    "712b39015b4fb26d8fb9b87ebb4f50b7d80ee6eb751bd844cfa6d14a45572952": {
+      "city": "incheon_tmyx",
+      "preset": "mall_large"
+    },
+    "bb8b6998a95b620abb23a208f4ef13b0d995c5a4d54d6a7df334f912df75f819": {
+      "city": "incheon_tmyx",
+      "preset": "residential_small"
+    },
+    "39f61923ce903508309c1333dc8a60bd15fde546d83bacddfd492aee1c61288a": {
+      "city": "incheon_tmyx",
+      "preset": "residential_medium"
+    },
+    "1f62736cb6a6b09bf66b52fc4f80df23b10dfce01b5d02219335a461ed2657ec": {
+      "city": "incheon_tmyx",
+      "preset": "residential_large"
+    },
+    "c5d210b4cea74086e13129a3961c293fce8570a7d0d7092d042b087098bf867b": {
+      "city": "incheon_tmyx",
+      "preset": "hospital_small"
+    },
+    "c18d14ea14ac404e20783587588cbec2488277d10064d953a13cb944c9dcd2a4": {
+      "city": "incheon_tmyx",
+      "preset": "hospital_medium"
+    },
+    "3bf34ea862ff4c316a0fc838dd593aff911044805892cc0d62244eecd16e23d2": {
+      "city": "incheon_tmyx",
+      "preset": "hospital_large"
+    },
+    "b5b4f180eef48eef566548769639aa540050d284de1fa4b055e0bb70abbc03fe": {
+      "city": "incheon_tmyx",
+      "preset": "factory_small"
+    },
+    "d24aa77eb0740de68272611a6cd1074b7c1217a347f84d228e8684e5f557784f": {
+      "city": "incheon_tmyx",
+      "preset": "factory_medium"
+    },
+    "7de5ceb5a83aee544e061ab1f8328a349877bc56ffbd03880e7ce0afaccf2956": {
+      "city": "incheon_tmyx",
+      "preset": "factory_large"
+    },
+    "700e0c4336d37bd98a26f26797becb1be473f76cf4a72290977cf6c36d90507b": {
+      "city": "incheon_tmyx",
+      "preset": "agriculture_small"
+    },
+    "0ce564ce1b2e68e892e0164b75c666c2115e9210066c1db80a9d19ad66f53485": {
+      "city": "incheon_tmyx",
+      "preset": "agriculture_medium"
+    },
+    "9d15710b9def7bb20dcf61fd6fb42c9ea8a9f2d4c88fed4059e68fae290d6adf": {
+      "city": "incheon_tmyx",
+      "preset": "agriculture_large"
+    },
+    "4a1f56b2ac12382b92317f609313c938d8f0e523c7b57435d598a694a69da75c": {
+      "city": "ulsan_tmyx",
+      "preset": "office_small"
+    },
+    "f1d6fca583f0cebb2d2def234795020a45b7748ad2405bfd19c7b9aaa808ad75": {
+      "city": "ulsan_tmyx",
+      "preset": "office_medium"
+    },
+    "bd14a95e29459568f0d29c9fd58c6a12689be111fdcd56278c550893bfb95b58": {
+      "city": "ulsan_tmyx",
+      "preset": "office_large"
+    },
+    "8cd9b6dcb596d4c05915ded75877a0fb80d24d2e16bc8b8d62485c32f333249e": {
+      "city": "ulsan_tmyx",
+      "preset": "mall_small"
+    },
+    "6b5574bea4e9daf28ced9981a31499c4b4f9ff85d729163f1d52acfa9fbfe844": {
+      "city": "ulsan_tmyx",
+      "preset": "mall_medium"
+    },
+    "00e3e8496b6757b67625fe18f7a5da0f717647966e4cb0d14cbb97f1c5a687e8": {
+      "city": "ulsan_tmyx",
+      "preset": "mall_large"
+    },
+    "c21974ce0455cd9522da831815180e28a2271edb6c98a3f54ae01b59839fd0cb": {
+      "city": "ulsan_tmyx",
+      "preset": "residential_small"
+    },
+    "e770dc68e379c1dd1a6c726728ec3ff830959d114ac6dce95c757f715e94c486": {
+      "city": "ulsan_tmyx",
+      "preset": "residential_medium"
+    },
+    "b510fa70ce75c06f970e919da8fd520f465e0f14ac96b482f5ac9ff7c2c80ac2": {
+      "city": "ulsan_tmyx",
+      "preset": "residential_large"
+    },
+    "d3b992c1eaef96a7b36f20d1f0dc3ca7628123a15b993902caf70f60a48d4a88": {
+      "city": "ulsan_tmyx",
+      "preset": "hospital_small"
+    },
+    "12ff24ceaf07081ecc77f80e08e0596e04e70f4e8af550fe4096c1effc9e68dc": {
+      "city": "ulsan_tmyx",
+      "preset": "hospital_medium"
+    },
+    "e42a919a6b33bd52ea6d73d033abe66239fb1b2115536b3a6f0c88af3bf73989": {
+      "city": "ulsan_tmyx",
+      "preset": "hospital_large"
+    },
+    "e4fe11c8b07445517231e9fb1a2b2db1b2efe401d571d9860c0138fda85521c4": {
+      "city": "ulsan_tmyx",
+      "preset": "factory_small"
+    },
+    "3ff8b2c4ae219bd03f8c7e2b117de1937d088837a85238cc754b81e1663ad3b8": {
+      "city": "ulsan_tmyx",
+      "preset": "factory_medium"
+    },
+    "9a3288fa87faddf9cc6d51e4321a423f6b019f923dc5841601fa25ef96a13837": {
+      "city": "ulsan_tmyx",
+      "preset": "factory_large"
+    },
+    "142ad12b3cf02d7624c685275538e00a4c35949ed06665bd195d5bf32ae9a15e": {
+      "city": "ulsan_tmyx",
+      "preset": "agriculture_small"
+    },
+    "4f71e926d1b4bca981a6653fd9979dea3532f73d5a6a5d08e6db172dbb317dfe": {
+      "city": "ulsan_tmyx",
+      "preset": "agriculture_medium"
+    },
+    "bbbfe5fa8cee3becc4a4714de404732c1ac61c9e589be54300f534404cbd6719": {
+      "city": "ulsan_tmyx",
+      "preset": "agriculture_large"
+    },
+    "0f6815eb826dc9ce611d26cc1d5227c05a2115b08653a7ec025e6d3d178c520a": {
+      "city": "jeju_tmyx",
+      "preset": "office_small"
+    },
+    "15648229426444011880d5860d022418e6e4c09cbd90dab3a064119d35e37dfc": {
+      "city": "jeju_tmyx",
+      "preset": "office_medium"
+    },
+    "c568bc9226b24057de484b54f842f5b7437d8f42616112e345fb93cd73addd50": {
+      "city": "jeju_tmyx",
+      "preset": "office_large"
+    },
+    "20c8407359ef34262c64a75e3f45497d181519afade32ef81f00c6060deb94ff": {
+      "city": "jeju_tmyx",
+      "preset": "mall_small"
+    },
+    "6794a32d5ed009268928b83ffba8f18a07cfc43b1000cc15afc11e43fce85f30": {
+      "city": "jeju_tmyx",
+      "preset": "mall_medium"
+    },
+    "3884157e2f0d81f7169b31cea1f985354e40c96732cad0f9cec267855d0a4dc1": {
+      "city": "jeju_tmyx",
+      "preset": "mall_large"
+    },
+    "12cd6fb566662d30f07c8d2da6dd29a548c62bbd39c701f26636cf1532fc1289": {
+      "city": "jeju_tmyx",
+      "preset": "residential_small"
+    },
+    "25b9bef7d776558501346cc0b7234af10c01864ca9b31f2a4dbdebee94a944e8": {
+      "city": "jeju_tmyx",
+      "preset": "residential_medium"
+    },
+    "70062e7e790aefc1bc6c4430f09c274d3edb78f0b5fc260531effbf6be31eab8": {
+      "city": "jeju_tmyx",
+      "preset": "residential_large"
+    },
+    "4f467e8698ff3df6e4fa95ba0d8f028729dd7d0d4de703e428ed9f6cdff276a4": {
+      "city": "jeju_tmyx",
+      "preset": "hospital_small"
+    },
+    "1a1738963d6f4092964f2ef5849b69da87b3c4aca9de5e35898ebde7a779786c": {
+      "city": "jeju_tmyx",
+      "preset": "hospital_medium"
+    },
+    "b8bc11d43f334c430e9f48f926492a12f495496a14fd68cb45ace00b2e4c99fc": {
+      "city": "jeju_tmyx",
+      "preset": "hospital_large"
+    },
+    "1816f5584aafbd50408fe9a5e6cce4bcbb42c87cda635f36785c86713e95c923": {
+      "city": "jeju_tmyx",
+      "preset": "factory_small"
+    },
+    "befe30f762e0665a81959c3231c8107a85a946aa41fa7237b40a23c2fe2fb522": {
+      "city": "jeju_tmyx",
+      "preset": "factory_medium"
+    },
+    "5a3c99ce5e7bdb8f3679c420a5c323b11370e4174ebadbfd1b3a2e34233da7d6": {
+      "city": "jeju_tmyx",
+      "preset": "factory_large"
+    },
+    "243e0f18052491b084edf7d920d77fd414a9ac7c42f7089c393e522ffe9b7b81": {
+      "city": "jeju_tmyx",
+      "preset": "agriculture_small"
+    },
+    "f746b1ec727f907d3099c8171f969431f7310f5a27443886736e07c11dd3e096": {
+      "city": "jeju_tmyx",
+      "preset": "agriculture_medium"
+    },
+    "b4ce0a93312f5cd1f0cb978767bd0859f299363276e68a948f637f3e8068f742": {
+      "city": "jeju_tmyx",
+      "preset": "agriculture_large"
+    },
+    "62330760ef9fe7f66b487dfd5b4fb9c37ae579c1b604f910f6d39ca0ee6dd2de": {
+      "city": "manila_tmy",
+      "preset": "office_small"
+    },
+    "e31f01bdd3bf7a92884e85d2999ef3b14255d8b581b40adeb8c26c4484841342": {
+      "city": "manila_tmy",
+      "preset": "office_medium"
+    },
+    "b7b565b1afa5cdc516b86f5bccc263bbd65bad258ad112c0da43bad7f12d76d4": {
+      "city": "manila_tmy",
+      "preset": "office_large"
+    },
+    "88b97e63ae0546481e39570d357ffe3e5aaeaa95c607e6dfe354efcf6e6d5a0e": {
+      "city": "manila_tmy",
+      "preset": "mall_small"
+    },
+    "d703a33bab9536b223468fc8c9218ed02d13eb8155d68f746d9cada9097d79ab": {
+      "city": "manila_tmy",
+      "preset": "mall_medium"
+    },
+    "ffe961056e97d9b8a4db1831361abfd8c1dcdc17ecf89ae55fd7fa19ad66c0fa": {
+      "city": "manila_tmy",
+      "preset": "mall_large"
+    },
+    "f9a2b29064c3b1689d3487fe40dcd7bcaf3fc593b6a1e381f9aa02b5be10e283": {
+      "city": "manila_tmy",
+      "preset": "residential_small"
+    },
+    "77b2a757b187df17eacba985c63506d98822d54633e328eb38a688adcdfc3f3a": {
+      "city": "manila_tmy",
+      "preset": "residential_medium"
+    },
+    "2d641e6914fe6eba96dba6bdd6b05513aee8617a32707eae76d0c71953b1de75": {
+      "city": "manila_tmy",
+      "preset": "residential_large"
+    },
+    "cd8352cc862801cdab4226b8c6091018b0f59a41d616f9c5b66c281342066c84": {
+      "city": "manila_tmy",
+      "preset": "hospital_small"
+    },
+    "55e7621c06995654b032311276b3dd94fa030e6d841bd056bb50efa7f5f54896": {
+      "city": "manila_tmy",
+      "preset": "hospital_medium"
+    },
+    "1065050b7969ad546261de9e4bb5fce539b5f90272f2ec58ab493753b512971d": {
+      "city": "manila_tmy",
+      "preset": "hospital_large"
+    },
+    "a475b7d202c16adbc70dc6f39f10a3f29b3456ce7a1d57bb8fed64b4d4ebe9e5": {
+      "city": "manila_tmy",
+      "preset": "factory_small"
+    },
+    "acf412b130a9bc84e7852b9a5bcc653903c2d3491a73ba5af94982ac71f6ae1f": {
+      "city": "manila_tmy",
+      "preset": "factory_medium"
+    },
+    "53e372439ec973901dd68d002287c73126535f40266a16455d0ef895a30572ae": {
+      "city": "manila_tmy",
+      "preset": "factory_large"
+    },
+    "a714e8b3b2472650e9b074b088aabe0bcf3bbd3efa221178ba0d72e80f724b38": {
+      "city": "manila_tmy",
+      "preset": "agriculture_small"
+    },
+    "1ed44058882ebe8a5574807031ad9acee275afd96f9c625982d0ae8dab918979": {
+      "city": "manila_tmy",
+      "preset": "agriculture_medium"
+    },
+    "d980d939399f268a0ca0d876baf2ea104966ceb06abc59fbe1d57362ff3d10f0": {
+      "city": "manila_tmy",
+      "preset": "agriculture_large"
+    },
+    "317ba7af1ba188339d6b33d01cff650672887620249491ba67f167fec6818618": {
+      "city": "hanoi_tmyx",
+      "preset": "office_small"
+    },
+    "b6aa787423b29ab88c6518fc8c1652dbffa1a05252776e3319f59d8fdfe81e02": {
+      "city": "hanoi_tmyx",
+      "preset": "office_medium"
+    },
+    "6d466d1081e928d278a52090cf9779534131fe8edf802c1a34726f1689b7aa5a": {
+      "city": "hanoi_tmyx",
+      "preset": "office_large"
+    },
+    "b5bea4772661ccc0d7c459dd3ef76d28919172f86b3d9c5abd200ceb2c46349c": {
+      "city": "hanoi_tmyx",
+      "preset": "mall_small"
+    },
+    "8c21a0d9300e017d575ebbdb3dbd7e58af138f622813c36c633bdc98ce7407c5": {
+      "city": "hanoi_tmyx",
+      "preset": "mall_medium"
+    },
+    "50cb9bc18ddda7e9210e9630cf4f689f3421f41f37f1ce1c20e531f874cc499d": {
+      "city": "hanoi_tmyx",
+      "preset": "mall_large"
+    },
+    "5eb242c72b85b28cd481b0c5f62682ed7d19328ec8690985a396b9d0abb2975c": {
+      "city": "hanoi_tmyx",
+      "preset": "residential_small"
+    },
+    "99c9c0a20f466cab83a621a65905e6668f9b9424a5ff4ed99ef6dff04ab3fee1": {
+      "city": "hanoi_tmyx",
+      "preset": "residential_medium"
+    },
+    "3222c3e76abfce912222c6012b6b8b4cf5df705668df52b8dd691fef2921d193": {
+      "city": "hanoi_tmyx",
+      "preset": "residential_large"
+    },
+    "47a779313ad7643e74842db130c823b7103d9228896468b36b32f2af87a35b0c": {
+      "city": "hanoi_tmyx",
+      "preset": "hospital_small"
+    },
+    "ab1497fc6498b5977b433d651cfe76cfb7579f1e13fd027a68f4230e183824f5": {
+      "city": "hanoi_tmyx",
+      "preset": "hospital_medium"
+    },
+    "165dd661fe57e9cff009b7bd582fdc7d9e22742d66fe0c22cbb0b63d790d1473": {
+      "city": "hanoi_tmyx",
+      "preset": "hospital_large"
+    },
+    "dedc0c9ce60d298fc9d1ccd5c47519e830b5e30f6785b4f895a6984d0e6eeb5e": {
+      "city": "hanoi_tmyx",
+      "preset": "factory_small"
+    },
+    "c6feb11973731c81cecf28670760d15136dc1b6accb2ba838baa9327e6e9fec7": {
+      "city": "hanoi_tmyx",
+      "preset": "factory_medium"
+    },
+    "28d1fa2ab03cfecd5f9806fc2fd0ff96c86ab6125ceeb380b398d5d58256c0a5": {
+      "city": "hanoi_tmyx",
+      "preset": "factory_large"
+    },
+    "2e68670eb4358d115d9053769878506f7c02bc3b85d7c623c6a06fad535980fa": {
+      "city": "hanoi_tmyx",
+      "preset": "agriculture_small"
+    },
+    "3ec00671b0cb8442c147c367491feccc18aa0cd051735d098087cefd18cf6777": {
+      "city": "hanoi_tmyx",
+      "preset": "agriculture_medium"
+    },
+    "95e28303eec33ef1f08da6170688006f71cb73127d34916448da9f092f399aef": {
+      "city": "hanoi_tmyx",
+      "preset": "agriculture_large"
+    },
+    "9ad5c00e63d1e60a509bba2f8e67b413dbeddb3624927c8be8e5ecfa1731aaa7": {
+      "city": "houston_tmyx",
+      "preset": "office_small"
+    },
+    "3e8499d4c321d13dc828d68ce97887c4be1588a1c192e92d830b0db387e59cbb": {
+      "city": "houston_tmyx",
+      "preset": "office_medium"
+    },
+    "17e21e4812d3c082c3cd754a55cb69160742d81e1bf43e627e454f2ba58f15a5": {
+      "city": "houston_tmyx",
+      "preset": "office_large"
+    },
+    "478513c58c3f8c6c386ba64382602bec3470a9b0ef0dc7b5a913e035786f1176": {
+      "city": "houston_tmyx",
+      "preset": "mall_small"
+    },
+    "6d4d9f1cea0e495e002a5917dbaa04de9c42372452fde2f3b05eb907a328f00e": {
+      "city": "houston_tmyx",
+      "preset": "mall_medium"
+    },
+    "5083fa1a419a2d4b18d058db729c9f3696eaee5a6df61e4bd4ecb2755331c726": {
+      "city": "houston_tmyx",
+      "preset": "mall_large"
+    },
+    "29da66058e30b631aab7049ca5249ceb40a685bbf7a9eef94cb8832791322fdf": {
+      "city": "houston_tmyx",
+      "preset": "residential_small"
+    },
+    "07e4cbed7aab5fe07ad532fba3e5e12299f485e71d0a2a9cac5be8e52fae9db8": {
+      "city": "houston_tmyx",
+      "preset": "residential_medium"
+    },
+    "0e2f343bbe54bae7df37b8af87bfc59647a0313bd1321858ea595144c8d999af": {
+      "city": "houston_tmyx",
+      "preset": "residential_large"
+    },
+    "18aac122e4b7c764224d1d44dfb969e66b774d9fe2584f62a73cb10db4f73ae4": {
+      "city": "houston_tmyx",
+      "preset": "hospital_small"
+    },
+    "8bb89eeb37b5c29b363cb47e5feaa70e0f4c7f73835a2b0b4fce965390b4a8b1": {
+      "city": "houston_tmyx",
+      "preset": "hospital_medium"
+    },
+    "efad015c6c34aa800938e64abec56b24863f439be894c36567406fa2d2ec2b7e": {
+      "city": "houston_tmyx",
+      "preset": "hospital_large"
+    },
+    "e163c36f30707e08e10b7b32203966aa61fc22908cc7be15c7cf529c7f770245": {
+      "city": "houston_tmyx",
+      "preset": "factory_small"
+    },
+    "10fa4c5c09add668a5f240966e6ad8e1b1b8ded370a61100570c6742f8612642": {
+      "city": "houston_tmyx",
+      "preset": "factory_medium"
+    },
+    "b7a3f177a1bc8c33f9ff4951eaca875816cfc1d0b0c875b4982b214e6b9744fc": {
+      "city": "houston_tmyx",
+      "preset": "factory_large"
+    },
+    "c0cef52d6621f60e88353ab57f03d2e165213435077a9fabd8fee479e435da6b": {
+      "city": "houston_tmyx",
+      "preset": "agriculture_small"
+    },
+    "9900add5138c3335eb5faada0075f174d3ec5860ced0ab8c9472b6144923eca1": {
+      "city": "houston_tmyx",
+      "preset": "agriculture_medium"
+    },
+    "9fb9daf11ff7182106acafdf9e9bf893b5439fe2a86ca0fccfea33f05c4f51e2": {
+      "city": "houston_tmyx",
+      "preset": "agriculture_large"
+    },
+    "536ebec0a57609a9cddca488aff8d91c1f8c19cf589fd264b5501328c59ed4e1": {
+      "city": "shanghai_tmyx",
+      "preset": "office_small"
+    },
+    "a31b4447d031b891a65eb2abf7c882a0114c180abe9f8271b3bdf2b1fbc06dc4": {
+      "city": "shanghai_tmyx",
+      "preset": "office_medium"
+    },
+    "c59e3778feea32483394386c8b8a8a3d6ba30080caa548255c3ad90b86cb4d47": {
+      "city": "shanghai_tmyx",
+      "preset": "office_large"
+    },
+    "dbc00ad92ed8e361a979e0e2f5d4fd3dd76535b6df71021f01ebcc3d14bcbb15": {
+      "city": "shanghai_tmyx",
+      "preset": "mall_small"
+    },
+    "f7bf9780c7734f326ff5e7c690ce183a8414186d665e37a14d55d72488090503": {
+      "city": "shanghai_tmyx",
+      "preset": "mall_medium"
+    },
+    "228868b695f784765288259a56d4b55110a4045c97897371aada7f6311e6da60": {
+      "city": "shanghai_tmyx",
+      "preset": "mall_large"
+    },
+    "8849dc94fa2f06278f8fac28e0399b1269adb3248e9b4c8143aaed62b24e7d44": {
+      "city": "shanghai_tmyx",
+      "preset": "residential_small"
+    },
+    "84b7515381865dc8a9c7cd69a238a76181ecce980e5e11ed472e4d417fefce78": {
+      "city": "shanghai_tmyx",
+      "preset": "residential_medium"
+    },
+    "f37dad5f0124d9e26bbd97664f7861f40d9cb19c46ca55ba5c4a17f2419caf51": {
+      "city": "shanghai_tmyx",
+      "preset": "residential_large"
+    },
+    "76c237c70d85aa31e1c2513d74575536b75574f57ef4b578cf4dd599b01f02ec": {
+      "city": "shanghai_tmyx",
+      "preset": "hospital_small"
+    },
+    "6f2facab27276a6f8d015ff718add9af1c7db252a05a8ef885654b0650c67201": {
+      "city": "shanghai_tmyx",
+      "preset": "hospital_medium"
+    },
+    "c34af1a58ca6d54cdeb9e4b59560fbb1a94e4237cee2f13b0075e4d5d9313f92": {
+      "city": "shanghai_tmyx",
+      "preset": "hospital_large"
+    },
+    "ff7ae717b0ba4985296956df225ee358223d919688484e5b446856c144094cd2": {
+      "city": "shanghai_tmyx",
+      "preset": "factory_small"
+    },
+    "ceb61c8914d824a80deca0a51fb437f73cc14dd91e9a71368a5174eea5a6da3c": {
+      "city": "shanghai_tmyx",
+      "preset": "factory_medium"
+    },
+    "804dfb16d5b1f461599b98d790ee90702d9bb5eb44d44a643d95525df846cb6d": {
+      "city": "shanghai_tmyx",
+      "preset": "factory_large"
+    },
+    "05086751ea2ebd13ef7657d645b029acbfa83302c54f0457917201826afec08a": {
+      "city": "shanghai_tmyx",
+      "preset": "agriculture_small"
+    },
+    "87ec3f1bda843b3ae2f60519140dc580c34146cdf483d3d3bd435988be959590": {
+      "city": "shanghai_tmyx",
+      "preset": "agriculture_medium"
+    },
+    "14975a3ce332089158775dbcbdb162c34231f466a526d116d5f27057b7ef2d25": {
+      "city": "shanghai_tmyx",
+      "preset": "agriculture_large"
+    },
+    "daccd256e366a4253bed5d754c11bd44643d193209eadf337b7bf1a90a67ec26": {
+      "city": "berlin_tmyx",
+      "preset": "office_small"
+    },
+    "220c247519920a8e790dc9cd400ec8031010ae99e4ee8139d0b54a8d12f13940": {
+      "city": "berlin_tmyx",
+      "preset": "office_medium"
+    },
+    "ab30d184da7f6cbdf8c87fcf19723737628e971d76d740cde05ee518732889fb": {
+      "city": "berlin_tmyx",
+      "preset": "office_large"
+    },
+    "19166bd8031c7ae424460e6e4734175433d16d5657828578357965d20396f3fa": {
+      "city": "berlin_tmyx",
+      "preset": "mall_small"
+    },
+    "0acbd8ddbbc58cec64b91928239f670270c6ef5849217f3ee3d4808aa9e20e31": {
+      "city": "berlin_tmyx",
+      "preset": "mall_medium"
+    },
+    "006b53266a1c9878f1ec1685ce731238d3a009024c77d50f1ed1464e3c6ec506": {
+      "city": "berlin_tmyx",
+      "preset": "mall_large"
+    },
+    "514c3f70678ced82acd491531560a950a42ecabfa92b9bd3645df50f635c520e": {
+      "city": "berlin_tmyx",
+      "preset": "residential_small"
+    },
+    "e69d81bb3e71bc68a932c055153463b0d6e3e482066ad5adfa2e76ff57530154": {
+      "city": "berlin_tmyx",
+      "preset": "residential_medium"
+    },
+    "98b50338c01d942c65678f102afd9d09ed97700e0e55ab60cd16683fb3cb2724": {
+      "city": "berlin_tmyx",
+      "preset": "residential_large"
+    },
+    "0fb655282c63f6bcd379ab27f2b69f7d7265aaef70f8d7d5716709f81e99f52e": {
+      "city": "berlin_tmyx",
+      "preset": "hospital_small"
+    },
+    "53923f3fa03b61f34daa5beb1280cec85b10cab4a0ae70128c8d9857aaa3b12d": {
+      "city": "berlin_tmyx",
+      "preset": "hospital_medium"
+    },
+    "781a8c9bf621dacd71d7bc6a95fa08f3e7b6256456b99b18836da43e5d21e27b": {
+      "city": "berlin_tmyx",
+      "preset": "hospital_large"
+    },
+    "bb780f451e313dc6afddf9caa9af8264bd46d6e902ec185353a1b1f7fd58726b": {
+      "city": "berlin_tmyx",
+      "preset": "factory_small"
+    },
+    "aa6ade110fe7efa75b63b6e7af46c09da267bdcddae81b161a3d42998687e0c1": {
+      "city": "berlin_tmyx",
+      "preset": "factory_medium"
+    },
+    "2e620ab3e28b0126a3acf3dfe963733caf4a581f5e97497a8cefa08ffabaaf92": {
+      "city": "berlin_tmyx",
+      "preset": "factory_large"
+    },
+    "88437b691aeefd0a97436347b947d55e2f9b98f86fed041dbdc89bb6d7f5a3f2": {
+      "city": "berlin_tmyx",
+      "preset": "agriculture_small"
+    },
+    "76f65ef82988719b6f8dfb84d6ad1fbaec31d4500085895495749ae214806250": {
+      "city": "berlin_tmyx",
+      "preset": "agriculture_medium"
+    },
+    "dffbd7307a515dceabf62cdf611e4aacdf41ce2b9ba630c02fe4d13fd20eb4f1": {
+      "city": "berlin_tmyx",
+      "preset": "agriculture_large"
+    }
+  }
+}
