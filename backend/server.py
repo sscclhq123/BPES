@@ -166,9 +166,9 @@ def build_configs(payload):
     config.reg_vav_control = config.reg_capacity_auto_size
     config.reg_min_air_ratio = 1.0
     config.reg_fixed_lg = to_number(payload, "regenLgRatio", 1.2)
-    config.reg_max_air_ratio = to_number(payload, "regenMaxAirRatio", 3.0)
-    if not np.isfinite(config.reg_max_air_ratio) or not 1 <= config.reg_max_air_ratio <= 3:
-        raise ValueError("재생 VAV 외기량 상한은 제습 풍량의 1~3배 사이로 입력하세요.")
+    # Old saved URLs may still send regenMaxAirRatio=3; do not silently restore
+    # that retired design budget. VAV is bounded by the load-sized installed bank.
+    config.reg_max_air_ratio = None
     if not np.isfinite(config.reg_fixed_lg) or not .65 <= config.reg_fixed_lg <= 2:
         raise ValueError("재생 L/G는 모듈 유량 교집합이 존재하는 0.65~2.0 사이여야 합니다.")
     config.lg_auto_control = payload.get("lgMode", "auto") == "auto"
@@ -306,7 +306,8 @@ def ld_flow_hourly(result):
                   on(r.REG_SOL_IN_mdot_kg_s, g),
                   on(r.REG_ACTIVE_MODULE_COUNT, g)]
         records.append([round(v, 8) if isinstance(v, float) else v for v in values])
-    return {"version": 1, "rows": records}
+    design = result.attrs.get("regeneration_design") or {}
+    return {"version": 1, "rows": records, "designMaxAirRatio": design.get("maxAirRatio")}
 
 
 def monthly_weather_rows(result):
@@ -1281,6 +1282,7 @@ def substep_trace(payload):
         "upper": config.target_supply_w_g_kg + config.target_humidity_tolerance_g_kg,
         "floor": config.xi_abs_stop * 100,
         "hourSupplyHumidity": float(row.SUPPLY_AIR_w_kgkg * 1000),
+        "designMaxAirRatio": (result.attrs.get("regeneration_design") or {}).get("maxAirRatio"),
         "steps": [{k: clean_value(v) for k, v in step.items()} for step in result.attrs["substep_trace"]],
     }
 
@@ -1326,6 +1328,7 @@ def substep_windows(payload):
             target=config.target_supply_w_g_kg, upper=config.target_supply_w_g_kg+config.target_humidity_tolerance_g_kg,
             floor=config.xi_abs_stop*100,
             hourSupplyHumidity=sum(s["supplyHumidity"]*s["durationSeconds"] for s in steps)/duration,
+            designMaxAirRatio=(result.attrs.get("regeneration_design") or {}).get("maxAirRatio"),
             steps=steps))
     return {"traces": traces}
 
@@ -1409,7 +1412,7 @@ def simulate(payload):
     regen_design = {key.removeprefix("REG_DESIGN_"): clean_value(value)
                     for key,value in row.items() if key.startswith("REG_DESIGN_")}
     if regen_design.get("limited"):
-        warnings.append("독립 산정한 재생 용량이 외기량 상한 또는 재생 불가 외기조건으로 제한됩니다. 결과를 목표 충족으로 간주하지 마세요.")
+        warnings.append("허용 용액온도·농도에서 재생이 불가능한 외기조건이 있습니다. 풍량 증설만으로 해결되지 않으며 결과를 목표 충족으로 간주하지 마세요.")
 
     def candidate_with_monthly(candidate):
         cache_key = candidate["collectorArea"]

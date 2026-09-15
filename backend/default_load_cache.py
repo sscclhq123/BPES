@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 
 CACHE_DIR = Path(__file__).resolve().parents[1] / "data" / "default_ld_cache"
-SCHEMA = 1
+SCHEMA = 2
 CATALOG_PATH = Path(__file__).with_name("default_ld_catalog.json")
 PRESETS = {
     "office_small": (511, 795, 9), "office_medium": (4982, 7745, 9),
@@ -46,7 +46,7 @@ def default_payload(city, preset):
                 collectorType="evacuated", solutionConcentration=38, lgRatio=1,
                 lgMode="auto", absSolutionTemp=25, absTempMode="auto",
                 regenTemp=59.4, regenMode="auto", regenFlowMode="auto",
-                regenSizingMode="load", regenLgRatio=1.2, regenMaxAirRatio=3,
+                regenSizingMode="load", regenLgRatio=1.2,
                 targetAbsHumidity=10, targetHumidityTolerance=.5,
                 tesSupplyTemp=60, tesReturnTemp=45, targetSolarShare=80)
 
@@ -87,9 +87,7 @@ def write_snapshot(key, result, summary, provenance, directory=CACHE_DIR):
             dtype = str(series.dtype)
             values = series.to_numpy()
             if dtype == "object":
-                if not all(isinstance(v, str) for v in values):
-                    raise ValueError(f"Unsupported non-string object column: {column}")
-                values = values.astype(str)
+                values = np.array([_json(v) for v in values])
             arrays[f"{label}_{i}"] = values
             spec.append([column, dtype])
         frames[label] = dict(columns=spec, attrs=frame.attrs)
@@ -136,7 +134,8 @@ def read_snapshot(key, directory=CACHE_DIR):
             frames = []
             for label in ("result", "summary"):
                 spec = metadata["frames"][label]
-                frame = pd.DataFrame({column: archive[f"{label}_{i}"].astype(dtype)
+                frame = pd.DataFrame({column: (np.array([json.loads(v) for v in archive[f"{label}_{i}"]], dtype=object)
+                                               if dtype == "object" else archive[f"{label}_{i}"].astype(dtype))
                                       for i, (column, dtype) in enumerate(spec["columns"])})
                 frame.attrs = spec["attrs"]
                 frames.append(frame)

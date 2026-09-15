@@ -33,7 +33,7 @@ class DefaultLoadCacheTests(unittest.TestCase):
         original = self.key(self.payload)
         for field, value in dict(airflow=7000, operationHours=24, lgRatio=2,
                                  absTempMode="fixed", solutionConcentration=37,
-                                 regenMaxAirRatio=2, tesSupplyTemp=65,
+                                 regenLgRatio=1.3, tesSupplyTemp=65,
                                  analysisPeriodMode="monthly", collectorType="flat").items():
             with self.subTest(field=field):
                 self.assertNotEqual(original, self.key({**self.payload, field: value,

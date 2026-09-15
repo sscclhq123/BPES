@@ -692,7 +692,7 @@ function readInputs() {
   const regenParams = new URLSearchParams(window.location.search);
   data.regenSizingMode = regenParams.get("regenSizingMode") || "load";
   data.regenLgRatio = Number(regenParams.get("regenLgRatio") ?? 1.2);
-  data.regenMaxAirRatio = Number(regenParams.get("regenMaxAirRatio") ?? 3);
+  // Regeneration capacity is load-sized; retired ratio limits are not forwarded.
   return data;
 }
 

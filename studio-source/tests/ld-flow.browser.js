@@ -8,7 +8,7 @@ async page => {
   const on=h>=9&&h<18,ad=on?.75:0,rd=on?(h===13?.5:1):0;
   rows.push([`${date} ${String(h).padStart(2,'0')}:00:00`,3600,ad,rd,on?2: null,on?1.2:null,on?2:null,on?4:null,on?(h<14?2:3):null,on?(h<14?2.4:3.6):null,on?6:null]);
  }
- const base={key:'seoul_epw',label:'서울',best:{regenFixedLg:1.2},monthly:[],ldFlowHourly:{version:1,rows},traceRequest:{weatherDataset:'seoul_epw',regenLgRatio:1.2}};
+ const base={key:'seoul_epw',label:'서울',best:{regenFixedLg:1.2},monthly:[],ldFlowHourly:{version:1,designMaxAirRatio:4.49322,rows},traceRequest:{weatherDataset:'seoul_epw',regenLgRatio:1.2}};
  const summary={primaryKey:'seoul_epw',regions:[base,{...base,key:'busan',label:'부산',ldFlowHourly:{version:1,rows:rows.filter(r=>r[0].includes('08-01'))}}]};
  await page.evaluate(summary=>window.dispatchEvent(new MessageEvent('message',{origin:'https://saldop.vercel.app',data:{type:'saldop:calculation-complete',summary}})),summary);
  const card=page.locator('.ld-flow-card');await card.waitFor();
@@ -16,6 +16,8 @@ async page => {
  const multiplePlot=card.locator('.ld-flow-plot').filter({hasText:'제습 설계 풍량 대비 재생 외기량'});
  check((await lgPlot.locator('svg text').allTextContents()).join(',')==='0.0,0.5,1.0,1.5,2.0,2.5,3.0','L/G axis must end at 3.0');
  check(await multiplePlot.count()===1,'Airflow multiple plot missing');
+ check((await multiplePlot.innerText()).includes('산정 설비 용량 4.49배'),'Calculated bank capacity reference missing');
+ check(!(await multiplePlot.innerText()).includes('설정 상한'),'Retired ratio budget label remains');
  await page.getByLabel('액기비 분석 월').selectOption('07');await page.getByLabel('액기비 분석 일').selectOption('31');
  check(await card.locator('.ld-flow-checks').innerText().then(s=>!/[1-9]\.\d{6}/.test(s)),'Unexpected diagnostic difference');
  check((await card.locator('.ld-flow-xlabels button').allTextContents()).includes('23:00'),'Missing last hourly x label');

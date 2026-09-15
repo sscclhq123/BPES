@@ -3,7 +3,7 @@ import {useEffect,useState} from "react";
 import LdFlowPlots,{type FlowRow} from "./LdFlowPlots";
 
 type Step={tankTempStart?:number;tankTempEnd?:number;absAirFlow?:number;absSolutionFlow?:number;regAirFlow?:number;regSolutionFlow?:number;absAirInTemp?:number;regAirInTemp?:number;absAirOutTemp?:number;regAirOutTemp?:number;absSolutionOutTemp?:number;regSolutionOutTemp?:number;heatBalanceResidualKW?:number;time?:string;outdoorTemp?:number;outdoorHumidity?:number;irradiance?:number;startSeconds:number;endSeconds:number;durationSeconds:number;concentrationStart:number;concentrationEnd:number;saltKg:number;waterStartKg:number;waterEndKg:number;absorbedKg:number;desorbedKg:number;supplyHumidity:number;absFraction:number;regFraction:number;lg:number|null;absTemp:number|null;regTemp:number|null;regenHeatKWh:number;protection:boolean};
-type Trace={endTime?:string;clipped?:boolean;time:string;durationSeconds:number;outdoorTemp:number;outdoorHumidity:number;irradiance:number;target:number;upper:number;floor:number;hourSupplyHumidity:number;steps:Step[]};
+type Trace={designMaxAirRatio?:number;endTime?:string;clipped?:boolean;time:string;durationSeconds:number;outdoorTemp:number;outdoorHumidity:number;irradiance:number;target:number;upper:number;floor:number;hourSupplyHumidity:number;steps:Step[]};
 const f=(v:number|null,d=2)=>v===null?"—":v.toFixed(d);
 
 function Plot({title,unit,series,limit,duration}:{title:string;unit:string;series:{name:string;color:string;points:[number,number][]}[];limit?:number;duration:number}){
@@ -46,7 +46,7 @@ export default function SubstepTrace({request,time,times,data,flowReference}:{re
  {trace.clipped&&<p>분석 기간 경계로 인해 앞뒤 30분 중 데이터가 있는 범위만 표시합니다.</p>}<div className="trace-plots"><Plot title="급기 절대습도" unit="g/kgDA" duration={trace.durationSeconds} limit={trace.upper} series={[{name:"내부 구간 평균",color:"#098ea4",points:staircase("supplyHumidity")},{name:`구간 평균 ${f(trace.hourSupplyHumidity)}`,color:"#53666f",points:[[0,trace.hourSupplyHumidity],[trace.durationSeconds,trace.hourSupplyHumidity]]}]}/>
  <Plot title="탱크 LiCl 농도" unit="wt%" duration={trace.durationSeconds} limit={trace.floor} series={[{name:"탱크 농도",color:"#098ea4",points:[[0,steps[0].concentrationStart],...steps.map(s=>[s.endSeconds,s.concentrationEnd] as [number,number])]}]}/>
  <Plot title="수분 흡수·제거율" unit="kg/h" duration={trace.durationSeconds} series={[{name:"제습 흡수율",color:"#098ea4",points:staircase("absorbedKg")},{name:"재생 제거율",color:"#c74b40",points:staircase("desorbedKg")}]}/>
- </div><LdFlowPlots rows={flowRows} designAir={Number(request?.airflow)>0?Number(request?.airflow)/3600*1.2:undefined} airLimit={Number(request?.regenMaxAirRatio)||3} reference={reference} xTitle="시각 (60초 집계)" compact/><details><summary style={{cursor:"pointer",padding:12}}>입출구 상태 · 공기/용액 유량 · 열수지 확인</summary>
+ </div><LdFlowPlots rows={flowRows} designAir={Number(request?.airflow)>0?Number(request?.airflow)/3600*1.2:undefined} airLimit={trace.designMaxAirRatio} reference={reference} xTitle="시각 (60초 집계)" compact/><details><summary style={{cursor:"pointer",padding:12}}>입출구 상태 · 공기/용액 유량 · 열수지 확인</summary>
  <p>공용 완전혼합 용액탱크에서 두 접촉기로 분기합니다. 아래는 각 로그 구간의 가동 중 평균 질량유량(kg/s)과 입출구 온도(℃)입니다. 제습 공기량은 건물 요구량으로 고정합니다.</p>
  <p>단열 접촉기: 공기 유입 엔탈피 + 용액 유입 엔탈피 = 공기 유출 엔탈피 + 용액 유출 엔탈피.<br/>재생 가열열 = 용액 유량 × (가열 후 엔탈피 − 탱크 엔탈피) = TES 공급열 + 보조열원.</p>
  <p>열수지 잔차는 LD 부하 계산 단계 기준입니다. 태양열·TES 배분은 별도의 이상적 월별 에너지 배분 결과이며, 이 표를 분 단위 태양열 배분으로 해석하지 않습니다.</p>

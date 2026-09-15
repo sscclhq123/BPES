@@ -11,7 +11,7 @@ class RegenerationVavTests(unittest.TestCase):
     def config(self, **changes):
         return replace(e.SystemConfig(sa_abs_m3h=7745, sim_months=(7,),
             reg_capacity_auto_size=True, reg_vav_control=True,
-            reg_temp_auto_control=True, reg_flow_control_by_tes=False), **changes)
+            reg_temp_auto_control=True, reg_flow_control_by_tes=False, reg_max_air_ratio=3), **changes)
 
     def test_on_flow_bounds_module_domains_and_linked_pump(self):
         for lg in [.65, 1.2, 2.0]:
@@ -39,9 +39,29 @@ class RegenerationVavTests(unittest.TestCase):
                     if need==0:self.assertEqual(d,0)
                     if need==.08:self.assertLess(cap,need)
 
-    def test_website_defaults_and_hard_maximum(self):
-        for value in [.9, 3.01, float('nan')]:
-            with self.assertRaises(ValueError):build_configs({'regenMaxAirRatio':value})
+    def test_website_ignores_retired_budget_in_old_requests(self):
+        for value in [None, 1, 3, 4, float('nan')]:
+            self.assertIsNone(build_configs({'regenMaxAirRatio':value})[2].reg_max_air_ratio)
+
+    def test_load_sized_bank_over_three_times_and_fixed_runtime_capacity(self):
+        c=self.config(reg_max_air_ratio=None)
+        weather=pd.DataFrame([dict(time=pd.Timestamp('2001-07-31 14:00'),Ta_degC=33,RH_pct=90)])
+        absorber=c.sa_abs_m3h/3600*c.rho_air_kg_m3
+        design=e.size_regeneration_bank(weather,c,absorber)
+        self.assertGreater(design['airRatio'],3)
+        self.assertEqual(design['modules'],design['requiredModules'])
+        self.assertFalse(design['limited'])
+        amin,amax=e.regeneration_air_domain(c)
+        w=e.humidity_ratio_from_trh(33,90);h=e.moist_air_enthalpy(33,w)
+        for need in [.0001,.01,absorber*(w-.01),1.0]:
+            r,t,d,cap,_=e.controlled_regeneration(c,33,90,w,h,0,0,design['modules'],.38,need)
+            n=r['controlled_modules'];air=r['controlled_air_kg_s']
+            self.assertLessEqual(n,design['modules'])
+            self.assertLessEqual(air,design['designAirKgS']+1e-9)
+            self.assertGreaterEqual(air,absorber-1e-9)
+            self.assertTrue(amin-1e-9<=air/n<=amax+1e-9)
+            self.assertAlmostEqual(r['controlled_solution_kg_s']/air,c.reg_fixed_lg)
+            if need==1.0:self.assertLess(cap,need)  # Never grow virtual modules.
 
     def test_tank_and_heat_balance_with_after_hours_recovery(self):
         c=self.config(xi_tank_init=.37,xi_target=.38)

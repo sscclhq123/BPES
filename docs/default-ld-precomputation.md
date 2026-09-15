@@ -5,7 +5,8 @@
 13 registered EPWs × 6 building uses × 3 sizes = **234 default cases**.
 The canonical payloads are in `backend/default_load_cache.py` and mirror the
 studio building templates: annual weather, default airflow/schedule, automatic
-LD controls, 38% concentration target, regenerator L/G 1.2, airflow limit 3×,
+LD controls, 38% concentration target, regenerator L/G 1.2, load-sized regeneration
+capacity without an arbitrary airflow-ratio budget,
 evacuated-tube collector selection, TES supply/return 60/45°C.
 
 This stores **annual LD load results**, not final design responses. Collector
@@ -54,7 +55,7 @@ files. JSON-line stdout reports each completed/failed case. Narrow checks use
 Generated files must be committed/deployed alongside the matching code/catalog.
 Do not deploy `.building-*` temporary files. No automatic deletion of old data.
 
-## Validation recorded 2026-09-15
+## Initial cache validation (previous 3× model, superseded)
 
 - Seoul medium office annual generation: 18.63 s; snapshot 887,179 bytes.
 - Local cached complete API calculation: 50% coverage 2.30 s; 100% 2.42 s.
@@ -63,6 +64,14 @@ Do not deploy `.building-*` temporary files. No automatic deletion of old data.
   from 442.2 m² to 884.3 m² (existing model outputs, not new validation claims).
 - Unit tests cover exact round trip, corrupted/missing fallback, coverage reuse,
   and cache misses for changed LD/period/weather/engine conditions.
+
+## Load-sized revision
+
+The 3× batch was stopped on the user's instruction. Old files are retained but
+cannot match the new engine hash and schema 2 keys. The new batch is logged at
+`output/default-ld-load-sized-20260915.jsonl`. Only the keys in the CURRENT
+catalog should be staged for the remaining data deployment. Schema 2 also stores
+nullable object columns losslessly through JSON strings within NPZ (no pickle).
 
 ## Existing scientific limitation (not changed here)
 

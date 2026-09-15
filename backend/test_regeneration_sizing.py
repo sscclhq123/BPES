@@ -9,7 +9,7 @@ from backend.server import DEFAULT_WEATHER, build_configs
 class RegenerationSizingTests(unittest.TestCase):
     def config(self, **kw):
         return replace(e.SystemConfig(sa_abs_m3h=7745, sim_months=(7,), reg_temp_auto_control=True,
-            reg_capacity_auto_size=True, reg_flow_control_by_tes=False), **kw)
+            reg_capacity_auto_size=True, reg_flow_control_by_tes=False, reg_max_air_ratio=3), **kw)
 
     def test_independent_capacity_and_budget(self):
         c=self.config()
@@ -29,7 +29,7 @@ class RegenerationSizingTests(unittest.TestCase):
             self.assertTrue(19*.24-1e-9<=r['controlled_air_kg_s']<=19*.4+1e-9)
             self.assertLessEqual(r['m_water_desorb']*d,need+1e-9)
         with self.assertRaises(ValueError):e.regeneration_air_domain(replace(c,reg_fixed_lg=3))
-        with self.assertRaises(ValueError):build_configs({'regenMaxAirRatio':float('nan')})
+        self.assertIsNone(build_configs({})[2].reg_max_air_ratio)
 
     def test_high_capacity_tank_stability_and_minute_logs(self):
         c=self.config();collector=e.CollectorConfig(area_m2=0)

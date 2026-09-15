@@ -80,7 +80,7 @@ class SystemConfig:
     reg_fixed_lg: float = 1.2
     reg_vav_control: bool = False  # Website enables linked fan/pump control.
     reg_min_air_ratio: float = 1.0
-    reg_max_air_ratio: float = 3.0  # User-adjustable screening budget, NOT a physical law.
+    reg_max_air_ratio: float | None = None  # None: size the bank from load, not an arbitrary ratio.
     control_cache_enabled: bool = True  # Exact-state lookup; no state rounding.
     reg_fan_pressure_pa: float = 300.0  # Preliminary assumptions, not a fan curve.
     reg_fan_efficiency: float = 0.60
@@ -669,11 +669,12 @@ def regeneration_water_demand(salt_kg, water_kg, target_xi, absorption_kg_s,
 
 
 def regeneration_vav_domains(config, installed_modules):
-    """Feasible ON-state bank flows: geometry AND the user's total-flow bounds."""
+    """Feasible ON flows inside the FIXED installed bank, never virtual modules."""
     module_min, module_max = regeneration_air_domain(config)
     absorber_air = config.sa_abs_m3h / 3600 * config.rho_air_kg_m3
     low = absorber_air * config.reg_min_air_ratio
-    high = absorber_air * config.reg_max_air_ratio
+    high = (installed_modules * module_max if config.reg_max_air_ratio is None
+            else absorber_air * config.reg_max_air_ratio)
     domains = []
     for n in range(1, installed_modules + 1):
         a, b = max(low, n * module_min), min(high, n * module_max)
@@ -967,13 +968,17 @@ def size_regeneration_bank(weather, config, absorber_air_kg_s):
     """Size at TARGET concentration, before dilution/protection can hide the load.
 
     Each installed module retains the correlation's geometry and flow domain.
-    The airflow ratio is a design-budget constraint only, not capacity sizing.
+    No arbitrary airflow-ratio budget is used by the website. A finite ratio
+    remains available only for explicit legacy/counterfactual model audits.
+    Capacity is sized once; runtime VAV cannot add installed modules.
     """
     _, air_max = regeneration_air_domain(config)
-    budget = absorber_air_kg_s * config.reg_max_air_ratio
-    max_modules = (math.ceil(budget / air_max - 1e-10) if config.reg_vav_control
+    budget = (float("inf") if config.reg_max_air_ratio is None
+              else absorber_air_kg_s * config.reg_max_air_ratio)
+    max_modules = (None if config.reg_max_air_ratio is None else
+                   math.ceil(budget / air_max - 1e-10) if config.reg_vav_control
                    else math.floor(budget / air_max + 1e-10))
-    if max_modules < 1:
+    if max_modules is not None and max_modules < 1:
         raise ValueError("재생 외기유량 상한이 모듈 1대의 설계유량보다 작습니다. 상한을 늘려주세요.")
     required, impossible, worst_time, peak_load = 1, 0, "", 0.
     budget_limited_hours = 0
@@ -989,7 +994,7 @@ def size_regeneration_bank(weather, config, absorber_air_kg_s):
         r = regenerator_block(row.Ta_degC, row.RH_pct, w, moist_air_enthalpy(row.Ta_degC,w),
             config.p_atm_kpa, air_max, air_max * config.reg_fixed_lg, temp, config.xi_target, np.nan, config.eff_enthalpy)
         capacity = r["m_water_desorb"]
-        if config.reg_vav_control:
+        if config.reg_vav_control and max_modules is not None:
             domains = regeneration_vav_domains(config, max_modules)
             available = max((capacity * n * (b / (n * air_max)) ** .6467
                              for n, a, b in domains), default=0.)
@@ -1004,14 +1009,16 @@ def size_regeneration_bank(weather, config, absorber_air_kg_s):
     if config.reg_vav_control:
         # A small residual load must still support the minimum 1x fan flow.
         required = max(required, math.ceil(absorber_air_kg_s * config.reg_min_air_ratio / air_max - 1e-10))
-    installed = min(required, max_modules)
+    installed = required if max_modules is None else min(required, max_modules)
     design_air = min(installed * air_max, budget)
     return {"modules": installed, "requiredModules": required,
-        "limited": required > max_modules or impossible > 0 or budget_limited_hours > 0,
+        "limited": (max_modules is not None and required > max_modules) or impossible > 0 or budget_limited_hours > 0,
         "budgetLimitedHours": budget_limited_hours, "zeroCapacityHours": impossible,
         "sizingTime": worst_time, "peakLoadKgH": peak_load * 3600,
         "designAirKgS": design_air, "designSolutionKgS": design_air * config.reg_fixed_lg,
-        "airRatio": design_air / absorber_air_kg_s, "maxAirRatio": config.reg_max_air_ratio,
+        "airRatio": design_air / absorber_air_kg_s, "maxAirRatio": design_air / absorber_air_kg_s,
+        "airRatioBudget": config.reg_max_air_ratio,
+        "capacityBasis": "load-sized" if config.reg_max_air_ratio is None else "ratio-budget",
         "minAirRatio": config.reg_min_air_ratio if config.reg_vav_control else None}
 
 
