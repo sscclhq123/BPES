@@ -6,6 +6,7 @@ import { animate, stagger } from "animejs";
 import SubstepTrace from "./SubstepTrace";
 import LdFlowDiagnostics,{type FlowData} from "./LdFlowDiagnostics";
 import LdSchematic from "./LdSchematic";
+import LdPerformance, {type PerformanceData} from "./LdPerformance";
 
 type View = "intro" | "overview" | "wizard" | "calculating" | "result";
 type HeatmapDay = {day:number;hours:number[]};
@@ -16,7 +17,7 @@ type ConcentrationHour = {hour:number;value:number};
 type ConcentrationDay = {day:number;hours:ConcentrationHour[]};
 type ConcentrationMonth = {month:number;days:ConcentrationDay[]};
 type CalculationRegion = { ldFlowHourly?:FlowData; traceRequest?:Record<string,unknown>; key:string; label:string; best:Record<string,number|string|boolean>; monthly:Array<Record<string,number|string>>; weatherMonthly?:WeatherMonth[]; weatherHourly?:Array<{month:number;day:number;hour:number;outdoorTemp:number;outdoorHumidity:number;irradiance:number;duration:number}>; solutionConcentrationDrilldown?:ConcentrationMonth[]; unmetTrend?:Record<string,unknown>; ldUsageHeatmap?:HeatmapMonth[]; regUsageHeatmap?:HeatmapMonth[]; areaResults?:Array<Record<string,unknown>> };
-type CalculationSummary = { primaryKey:string; regions:CalculationRegion[]; failedCount:number };
+type CalculationSummary = { primaryKey:string; regions:(CalculationRegion&{ldPerformance?:PerformanceData})[]; failedCount:number };
 type Design = {
   weatherMode: "standard" | "upload"; weatherDataset: string; weatherDatasets: string[]; analysisPeriod: "annual" | "custom"; simulationMonths: number[];
   buildingInputMode: "template" | "custom"; buildingUse: string; buildingSize: string; mallParking: "no" | "yes";
@@ -310,6 +311,7 @@ function ResultOverview({summary,design,onReset}:{summary:CalculationSummary;des
     <section className="result-heading"><div><p>DESIGN OUTPUT · {primary.label}</p><div className="result-title-row"><h1>설계 결과 <em>요약</em></h1>{summary.regions.length>1&&<label className="summary-region-select"><span>요약 지역</span><select value={summaryRegionKey} onChange={e=>{const key=e.target.value;setSummaryRegionKey(key);setWeatherRegionKey(key);setHeatmapRegionKey(key);setSelectedHeatmapMonth(null)}}>{summary.regions.map(region=><option key={region.key} value={region.key}>{region.label}</option>)}</select></label>}</div></div><p>핵심 성능과 월별 에너지 흐름을 요약했습니다. 아래 결과 항목을 선택하면 이 화면 안에서 상세 그래프와 시간별 데이터를 이어서 확인할 수 있습니다.</p></section>
     <section className="metric-grid">
       <article><span>REQUIRED AREA</span><b>{n(best.collectorArea).toLocaleString(undefined,{maximumFractionDigits:1})}</b><small>m² · 최소 집열기 면적</small></article>
+      <article><span>COLLECTOR / BUILDING</span><b>{design.buildingArea>0?(n(best.collectorArea)/design.buildingArea*100).toFixed(1):"—"}</b><small>% · 입력 건축면적 대비 집열기 면적<br/>{design.buildingArea.toLocaleString()} m² 기준 · 옥상 점유율 아님</small></article>
       <article><span>MIN. COVERAGE</span><b>{coverage.toFixed(1)}</b><small>% · 월별 최저 커버율</small></article>
       <article><span>DEHUMIDIFICATION</span><b>{dehum.toFixed(1)}</b><small>% · 목표 제습 달성률</small></article>
       <article><span>UNMET HOURS</span><b>{n(best.unmetHours).toLocaleString()}</b><small>h · 허용상한 초과시간</small></article>
@@ -326,6 +328,7 @@ function ResultOverview({summary,design,onReset}:{summary:CalculationSummary;des
       <HeatmapDrilldown key={`heatmap:${primary.key}`} regions={summary.regions} primaryKey={primary.key} operationHours={design.operationHours}/>
       <ConcentrationChart monthly={monthly} drilldown={primary.solutionConcentrationDrilldown||[]} region={primary.label}/>
       <LdFlowDiagnostics key={`ld-flow:${primary.key}`} data={primary.ldFlowHourly} region={primary.label} reference={Number(best.regenFixedLg)||undefined} request={primary.traceRequest}/>
+      <LdPerformance data={primary.ldPerformance} region={primary.label}/>
       <article className="chart-card decision-card"><span>DESIGN DECISION</span><h2>목표 커버율 {design.targetSolarShare}% 기준</h2><p>{Boolean(best.targetAchieved)?"입력한 목표를 만족하는 최소 집열기 면적을 찾았습니다.":"설정 조건에서 목표를 완전히 만족하지 못했습니다. 상세 결과에서 지배월과 보조열원을 확인하세요."}</p><button onClick={()=>setShowOptions(value=>!value)}>확인할 상세 결과 선택 <i>{showOptions?"−":"＋"}</i></button></article>
     </section>
     {showOptions&&<section className="result-options"><header><div><span>DETAIL OPTIONS</span><h2>추가로 확인할 결과를 선택하세요.</h2></div><button onClick={()=>setShowOptions(false)}>닫기 ×</button></header><div><button onClick={()=>{setSelectedDetail("dehum");setShowOptions(false)}}><b>01</b><strong>월별 목표·실제 제습량</strong><small>목표, 허용 최소, 실제 제습량과 달성률 비교</small><i>↓</i></button><button onClick={()=>{setSelectedDetail("unmet");setShowOptions(false)}}><b>02</b><strong>목표 제습 미충족 추이</strong><small>급기 절대습도, 평균·최대 초과량과 발생시각</small><i>↓</i></button><button onClick={()=>{setSelectedDetail("area");setShowOptions(false)}}><b>03</b><strong>집열기 면적별 재생열 커버율</strong><small>면적 후보별 실사용 커버율과 보조열원 비교</small><i>↓</i></button><button disabled><b>04</b><strong>TES 용량 및 시간별 상태</strong><small>성층화·손실·용량 산정 모델 추후 업데이트</small><i>SOON</i></button></div></section>}

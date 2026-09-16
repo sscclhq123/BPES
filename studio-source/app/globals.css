@@ -527,3 +527,18 @@ button,a { font:inherit; } button { cursor:pointer; }
 .ld-auto-scope small{display:block;font-size:12px!important;line-height:1.65}
 .ld-auto-scope a{color:#8ee8ec;text-decoration:underline}
 .ld-auto-scope .ld-auto-budget{margin:14px 0;padding:12px;font-size:13px;line-height:1.65;border-color:#426052}
+.ld-performance{grid-column:1/-1;min-width:0;color:#244039}
+.ld-performance h2{text-wrap:balance}
+.ld-performance p,.ld-performance small{text-wrap:pretty;line-height:1.7}
+.ld-performance-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:22px 0}
+.ld-performance-metrics article{padding:20px;border:1px solid #d9e3de;border-radius:12px;background:#f7faf9;display:flex;flex-direction:column;gap:10px}
+.ld-performance-metrics strong{font-size:28px;color:#088a9d;font-variant-numeric:tabular-nums}
+.ld-performance-metrics small{font-size:14px}
+.ld-performance-table{overflow-x:auto;margin:20px 0}
+.ld-performance table{width:100%;border-collapse:collapse;font-size:15px;font-variant-numeric:tabular-nums}
+.ld-performance caption{text-align:left;padding:10px 0;color:#53675d}
+.ld-performance th,.ld-performance td{padding:12px;text-align:right;border-bottom:1px solid #d9e3de;white-space:nowrap}
+.ld-performance th:first-child{text-align:left}
+.ld-performance summary{cursor:pointer;font-size:16px;padding:14px 0}
+.ld-performance details p{font-size:15px}
+@media(max-width:600px){.ld-performance-metrics{grid-template-columns:1fr}.ld-performance-metrics article{padding:16px}.ld-performance table{font-size:14px}}

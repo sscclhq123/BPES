@@ -27,6 +27,7 @@ from solar_ld_engine import (  # noqa: E402
     run_simulation,
 )
 from default_load_cache import signature as load_cache_signature, read_snapshot
+from ld_performance import ld_performance, area_ratio
 
 
 UPLOAD_DIR = Path("/tmp/bpes-weather-uploads") if os.environ.get("VERCEL") else ROOT / "data" / "weather" / "uploads"
@@ -1473,6 +1474,7 @@ def simulate(payload):
         "weatherMonthly": monthly_weather_rows(result),
         "weatherHourly": weather_hourly_rows(result),
         "ldFlowHourly": ld_flow_hourly(result),
+        "ldPerformance": ld_performance(result),
         "ldUsageHeatmap": ld_usage_heatmap(result, "ABS_ON"),
         "regUsageHeatmap": ld_usage_heatmap(result, "REG_ON"),
         "unmetTrend": unmet_dehumidification_trend(
@@ -1483,6 +1485,7 @@ def simulate(payload):
             **{key: value for key, value in best.items() if key != "searchHierarchy"},
             **{"regenDesign" + key[0].upper() + key[1:]: value for key,value in regen_design.items()},
             "regenFixedLg": config.reg_fixed_lg,
+            "collectorToBuildingAreaPct": area_ratio(best.get("collectorArea"), payload.get("buildingArea")),
             "regenSizingMode": "load" if config.reg_capacity_auto_size else "legacy",
             "integrationStepSeconds": clean_value(row.get("LD_integration_step_s",config.dt_internal_s)),
             "lgRatio": clean_value(row["LG_ratio_abs"]),

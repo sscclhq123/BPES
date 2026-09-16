@@ -1897,6 +1897,7 @@ async function runCalculation() {
             weatherMonthly: result.weatherMonthly,
             weatherHourly: result.weatherHourly,
             ldFlowHourly: result.ldFlowHourly,
+            ldPerformance: result.ldPerformance,
             unmetTrend: result.unmetTrend,
             traceRequest: result.traceRequest,
             ldUsageHeatmap: result.ldUsageHeatmap,
