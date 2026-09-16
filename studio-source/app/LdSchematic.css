@@ -1,4 +1,4 @@
-.ldp-dialog{width:min(1020px,calc(100vw - 32px));height:min(700px,calc(54.55vw + 110px),calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));max-width:none;max-height:none;padding:0;margin:auto;border:1px solid #52645c;border-radius:14px;background:#101815;color:#eef4ef;overflow:hidden;box-shadow:0 24px 64px #0008}
+.ldp-dialog{position:absolute;z-index:7;inset:12px;width:calc(100% - 24px);height:calc(100% - 24px);box-sizing:border-box;max-width:1020px;max-height:none;padding:0;margin:auto;border:1px solid #52645c;border-radius:14px;background:#101815;color:#eef4ef;overflow:hidden;box-shadow:0 24px 64px #0008}
 .ldp-dialog[open]{display:flex;flex-direction:column}
 .ldp-dialog::backdrop{background:#000b}
 .scene-canvas.ld-detail-open .scene-art *{animation-play-state:paused!important}
@@ -26,12 +26,12 @@
 .ldp-legend .dilute:before{border-color:#75b8ff;border-top-style:dashed}.ldp-legend .concentrated:before{border-color:#ffb366;border-top-style:dashed}
 .ldp-footer p{margin:7px 0 0;text-align:center;font-size:12px;line-height:1.4;color:#b9c9be;text-wrap:pretty}
 @media(max-width:600px) and (orientation:portrait){
- .ldp-dialog{width:calc(100vw - 12px);height:calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));border-radius:10px}
+ .ldp-dialog{inset:6px;width:calc(100% - 12px);height:calc(100% - 12px);border-radius:10px}
  .ldp-header{padding:8px 10px}.ldp-header h2{font-size:17px}
  .ldp-content{margin:8px 6px 4px;overflow-y:auto;overscroll-behavior:contain;scrollbar-color:#829789 #101815}.ldp-content .ldp-wide{display:none}.ldp-content .ldp-narrow{display:block;height:auto}
  .ldp-dialog .ldp-narrow .ldp-unit-name{font-size:23px}.ldp-dialog .ldp-mobile-hx{font-size:20px}
  .ldp-footer{padding:8px 8px 10px}.ldp-legend{gap:6px 13px}.ldp-legend span{font-size:12px;gap:5px}.ldp-legend span:before{width:17px}
  .ldp-footer p{font-size:11px}
 }
-@media(max-height:500px) and (orientation:landscape){.ldp-dialog{width:calc(100vw - 16px);height:calc(100dvh - 12px)}.ldp-header{padding:2px 12px}.ldp-header h2{font-size:16px}.ldp-content{margin:4px 8px}.ldp-footer{padding:4px 8px}.ldp-footer p{display:none}.ldp-legend span{font-size:12px}}
+@media(max-height:500px) and (orientation:landscape){.ldp-header{padding:2px 12px}.ldp-header h2{font-size:16px}.ldp-content{margin:4px 8px}.ldp-footer{padding:4px 8px}.ldp-footer p{display:none}.ldp-legend span{font-size:12px}}
 @media(prefers-reduced-motion:reduce){.ldp-particle{display:none}}

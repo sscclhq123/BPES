@@ -41,9 +41,10 @@ function Tank({x,y}:{x:number;y:number}){
 export default function LdSchematic({onClose}:{onClose:()=>void}){
  const dialogRef=useRef<HTMLDialogElement>(null);
  useEffect(()=>{
-  const dialog=dialogRef.current!,previousOverflow=document.body.style.overflow;
-  dialog.showModal();document.body.style.overflow="hidden";
-  return()=>{dialog.close();document.body.style.overflow=previousOverflow;};
+  const dialog=dialogRef.current!;
+  // Non-modal dialog stays in the schematic's containing block, not the top layer.
+  dialog.show();
+  return()=>{dialog.close();};
  },[]);
  useEffect(()=>{
   const reduced=window.matchMedia("(prefers-reduced-motion: reduce)"),svgs=Array.from(dialogRef.current!.querySelectorAll<SVGSVGElement>(".ldp-diagram")),visible=new Set<SVGSVGElement>();
