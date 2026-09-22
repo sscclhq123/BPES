@@ -36,19 +36,11 @@ function Plot({title,unit,rows,series,xTitle,onSelect,yMax}:{title:string;unit:s
 
 export default function LdFlowPlots({rows,rawRows=rows,reference,xTitle,onSelect,compact=false,designAir,airLimit}:{rows:FlowRow[];rawRows?:FlowRow[];reference?:number;xTitle:string;onSelect?:(i:number)=>void;compact?:boolean;designAir?:number;airLimit?:number}) {
  const [average,setAverage]=useState(false);
- const tested=rawRows.filter(r=>r.regDuty>0&&r.regLg!==null&&ratio(r.regSol,r.regAir)!==null);
- const deviations=tested.map(r=>Math.abs(r.regLg!-ratio(r.regSol,r.regAir)!));
- const absTested=rawRows.filter(r=>r.absDuty>0&&r.absLg!==null&&ratio(r.absSol,r.absAir)!==null);
- const absDeviation=absTested.length?Math.max(...absTested.map(r=>Math.abs(r.absLg!-ratio(r.absSol,r.absAir)!))):null;
- const difference=deviations.length?Math.max(...deviations):null;
- const refDiff=reference!=null&&tested.length?Math.max(...tested.map(r=>Math.abs(ratio(r.regSol,r.regAir)!-reference))):null;
  const massFlow=(r:FlowRow,key:"regAir"|"regSol")=>average?(r[key]??0)*r.regDuty:r[key];
  const airBase=designAir&&Number.isFinite(designAir)&&designAir>0?designAir:rawRows.find(r=>r.absAir!=null&&r.absAir>0)?.absAir;
  const airMultiples=rows.map(r=>ratio(massFlow(r,"regAir"),airBase??null));
  return <div className="ld-flow-diagnostics">
  <p className="ld-flow-definition"><b>L/G = 용액 질량유량 ÷ 공기 질량유량 (kg/kg).</b> 아래 유량은 병렬 장치 전체의 입구 합계입니다. 정지 중 L/G는 정의하지 않아 선을 끊습니다. 재생 L/G를 고정해도 두 유량과 가동 대수는 함께 변할 수 있습니다.</p>
- <div className="ld-flow-checks" aria-live="polite"><div><small>제습 L/G · 유량 역산 최대 차이</small><b>{flowFormat(absDeviation,6)}</b></div><div><small>재생 L/G · 유량 역산 최대 차이</small><b>{flowFormat(difference,6)}</b></div><div><small>재생 고정값 {flowFormat(reference,2)} 대비 최대 차이</small><b>{flowFormat(refDiff,6)}</b></div></div>
- <p className="ld-flow-note">차이는 표시 기간의 원본 로그에서 확인합니다. 유량 집계·전달의 일관성 검사이며 실험식의 정확성이나 실험범위 충족을 검증하는 지표는 아닙니다. 재생 기록 L/G 자체도 누적 질량비로 산출됩니다.</p>
  <div className={compact?"ld-flow-grid compact":"ld-flow-grid"}>
  <Plot title="제습·재생 액기비 변화" unit="kg/kg" yMax={3} xTitle={xTitle} rows={rows} onSelect={onSelect} series={[{name:"제습 L/G",color:"#098ea4",values:rows.map(r=>r.absLg)},{name:"재생 L/G",color:"#c74b40",values:rows.map(r=>r.regLg)},...(reference!=null?[{name:`재생 고정값 ${reference.toFixed(2)}`,color:"#6c7f86",dash:true,values:rows.map(()=>reference)}]:[])]}/>
  <div><label className="ld-flow-basis">재생 유량 표시 기준<select value={average?"period":"on"} onChange={e=>setAverage(e.target.value==="period")}><option value="on">가동 중 평균</option><option value="period">정지시간 포함 평균</option></select></label><Plot title="재생부 공기·용액 유량 변화" unit="kg/s" xTitle={xTitle} rows={rows} onSelect={onSelect} series={[{name:"외기 질량유량",color:"#098ea4",values:rows.map(r=>massFlow(r,"regAir"))},{name:"용액 질량유량",color:"#c74b40",values:rows.map(r=>massFlow(r,"regSol"))}]}/></div>
