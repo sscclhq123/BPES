@@ -52,10 +52,12 @@ def ld_performance(result):
     on = result['REG_DUTY_FRACTION'] * dt
     outside = (~result['Ta_degC'].between(30.3, 36.6) |
                ~(result['OA_w_kgkg'] * 1000).between(10.5, 22.0))
-    hourly = [[str(t), *[round(float(v), 8) for v in values]]
+    # Append outdoor conditions; retain indices 0..7 for older consumers.
+    hourly = [[str(t), *[round(float(v), 8) if pd.notna(v) and math.isfinite(float(v)) else None for v in values]]
               for t, *values in zip(result['time'], absorbed, released, target,
-                                    served, result['REG_HX_HEAT_NEED_kWh'], on, on*outside)]
-    return {'hourlyVersion': 1, 'hourly': hourly, 'total': aggregate(result), 'monthly': [
+                                    served, result['REG_HX_HEAT_NEED_kWh'], on, on*outside,
+                                    result['Ta_degC'], result['OA_w_kgkg']*1000)]
+    return {'hourlyVersion': 2, 'hourly': hourly, 'total': aggregate(result), 'monthly': [
         {'month': int(month), **aggregate(frame)}
         for month, frame in result.groupby(months, sort=True)
     ]}

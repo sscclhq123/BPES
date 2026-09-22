@@ -528,6 +528,10 @@ button,a { font:inherit; } button { cursor:pointer; }
 .ld-auto-scope a{color:#8ee8ec;text-decoration:underline}
 .ld-auto-scope .ld-auto-budget{margin:14px 0;padding:12px;font-size:13px;line-height:1.65;border-color:#426052}
 .ld-performance{grid-column:1/-1;min-width:0;color:#244039}
+.regen-weather-detail{border:1px solid #d9e3de;border-radius:12px;padding:20px;background:#f7faf9;min-width:0}
+.regen-weather-detail h3{font-size:20px;margin:0}
+.regen-weather-detail small{font-size:14px;display:block}
+.ld-performance .weather-deviation-cell{text-align:left;line-height:1.7}
 .ld-performance h2{text-wrap:balance}
 .ld-performance p,.ld-performance small{text-wrap:pretty;line-height:1.7}
 .ld-performance-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:22px 0}

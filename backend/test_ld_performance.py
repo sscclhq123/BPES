@@ -35,9 +35,9 @@ class PerformanceTests(unittest.TestCase):
 
     def test_drilldown_additive_columns(self):
         p=ld_performance(self.frame())
-        self.assertEqual(p['hourlyVersion'],1)
-        self.assertEqual(p['hourly'][0][1:],[10,0,5,5,0,0,0])
-        self.assertEqual(p['hourly'][1][1:],[0,10,5,0,8,.5,.5])
+        self.assertEqual(p['hourlyVersion'],2)
+        self.assertEqual(p['hourly'][0][1:],[10,0,5,5,0,0,0,32,15])
+        self.assertEqual(p['hourly'][1][1:],[0,10,5,0,8,.5,.5,29,15])
         self.assertEqual(sum(r[1] for r in p['hourly']),p['total']['absorbedKg'])
         self.assertEqual(sum(r[5] for r in p['hourly']),p['total']['regenHeatKWh'])
 
