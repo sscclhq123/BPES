@@ -42,7 +42,20 @@ def ld_performance(result):
             'regenWeatherOutsidePct': ratio(on_hours[outside].sum()*100, on_hours.sum()),
         }
     months = pd.to_datetime(result['time']).dt.month
-    return {'total': aggregate(result), 'monthly': [
+    # Compact additive quantities, not averages of percentages. Preserve zero/off
+    # hours and actual calendar dates for day -> hour drilldown without a rerun.
+    dt = result['dt_h']
+    absorbed = result['ABS_WATER_ABSORB_kg_h'] * dt
+    released = result['REG_WATER_DESORB_kg_h'] * dt
+    target = result['TARGET_MOISTURE_REMOVAL_kg_h'] * dt
+    served = pd.concat([absorbed, target], axis=1).min(axis=1)
+    on = result['REG_DUTY_FRACTION'] * dt
+    outside = (~result['Ta_degC'].between(30.3, 36.6) |
+               ~(result['OA_w_kgkg'] * 1000).between(10.5, 22.0))
+    hourly = [[str(t), *[round(float(v), 8) for v in values]]
+              for t, *values in zip(result['time'], absorbed, released, target,
+                                    served, result['REG_HX_HEAT_NEED_kWh'], on, on*outside)]
+    return {'hourlyVersion': 1, 'hourly': hourly, 'total': aggregate(result), 'monthly': [
         {'month': int(month), **aggregate(frame)}
         for month, frame in result.groupby(months, sort=True)
     ]}

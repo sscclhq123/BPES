@@ -540,5 +540,10 @@ button,a { font:inherit; } button { cursor:pointer; }
 .ld-performance th,.ld-performance td{padding:12px;text-align:right;border-bottom:1px solid #d9e3de;white-space:nowrap}
 .ld-performance th:first-child{text-align:left}
 .ld-performance summary{cursor:pointer;font-size:16px;padding:14px 0}
+.performance-navigation{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:16px 0}
+.performance-navigation button,.ld-performance-table button{border:1px solid #c6dad3;border-radius:8px;padding:10px 14px;background:#f7faf9;color:#166b78;font:inherit;cursor:pointer;min-height:44px}
+.performance-navigation button:disabled{opacity:.55;cursor:default}
+.performance-navigation button:focus-visible,.ld-performance-table button:focus-visible{outline:2px solid #088a9d;outline-offset:3px}
+.geo-ranking .geo-area-percent{display:block;white-space:normal;font-size:13px;line-height:1.6;color:#53675d;font-weight:500;margin-top:5px}
 .ld-performance details p{font-size:15px}
 @media(max-width:600px){.ld-performance-metrics{grid-template-columns:1fr}.ld-performance-metrics article{padding:16px}.ld-performance table{font-size:14px}}
