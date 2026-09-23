@@ -528,6 +528,13 @@ button,a { font:inherit; } button { cursor:pointer; }
 .ld-auto-scope a{color:#8ee8ec;text-decoration:underline}
 .ld-auto-scope .ld-auto-budget{margin:14px 0;padding:12px;font-size:13px;line-height:1.65;border-color:#426052}
 .ld-performance{grid-column:1/-1;min-width:0;color:#244039}
+.transfer-chart{margin:24px 0;border:1px solid #d9e3de;border-radius:12px;padding:20px;min-width:0;background:#f7faf9}
+.transfer-chart h3{font-size:22px;margin:0}.transfer-chart h3 small{font-size:15px;display:inline-block}
+.transfer-formulas{display:flex;flex-wrap:wrap;gap:12px 24px;font-size:16px;margin:16px 0}
+.transfer-legend{display:flex;gap:24px;font-size:17px;font-weight:600}.transfer-legend span:first-child{color:#087f98}.transfer-legend span:last-child{color:#b64037}
+.transfer-plot-scroll{overflow-x:auto;margin-top:16px}.transfer-plot-scroll svg{display:block;width:100%;min-width:680px;height:auto;max-height:400px}
+.transfer-plot-scroll text{font:17px sans-serif;fill:#365650;font-variant-numeric:tabular-nums}
+.transfer-note{font-size:14px}.transfer-chart .ld-performance-table{max-height:260px;overflow:auto}
 .regen-weather-detail{border:1px solid #d9e3de;border-radius:12px;padding:20px;background:#f7faf9;min-width:0}
 .regen-weather-detail h3{font-size:20px;margin:0}
 .regen-weather-detail small{font-size:14px;display:block}

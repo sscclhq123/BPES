@@ -297,6 +297,26 @@ def calc_twb_stull(t_c, rh):
     )
 
 
+def accumulate_transfer(acc, w_in, w_out, w_eq, air_kg_s, on_seconds, regeneration):
+    """Same-step contactor effectiveness, integrated using potential water mass.
+
+    Do not clamp epsilon: >1 or negative is a model diagnostic, not a valid
+    effectiveness. Off/zero-flow and non-positive driving force are not zero %.
+    """
+    if on_seconds <= 0 or air_kg_s <= 0:
+        return
+    sign = 1 if regeneration else -1
+    potential = sign * (w_eq - w_in)
+    actual = sign * (w_out - w_in)
+    if not np.isfinite(potential) or not np.isfinite(actual) or potential <= 1e-9:
+        acc["invalid_s"] += on_seconds
+        return
+    acc["actual"] += air_kg_s * on_seconds * actual
+    acc["potential"] += air_kg_s * on_seconds * potential
+    if actual / potential < -1e-9 or actual / potential > 1 + 1e-9:
+        acc["outside_s"] += on_seconds
+
+
 def empty_absorber_result():
     return {
         "w_eq": np.nan,
@@ -451,6 +471,8 @@ def apply_absorber_target_control(
 ):
     """Mix untreated bypass air so the delivered air does not exceed the moisture target."""
     raw_out_w = float(result["w_air_out"])
+    # Preserve the contactor outlet before bypass mixing for mass-transfer diagnostics.
+    result["contactor_w_air_out"] = raw_out_w
     if raw_out_w >= target_w_kgkg or inlet_air_w_kgkg <= target_w_kgkg:
         result["process_air_fraction"] = 1.0
         return result
@@ -1385,6 +1407,8 @@ def run_simulation(
         }
         last_abs = empty_absorber_result()
         last_reg = empty_regenerator_result()
+        transfer = {side: dict(actual=0.0, potential=0.0, invalid_s=0.0, outside_s=0.0)
+                    for side in ("ABS", "REG")}
         hour_abs_on = False
         hour_reg_on = False
         hour_aux_on = False
@@ -1465,6 +1489,9 @@ def run_simulation(
                 m_abs_in = abs_res["ABS_SOL_IN_mdot_kg_s"]
                 water_headroom = max(m_salt_0 * (1 / config.xi_abs_stop - 1) - m_water_0, 0.0)
                 abs_duty = min(1.0, water_headroom / max(abs_res["m_water_absorb"] * dt_sub_s, 1e-12))
+                accumulate_transfer(transfer["ABS"], w_oa,
+                    abs_res.get("contactor_w_air_out", abs_res["w_air_out"]), abs_res["w_eq"],
+                    m_dot_oa_abs * abs_res.get("process_air_fraction", 1.0), dt_sub_s * abs_duty, False)
                 h_abs_in = solution_enthalpy(xi_0, abs_solution_t_controlled)
                 m_abs_in *= abs_duty
                 qcool_abs_w = m_abs_in * max(h_sol_0 - h_abs_in, 0) * 1000
@@ -1591,6 +1618,8 @@ def run_simulation(
 
             if reg_on_request:
                 reg_ret_m, reg_ret_xi, reg_ret_h = reg_res["m_sol_out"] * reg_duty, reg_res["xi_out"], reg_res["h_sol_out"]
+                accumulate_transfer(transfer["REG"], w_oa, reg_res["w_air_out"], reg_res["w_eq"],
+                    m_reg_air_active, dt_sub_s * reg_duty, True)
                 # Average actual ON duration consistently for water, circulation and heat.
                 m_reg_in *= reg_duty
                 m_reg_air_active *= reg_duty
@@ -1722,6 +1751,7 @@ def run_simulation(
                 "REG_ON": hour_reg_on,
                 "ABS_DUTY_FRACTION": acc["abs_active_time"] / dt_s,
                 "REG_DUTY_FRACTION": acc["reg_active_time"] / dt_s,
+                **{f"{side}_TRANSFER_{key}": value for side, values in transfer.items() for key, value in values.items()},
                 "ABS_PROTECTION_HOURS": acc["abs_protection_time"] / 3600,
                 "REG_CAPACITY_DEFICIT_HOURS": acc["reg_capacity_deficit_time"] / 3600,
                 "REG_TARGET_CAPACITY_DEFICIT_HOURS": acc["reg_target_capacity_deficit_time"] / 3600,

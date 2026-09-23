@@ -1,5 +1,6 @@
 "use client";
 import {useState} from "react";
+import TransferChart, {type TransferData} from "./TransferChart";
 export type PerformanceValues = {
   absorbedKg:number; releasedKg:number; targetKg:number; targetServedPct:number|null;
   waterBalancePct:number|null; netWaterKg:number; specificRegenHeat:number|null;
@@ -36,7 +37,7 @@ function WeatherCells({rows}:{rows:PerformanceHour[]}) {
   const range=(s:typeof stats[number])=>s.minValue===null?'—':s.minValue===s.maxValue?fmt(s.minValue,2):`${fmt(s.minValue,2)}–${fmt(s.maxValue,2)}`;
   return <><td>{range(stats[0])}</td><td>{range(stats[2])}</td><td className="weather-deviation-cell">{outside.map(s=><div key={s.label}>{s.label}: 최대 {fmt(s.max,2)} {s.unit}</div>)}{stats.some(s=>s.missing)&&<div>일부 외기값 누락</div>}{!outside.length&&!stats.some(s=>s.missing)&&'범위 내'}</td></>;
 }
-export type PerformanceData = {total:PerformanceValues;monthly:(PerformanceValues&{month:number})[];hourlyVersion?:number;hourly?:PerformanceHour[]};
+export type PerformanceData = {effectiveness?:TransferData|null;total:PerformanceValues;monthly:(PerformanceValues&{month:number})[];hourlyVersion?:number;hourly?:PerformanceHour[]};
 function aggregate(rows:PerformanceHour[]):PerformanceValues {
   const sums=rows.reduce((s,r)=>s.map((v,i)=>v+Number(r[i+1])),Array(7).fill(0) as number[]);
   const [absorbedKg,releasedKg,targetKg,served,regenHeatKWh,regenOnHours,regenWeatherOutsideHours]=sums;
@@ -62,8 +63,9 @@ export default function LdPerformance({data,region}:{data?:PerformanceData;regio
     !day?Array.from(daily).sort(([a],[b])=>a.localeCompare(b)).map(([date,rows])=>({key:date,label:`${Number(date.slice(8,10))}일`,value:aggregate(rows),rows,select:()=>setDay(date)})):
     selected.map((r,i)=>({key:`${r[0]}-${i}`,label:r[0].slice(11,16),value:aggregate([r]),rows:[r],select:undefined}));
   return <section className="chart-card ld-performance">
-    <header><div><span>LD PERFORMANCE · {region}</span><h2>제습·재생 성능 진단</h2><small>선택기간의 적산 수분량·열량 기준입니다. 접촉기 유효도나 전체 시스템 COP와는 다른 지표입니다.</small></div></header>
+    <header><div><span>LD PERFORMANCE · {region}</span><h2>제습·재생 성능 진단</h2><small>물질전달 유효도와 목표 충족률·수분수지·열량 지표를 구분해 확인합니다.</small></div></header>
     <nav className="performance-navigation" aria-label="성능진단 기간"><button onClick={()=>{setMonth(null);setDay(null)}} disabled={month===null}>전체 · 월별</button>{month!==null&&<button onClick={()=>setDay(null)} disabled={!day}>{month}월 · 일별</button>}<strong aria-live="polite">{period}{day?' · 시간별':''}</strong></nav>
+    <TransferChart data={data.effectiveness} groups={tableRows} period={period} axis={month===null?'월':day?'시각 (24시간)':'일'}/>
     <div className="ld-performance-metrics">
       <article><span>시간별 목표 제습량 충족률</span><strong>{fmt(p.targetServedPct)} %</strong><small>Σ min(실제 제습량, 목표량) / Σ 목표량<br/>다른 시간의 과잉 제습으로 미충족을 상쇄하지 않습니다.</small></article>
       <article><span>흡수 수분 대비 재생 배출량</span><strong>{fmt(p.waterBalancePct)} %</strong><small>재생 배출 {fmt(p.releasedKg)} / 흡수 {fmt(p.absorbedKg)} kg<br/>100%는 기간 수분수지 균형이며 재생 효율 100%라는 뜻은 아닙니다.</small></article>
@@ -81,6 +83,6 @@ export default function LdPerformance({data,region}:{data?:PerformanceData;regio
     <p>순 수분 축적량: <b>{fmt(p.netWaterKg)} kg</b> (흡수 − 배출). 양수이면 용액이 희석되는 방향입니다. 기간 처음·끝의 농도와 함께 해석해야 합니다.</p>
     <div className="ld-performance-table"><table><caption>{month===null?'월별':!day?`${month}월 일별`:`${period} 시간별`} 성능 비교 — {day?'시각은 저장 로그 기준, 비가동 시간도 표시합니다.':'월·날짜 버튼을 누르면 상세 기간을 확인합니다.'} 외기값은 재생 가동 중 최솟값–최댓값입니다. 모바일에서는 표를 좌우로 밀어 확인하세요.</caption><thead><tr><th>{month===null?'월':day?'시각':'일'}</th><th>목표 충족 (%)</th><th>배출/흡수 (%)</th><th>재생열 (kWh/kg)</th><th>외기범위 이탈 (%)</th><th>외기온도 (°C)</th><th>절대습도 (g/kgDA)</th><th>이탈 항목 · 최대 이탈량</th></tr></thead><tbody>{tableRows.map(row=><tr key={row.key}><th scope="row">{row.select?<button aria-label={`${period} ${row.label} 성능 상세 보기`} onClick={row.select}>{row.label} →</button>:row.label}</th><td>{fmt(row.value.targetServedPct)}</td><td>{fmt(row.value.waterBalancePct)}</td><td>{fmt(row.value.specificRegenHeat,3)}</td><td>{fmt(row.value.regenWeatherOutsidePct)}</td><WeatherCells rows={row.rows}/></tr>)}</tbody></table></div>
     {!hourly.length&&<p>이전 계산 결과에는 일·시간별 성능 로그가 없습니다. 설계 계산을 다시 실행하면 상세 기간을 볼 수 있습니다.</p>}
-    <details><summary>지표 해석 및 유효도 계산의 한계</summary><p>제습 수분전달 유효도 ε = (w입구 − w출구) / (w입구 − w평형), 재생 유효도 ε = (w출구 − w입구) / (w평형 − w입구)입니다. w평형은 용액 온도·농도에 따른 평형 절대습도입니다. 구동력인 분모가 0 이하이면 정상 전달 유효도로 해석하지 않습니다.</p><p>현재 시간별 저장값은 평균 유량과 마지막 계산시점의 재생 출구상태가 혼재합니다. 이를 조합한 숫자는 정확한 유효도가 아니므로 표시하지 않습니다. 현재 재생 코드의 유효도 0–1 제한도 실험범위 준수를 증명하지 않습니다.</p><p>여기서 범위 이탈은 재생 입구 외기 온도·습도만 점검합니다. 용액 온도·농도·모듈별 유량의 모든 내부 계산시점 검증은 포함하지 않으며, 이탈 0%도 실험식 전체의 검증 완료를 뜻하지 않습니다. 제습부 실험범위 전체 준수율 역시 아직 산출하지 않습니다.</p></details>
+    <details><summary>지표 해석 및 유효도 계산의 한계</summary><p>w평형은 각 접촉부 입구 용액 온도·농도에 따른 평형 절대습도입니다. 구동력인 분모가 0 이하이면 정상 전달 유효도로 해석하지 않습니다. 그래프는 내부 계산시점에서 별도 적산한 수분전달 값으로 산출하며, 시간평균 유량과 마지막 출구값을 혼합하지 않습니다.</p><p>여기서 외기범위 이탈은 재생 입구 외기 온도·습도만 점검합니다. 용액 온도·농도·모듈별 유량의 모든 내부 계산시점 검증은 포함하지 않으며, 이탈 0%도 실험식 전체의 검증 완료를 뜻하지 않습니다.</p></details>
   </section>;
 }

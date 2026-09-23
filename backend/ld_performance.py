@@ -57,7 +57,14 @@ def ld_performance(result):
               for t, *values in zip(result['time'], absorbed, released, target,
                                     served, result['REG_HX_HEAT_NEED_kWh'], on, on*outside,
                                     result['Ta_degC'], result['OA_w_kgkg']*1000)]
-    return {'hourlyVersion': 2, 'hourly': hourly, 'total': aggregate(result), 'monthly': [
+    columns = [f'{side}_TRANSFER_{key}' for side in ('ABS', 'REG')
+               for key in ('actual', 'potential', 'invalid_s', 'outside_s')]
+    effectiveness = None
+    if all(c in result for c in columns):
+        effectiveness = {'version': 1, 'rows': [
+            [str(t), *[float(v) for v in values]]
+            for t, *values in zip(result['time'], *(result[c] for c in columns))]}
+    return {'effectiveness': effectiveness, 'hourlyVersion': 2, 'hourly': hourly, 'total': aggregate(result), 'monthly': [
         {'month': int(month), **aggregate(frame)}
         for month, frame in result.groupby(months, sort=True)
     ]}
