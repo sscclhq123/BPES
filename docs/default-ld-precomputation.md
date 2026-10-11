@@ -55,6 +55,30 @@ files. JSON-line stdout reports each completed/failed case. Narrow checks use
 Generated files must be committed/deployed alongside the matching code/catalog.
 Do not deploy `.building-*` temporary files. No automatic deletion of old data.
 
+## Release guard (2026-10-11)
+
+The public engine at `ca9e1aa` requested a different key from the old catalog.
+A live Seoul medium-office 100% request missed the cache and took 111.48 seconds;
+the requested static snapshot returned HTTP 404. All 234 combinations are
+regenerated against that unchanged Liu engine in the cache repair release.
+Research Dong/hybrid code and TES assumptions are not part of this release.
+
+`scripts/verify_default_ld_release.py --write-manifest` verifies every current
+runtime key, reads all 8,760 rows of each snapshot, and records source, weather,
+catalog and snapshot hashes in `backend/default_ld_release.json`. The full
+precompute command now creates this manifest after successful generation.
+
+Vercel's build command runs `python3 scripts/verify_default_ld_release.py` using
+only the standard library. Missing files, obsolete calculation source, changed
+weather, a changed catalog, or corrupt snapshots stop the release instead of
+silently publishing an entirely uncached default catalog. This guard does not
+disable the normal runtime fallback for intentional custom inputs.
+
+After a narrow/resumed generation, explicitly run the manifest command once
+all 234 exact snapshots are available. Do not reuse old files under new keys.
+Coverage-only changes still reuse the annual LD snapshot; solar area sizing is
+computed live. Custom parameters and detailed minute traces are not precomputed.
+
 ## Initial cache validation (previous 3× model, superseded)
 
 - Seoul medium office annual generation: 18.63 s; snapshot 887,179 bytes.

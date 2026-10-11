@@ -88,6 +88,10 @@ def main():
                 print(json.dumps(dict(event="error", job=futures[future],
                                       error=str(error))), flush=True)
     print(json.dumps(dict(event="finished", total=len(jobs), failures=failures)), flush=True)
+    if not failures and not args.city and not args.preset:
+        from verify_default_ld_release import write_manifest, verify
+        write_manifest()
+        print(json.dumps(dict(event="release_verified", defaults=verify())), flush=True)
     return bool(failures)
 
 
