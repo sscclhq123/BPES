@@ -68,11 +68,13 @@ runtime key, reads all 8,760 rows of each snapshot, and records source, weather,
 catalog and snapshot hashes in `backend/default_ld_release.json`. The full
 precompute command now creates this manifest after successful generation.
 
-Vercel's build command runs `python3 scripts/verify_default_ld_release.py` using
-only the standard library. Missing files, obsolete calculation source, changed
-weather, a changed catalog, or corrupt snapshots stop the release instead of
-silently publishing an entirely uncached default catalog. This guard does not
-disable the normal runtime fallback for intentional custom inputs.
+Before deploying, run `python3 scripts/verify_default_ld_release.py` using only
+the standard library. Missing files, obsolete calculation source, changed
+weather, a changed catalog, or corrupt snapshots fail this preflight check.
+Do not deploy if it fails. This is a local release check, not a Vercel build
+command: preserve the existing automatic Python-function/static-asset build
+configuration. An explicit root output directory shadows the Python API with
+static source files. The normal runtime fallback for custom inputs is unchanged.
 
 After a narrow/resumed generation, explicitly run the manifest command once
 all 234 exact snapshots are available. Do not reuse old files under new keys.
